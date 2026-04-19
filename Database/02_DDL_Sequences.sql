@@ -1,0 +1,41 @@
+-- ============================================================================
+-- GBS - Sequences para PK autoincrement
+-- ============================================================================
+
+CREATE SEQUENCE SEQ_EQUIPAMENTO
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+CREATE SEQUENCE SEQ_UPGRADE
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+CREATE SEQUENCE SEQ_REMESSA
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+CREATE SEQUENCE SEQ_REMESSA_ITEM
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+CREATE SEQUENCE SEQ_IMPORTACAO
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+CREATE SEQUENCE SEQ_WHATSAPP
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+COMMIT;

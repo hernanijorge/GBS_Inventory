@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B4F8E2D1-3C6A-4E7B-9F5D-2A1B8C9D0E3F}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <StartupObject>GBS_Inventory.My.MyApplication</StartupObject>
+    <RootNamespace>GBS_Inventory</RootNamespace>
+    <AssemblyName>GBS_Inventory</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <MyType>WindowsForms</MyType>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionCompare>Binary</OptionCompare>
+    <OptionStrict>Off</OptionStrict>
+    <OptionInfer>On</OptionInfer>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DocumentationFile>GBS_Inventory.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DocumentationFile>GBS_Inventory.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OptionStrict>Off</OptionStrict>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Oracle.ManagedDataAccess, Version=4.122.21.1, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL">
+      <HintPath>..\packages\Oracle.ManagedDataAccess.21.13.0\lib\net462\Oracle.ManagedDataAccess.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.VisualBasic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+    <Import Include="System.Collections" />
+    <Import Include="System.Collections.Generic" />
+    <Import Include="System.Data" />
+    <Import Include="System.Drawing" />
+    <Import Include="System.Diagnostics" />
+    <Import Include="System.Windows.Forms" />
+    <Import Include="System.Linq" />
+    <Import Include="System.Xml.Linq" />
+    <Import Include="System.Threading.Tasks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Oracle Helper -->
+    <Compile Include="Oracle\OracleHelper.vb" />
+
+    <!-- Models -->
+    <Compile Include="Models\Equipamento.vb" />
+    <Compile Include="Models\Upgrade.vb" />
+    <Compile Include="Models\Remessa.vb" />
+
+    <!-- Classes (Gravação + Leitura + Importação) -->
+    <Compile Include="classes\clsGravacaoEquipamento.vb" />
+    <Compile Include="classes\clsGravacaoUpgrade.vb" />
+    <Compile Include="classes\clsGravacaoRemessa.vb" />
+    <Compile Include="classes\clsLeituraEquipamento.vb" />
+    <Compile Include="classes\clsLeituraUpgrade.vb" />
+    <Compile Include="classes\clsLeituraRemessa.vb" />
+    <Compile Include="classes\clsImportacaoExcel.vb" />
+
+    <!-- Controllers (MVC) -->
+    <Compile Include="Controllers\EquipamentoController.vb" />
+    <Compile Include="Controllers\UpgradeController.vb" />
+    <Compile Include="Controllers\RemessaController.vb" />
+    <Compile Include="Controllers\ImportacaoController.vb" />
+
+    <!-- Utils -->
+    <Compile Include="Utils\TemaEscuro.vb" />
+
+    <!-- Views (Forms) -->
+    <Compile Include="Views\frmPrincipal.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmPrincipal.Designer.vb">
+      <DependentUpon>frmPrincipal.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmScanner.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmScanner.Designer.vb">
+      <DependentUpon>frmScanner.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmImportacao.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmImportacao.Designer.vb">
+      <DependentUpon>frmImportacao.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmUpgrade.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmUpgrade.Designer.vb">
+      <DependentUpon>frmUpgrade.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmRemessa.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmRemessa.Designer.vb">
+      <DependentUpon>frmRemessa.vb</DependentUpon>
+    </Compile>
+
+    <!-- My Project -->
+    <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="My Project\Application.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Application.myapp</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="My Project\Application.myapp">
+      <Generator>MyApplicationCodeGenerator</Generator>
+      <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+</Project>
