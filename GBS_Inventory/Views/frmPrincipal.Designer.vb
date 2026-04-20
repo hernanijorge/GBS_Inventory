@@ -37,6 +37,29 @@ Partial Class frmPrincipal
     Friend WithEvents dgvRemessas As DataGridView
     Friend WithEvents dgvUpgrades As DataGridView
 
+    ' Controles da aba Remessas
+    Friend WithEvents lblRemessasTit       As Label
+    Friend WithEvents btnNovaRemessa       As Button
+    Friend WithEvents btnAtualizarRemessas As Button
+
+    ' Controles da aba Upgrades
+    Friend WithEvents lblUpgradesTit       As Label
+    Friend WithEvents lblUpgradesTotal     As Label
+    Friend WithEvents btnAtualizarUpgrades As Button
+
+    ' Controles da aba Importação
+    Friend WithEvents lblImpArquivo As Label
+    Friend WithEvents btnImpSelecionar As Button
+    Friend WithEvents btnImpIniciar As Button
+    Friend WithEvents progImp As ProgressBar
+    Friend WithEvents lblImpStatus As Label
+    Friend WithEvents lblImpInseridos As Label
+    Friend WithEvents lblImpAtualizados As Label
+    Friend WithEvents lblImpAbas As Label
+    Friend WithEvents lblImpLinhas As Label
+    Friend WithEvents lblImpErros As Label
+    Friend WithEvents txtImpErros As TextBox
+
     Private Sub InitializeComponent()
 
         Me.SuspendLayout()
@@ -178,27 +201,157 @@ Partial Class frmPrincipal
         Me.tabEstoque.Controls.Add(pnlAcoes)
 
         ' ─── ABA REMESSAS ─────────────────────────────────────────────
-        Me.dgvRemessas = New DataGridView()
+        Me.tabRemessas.Padding = New Padding(0)
+
+        Dim pnlRemessasTop As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 50,
+            .BackColor = TemaEscuro.Surface,
+            .Padding   = New Padding(8)
+        }
+
+        Me.lblRemessasTit           = New Label()
+        Me.lblRemessasTit.Text      = "Remessas Ativas"
+        Me.lblRemessasTit.Font      = New Font("Segoe UI", 11, FontStyle.Bold)
+        Me.lblRemessasTit.ForeColor = TemaEscuro.Accent
+        Me.lblRemessasTit.Location  = New Point(15, 15)
+        Me.lblRemessasTit.AutoSize  = True
+
+        Me.btnNovaRemessa            = New Button()
+        Me.btnNovaRemessa.Text       = "+ Nova Remessa"
+        Me.btnNovaRemessa.Location   = New Point(200, 10)
+        Me.btnNovaRemessa.Size       = New Size(150, 30)
+
+        Me.btnAtualizarRemessas            = New Button()
+        Me.btnAtualizarRemessas.Text       = "Atualizar"
+        Me.btnAtualizarRemessas.Location   = New Point(360, 10)
+        Me.btnAtualizarRemessas.Size       = New Size(90, 30)
+
+        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas})
+
+        Me.dgvRemessas      = New DataGridView()
         Me.dgvRemessas.Dock = DockStyle.Fill
+
         Me.tabRemessas.Controls.Add(dgvRemessas)
+        Me.tabRemessas.Controls.Add(pnlRemessasTop)
 
         ' ─── ABA UPGRADES ─────────────────────────────────────────────
-        Me.dgvUpgrades = New DataGridView()
+        Me.tabUpgrades.Padding = New Padding(0)
+
+        Dim pnlUpgTop As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 50,
+            .BackColor = TemaEscuro.Surface,
+            .Padding   = New Padding(8)
+        }
+
+        Me.lblUpgradesTit           = New Label()
+        Me.lblUpgradesTit.Text      = "Upgrades (últimos 90 dias)"
+        Me.lblUpgradesTit.Font      = New Font("Segoe UI", 11, FontStyle.Bold)
+        Me.lblUpgradesTit.ForeColor = TemaEscuro.Accent
+        Me.lblUpgradesTit.Location  = New Point(15, 15)
+        Me.lblUpgradesTit.AutoSize  = True
+
+        Me.lblUpgradesTotal           = New Label()
+        Me.lblUpgradesTotal.Text      = "Total: 0"
+        Me.lblUpgradesTotal.Font      = New Font("Segoe UI", 10)
+        Me.lblUpgradesTotal.ForeColor = TemaEscuro.TextoMutado
+        Me.lblUpgradesTotal.Location  = New Point(290, 17)
+        Me.lblUpgradesTotal.AutoSize  = True
+
+        Me.btnAtualizarUpgrades            = New Button()
+        Me.btnAtualizarUpgrades.Text       = "Atualizar"
+        Me.btnAtualizarUpgrades.Location   = New Point(420, 10)
+        Me.btnAtualizarUpgrades.Size       = New Size(90, 30)
+
+        pnlUpgTop.Controls.AddRange({lblUpgradesTit, lblUpgradesTotal, btnAtualizarUpgrades})
+
+        Me.dgvUpgrades      = New DataGridView()
         Me.dgvUpgrades.Dock = DockStyle.Fill
+
         Me.tabUpgrades.Controls.Add(dgvUpgrades)
+        Me.tabUpgrades.Controls.Add(pnlUpgTop)
 
         ' ─── ABA IMPORTAÇÃO ───────────────────────────────────────────
-        Dim lblImport As New Label() With {
-            .Text = "Clique em 'Importar Planilha' na aba Estoque",
-            .Location = New Point(20, 20),
+        Me.tabImportacao.Padding = New Padding(20)
+
+        Dim lblImpTit As New Label() With {
+            .Text = "Importação de Planilha Excel",
+            .Font = New Font("Segoe UI", 14, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .Location = New Point(20, 15),
+            .AutoSize = True
+        }
+
+        Dim lblImpSub As New Label() With {
+            .Text = "Carregue a planilha da GBS (.xlsx). Todas as abas serão processadas com UPSERT.",
+            .Location = New Point(20, 45),
+            .Size = New Size(900, 20),
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+
+        Dim lblImpArq As New Label() With {
+            .Text = "Arquivo:",
+            .Location = New Point(20, 90),
             .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado
         }
-        Me.tabImportacao.Controls.Add(lblImport)
 
+        Me.lblImpArquivo = New Label()
+        Me.lblImpArquivo.Text = "(nenhum selecionado)"
+        Me.lblImpArquivo.Location = New Point(90, 90)
+        Me.lblImpArquivo.Size = New Size(800, 20)
+        Me.lblImpArquivo.ForeColor = TemaEscuro.TextoMutado
+        Me.lblImpArquivo.Font = New Font("Segoe UI", 9, FontStyle.Italic)
+
+        Me.btnImpSelecionar = New Button()
+        Me.btnImpSelecionar.Text = "Selecionar Planilha..."
+        Me.btnImpSelecionar.Location = New Point(20, 120)
+        Me.btnImpSelecionar.Size = New Size(200, 36)
+
+        Me.btnImpIniciar = New Button()
+        Me.btnImpIniciar.Text = "Iniciar Importação"
+        Me.btnImpIniciar.Location = New Point(230, 120)
+        Me.btnImpIniciar.Size = New Size(200, 36)
+        Me.btnImpIniciar.Enabled = False
+
+        Me.progImp = New ProgressBar()
+        Me.progImp.Location = New Point(20, 175)
+        Me.progImp.Size = New Size(900, 20)
+        Me.progImp.Style = ProgressBarStyle.Continuous
+        Me.progImp.Visible = False
+
+        Me.lblImpStatus = New Label()
+        Me.lblImpStatus.Text = "Aguardando..."
+        Me.lblImpStatus.Location = New Point(20, 200)
+        Me.lblImpStatus.Size = New Size(900, 22)
+        Me.lblImpStatus.ForeColor = TemaEscuro.TextoMutado
+
+        Me.lblImpInseridos = New Label() With {.Location = New Point(20, 240), .Size = New Size(280, 22), .Text = "Inseridos: —", .Font = New Font("Segoe UI", 10, FontStyle.Bold), .ForeColor = TemaEscuro.Accent}
+        Me.lblImpAtualizados = New Label() With {.Location = New Point(20, 265), .Size = New Size(280, 22), .Text = "Atualizados: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpAbas = New Label() With {.Location = New Point(20, 290), .Size = New Size(280, 22), .Text = "Abas processadas: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpLinhas = New Label() With {.Location = New Point(320, 240), .Size = New Size(280, 22), .Text = "Linhas lidas: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpErros = New Label() With {.Location = New Point(320, 265), .Size = New Size(280, 22), .Text = "Erros: 0", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.TextoMutado}
+
+        Me.txtImpErros = New TextBox()
+        Me.txtImpErros.Location = New Point(20, 340)
+        Me.txtImpErros.Size = New Size(900, 200)
+        Me.txtImpErros.Multiline = True
+        Me.txtImpErros.ScrollBars = ScrollBars.Vertical
+        Me.txtImpErros.ReadOnly = True
+        Me.txtImpErros.Font = New Font("Consolas", 8.5F)
+        Me.txtImpErros.Visible = False
+
+        Me.tabImportacao.Controls.AddRange({lblImpTit, lblImpSub, lblImpArq, lblImpArquivo,
+                                             btnImpSelecionar, btnImpIniciar, progImp,
+                                             lblImpStatus, lblImpInseridos, lblImpAtualizados,
+                                             lblImpAbas, lblImpLinhas, lblImpErros, txtImpErros})
+
+        ' ═════════════════════════════════════════════════════════════
+        ' MONTAGEM DO TABCONTROL
+        ' ═════════════════════════════════════════════════════════════
         Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabEstoque, tabRemessas, tabUpgrades, tabImportacao})
         Me.tabPrincipal.SelectedIndex = 1
-
         Me.pnlContainer.Controls.Add(tabPrincipal)
 
         ' ═════════════════════════════════════════════════════════════
