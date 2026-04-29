@@ -31,7 +31,7 @@ Partial Class frmScanner
 
         ' ── Título ────────────────────────────────────────────────
         Me.lblTitulo = New Label()
-        Me.lblTitulo.Text = "Scanner de Equipamentos"
+        Me.lblTitulo.Text = "Equipment Scanner"
         Me.lblTitulo.Font = New Font("Segoe UI", 14, FontStyle.Bold)
         Me.lblTitulo.ForeColor = TemaEscuro.Accent
         Me.lblTitulo.Location = New Point(20, 15)
@@ -39,7 +39,7 @@ Partial Class frmScanner
 
         ' ── Campo UID grande ──────────────────────────────────────
         Dim lblUID As New Label() With {
-            .Text = "Internal UID (escaneie ou digite):",
+            .Text = "Internal UID (scan or type):",
             .Location = New Point(20, 55),
             .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado,
@@ -55,7 +55,7 @@ Partial Class frmScanner
         Me.txtUID.ForeColor = TemaEscuro.Accent
 
         Me.btnBuscar = New Button()
-        Me.btnBuscar.Text = "Buscar"
+        Me.btnBuscar.Text = "Search"
         Me.btnBuscar.Location = New Point(575, 78)
         Me.btnBuscar.Size = New Size(120, 40)
         Me.btnBuscar.Font = New Font("Segoe UI", 10, FontStyle.Bold)
@@ -71,7 +71,7 @@ Partial Class frmScanner
         Me.lblResultado.Location = New Point(20, 130)
         Me.lblResultado.Size = New Size(840, 24)
         Me.lblResultado.Font = New Font("Segoe UI", 11, FontStyle.Bold)
-        Me.lblResultado.Text = "Aguardando leitura..."
+        Me.lblResultado.Text = "Waiting for scan..."
         Me.lblResultado.ForeColor = TemaEscuro.TextoMutado
 
         ' ── Card de detalhes ──────────────────────────────────────
@@ -100,7 +100,7 @@ Partial Class frmScanner
 
         ' ── Grid de upgrades ──────────────────────────────────────
         Dim lblHistUpg As New Label() With {
-            .Text = "Histórico de Upgrades:",
+            .Text = "Upgrade History:",
             .Location = New Point(20, 360),
             .AutoSize = True,
             .ForeColor = TemaEscuro.Accent,

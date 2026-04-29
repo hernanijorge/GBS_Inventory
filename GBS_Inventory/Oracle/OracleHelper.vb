@@ -73,6 +73,31 @@ Public Class OracleHelper
 
     End Function
 
+    ''' <summary>
+    ''' Executa um SELECT dentro de uma transação existente e retorna um DataSet preenchido.
+    ''' Necessário para enxergar dados inseridos mas ainda não commitados na mesma transação.
+    ''' </summary>
+    Public Shared Function ExecuteDataset(ByVal transaction As OracleTransaction,
+                                          ByVal commandType As CommandType,
+                                          ByVal commandText As String,
+                                          ByVal ParamArray commandParameters() As OracleParameter) As DataSet
+
+        If transaction Is Nothing Then
+            Throw New ArgumentNullException("transaction", "Transação não pode ser nula.")
+        End If
+
+        Dim oCmd As New OracleCommand()
+        Dim ds As New DataSet()
+
+        PrepareCommand(oCmd, transaction.Connection, transaction, commandType, commandText, commandParameters)
+        Dim oDa As New OracleDataAdapter(oCmd)
+        oDa.Fill(ds)
+        oCmd.Parameters.Clear()
+
+        Return ds
+
+    End Function
+
 #End Region
 
 #Region "ExecuteReader"
@@ -145,6 +170,7 @@ Public Class OracleHelper
         command.Connection = connection
         command.CommandText = commandText
         command.CommandType = commandType
+        command.BindByName = True
 
         If transaction IsNot Nothing Then
             command.Transaction = transaction

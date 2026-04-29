@@ -13,7 +13,7 @@ Public Class frmImportacao
     Public Sub New()
         InitializeComponent()
         oController = New ImportacaoController()
-        TemaEscuro.aplicar(Me)
+        TemaEscuro.aplicarHelius(Me)
     End Sub
 
     Private Sub btnSelecionar_Click(sender As Object, e As EventArgs) Handles btnSelecionar.Click
@@ -35,7 +35,7 @@ Public Class frmImportacao
     Private Sub btnImportar_Click(sender As Object, e As EventArgs) Handles btnImportar.Click
 
         If String.IsNullOrEmpty(sArquivoSelecionado) Then
-            MessageBox.Show("Selecione uma planilha primeiro.", "Atenção",
+            MessageBox.Show("Select a spreadsheet first.", "Warning",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning)
             Return
         End If
@@ -44,7 +44,7 @@ Public Class frmImportacao
         btnSelecionar.Enabled = False
         btnFechar.Enabled     = False
 
-        lblStatus.Text        = "Importando..."
+        lblStatus.Text        = "Importing..."
         lblStatus.ForeColor   = TemaEscuro.Accent
         progress.Value        = 0
         progress.Visible      = True
@@ -66,14 +66,14 @@ Public Class frmImportacao
             oController.importarPlanilha(sArquivoSelecionado, callback)
 
             progress.Value     = progress.Maximum
-            lblStatus.Text     = "Concluído!"
+            lblStatus.Text     = "Done!"
             lblStatus.ForeColor= TemaEscuro.Accent
 
-            lblInseridos.Text   = "Inseridos: "    & oController.TotalInseridos.ToString()
-            lblAtualizados.Text = "Atualizados: "  & oController.TotalAtualizados.ToString()
-            lblAbas.Text        = "Abas processadas: " & oController.TotalAbas.ToString()
-            lblLinhas.Text      = "Linhas lidas: " & oController.TotalLinhasPlanilha.ToString()
-            lblErros.Text       = "Erros: "        & oController.TotalErros.ToString()
+            lblInseridos.Text   = "Inserted: "     & oController.TotalInseridos.ToString()
+            lblAtualizados.Text = "Updated: "      & oController.TotalAtualizados.ToString()
+            lblAbas.Text        = "Sheets processed: " & oController.TotalAbas.ToString()
+            lblLinhas.Text      = "Lines read: "   & oController.TotalLinhasPlanilha.ToString()
+            lblErros.Text       = "Errors: "       & oController.TotalErros.ToString()
 
             If oController.TotalErros > 0 Then
                 txtErros.Lines = oController.Erros.ToArray()
@@ -81,17 +81,17 @@ Public Class frmImportacao
                 lblErros.ForeColor = TemaEscuro.Vermelho
             End If
 
-            MessageBox.Show($"Importação concluída!{vbCrLf & vbCrLf}" &
-                            $"Inseridos: {oController.TotalInseridos}{vbCrLf}" &
-                            $"Atualizados: {oController.TotalAtualizados}{vbCrLf}" &
-                            $"Erros: {oController.TotalErros}",
-                            "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Import completed!{vbCrLf & vbCrLf}" &
+                            $"Inserted: {oController.TotalInseridos}{vbCrLf}" &
+                            $"Updated: {oController.TotalAtualizados}{vbCrLf}" &
+                            $"Errors: {oController.TotalErros}",
+                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro na importação: " & ex.Message, "Erro",
+            MessageBox.Show("Import error: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
-            lblStatus.Text     = "Falha na importação"
+            lblStatus.Text     = "Import failed"
             lblStatus.ForeColor= TemaEscuro.Vermelho
 
         Finally

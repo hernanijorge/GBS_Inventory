@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -20,7 +19,6 @@
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
@@ -32,7 +30,6 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <DefineDebug>false</DefineDebug>
@@ -44,15 +41,12 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
-
   <PropertyGroup>
     <OptionStrict>Off</OptionStrict>
   </PropertyGroup>
-
   <PropertyGroup>
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
-
   <ItemGroup>
     <Reference Include="Oracle.ManagedDataAccess, Version=4.122.21.1, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL">
       <HintPath>..\packages\Oracle.ManagedDataAccess.21.13.0\lib\net462\Oracle.ManagedDataAccess.dll</HintPath>
@@ -69,7 +63,6 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
-
   <ItemGroup>
     <Import Include="Microsoft.VisualBasic" />
     <Import Include="System" />
@@ -83,16 +76,15 @@
     <Import Include="System.Xml.Linq" />
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
-
   <ItemGroup>
     <!-- Oracle Helper -->
     <Compile Include="Oracle\OracleHelper.vb" />
-
     <!-- Models -->
     <Compile Include="Models\Equipamento.vb" />
     <Compile Include="Models\Upgrade.vb" />
     <Compile Include="Models\Remessa.vb" />
-
+    <Compile Include="Models\Cliente.vb" />
+    <Compile Include="Models\Invoice.vb" />
     <!-- Classes (Gravação + Leitura + Importação) -->
     <Compile Include="classes\clsGravacaoEquipamento.vb" />
     <Compile Include="classes\clsGravacaoUpgrade.vb" />
@@ -101,16 +93,21 @@
     <Compile Include="classes\clsLeituraUpgrade.vb" />
     <Compile Include="classes\clsLeituraRemessa.vb" />
     <Compile Include="classes\clsImportacaoExcel.vb" />
-
+    <Compile Include="classes\clsGravacaoCliente.vb" />
+    <Compile Include="classes\clsLeituraCliente.vb" />
+    <Compile Include="classes\clsGravacaoInvoice.vb" />
+    <Compile Include="classes\clsLeituraInvoice.vb" />
     <!-- Controllers (MVC) -->
     <Compile Include="Controllers\EquipamentoController.vb" />
     <Compile Include="Controllers\UpgradeController.vb" />
     <Compile Include="Controllers\RemessaController.vb" />
     <Compile Include="Controllers\ImportacaoController.vb" />
-
+    <Compile Include="Controllers\ClienteController.vb" />
+    <Compile Include="Controllers\InvoiceController.vb" />
     <!-- Utils -->
     <Compile Include="Utils\TemaEscuro.vb" />
-
+    <Compile Include="Utils\InvoiceDocumentoService.vb" />
+    <Compile Include="Utils\InvoiceEmailService.vb" />
     <!-- Views (Forms) -->
     <Compile Include="Views\frmPrincipal.vb">
       <SubType>Form</SubType>
@@ -142,7 +139,18 @@
     <Compile Include="Views\frmRemessa.Designer.vb">
       <DependentUpon>frmRemessa.vb</DependentUpon>
     </Compile>
-
+    <Compile Include="Views\frmClientes.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmClientes.Designer.vb">
+      <DependentUpon>frmClientes.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmInvoice.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmInvoice.Designer.vb">
+      <DependentUpon>frmInvoice.vb</DependentUpon>
+    </Compile>
     <!-- My Project -->
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
@@ -150,7 +158,6 @@
       <DependentUpon>Application.myapp</DependentUpon>
     </Compile>
   </ItemGroup>
-
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
@@ -159,6 +166,10 @@
       <LastGenOutput>Application.Designer.vb</LastGenOutput>
     </None>
   </ItemGroup>
-
+  <ItemGroup>
+    <EmbeddedResource Include="Views\frmRemessa.resx">
+      <DependentUpon>frmRemessa.vb</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

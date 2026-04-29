@@ -22,46 +22,46 @@ Partial Class frmImportacao
 
         Me.SuspendLayout()
 
-        Me.Text = "Importar Planilha Excel — GBS"
+        Me.Text = "Import Excel Spreadsheet — GBS"
         Me.Size = New Size(720, 620)
         Me.StartPosition = FormStartPosition.CenterParent
         Me.BackColor = TemaEscuro.Fundo
         Me.Font = New Font("Segoe UI", 9)
 
         Me.lblTitulo = New Label()
-        Me.lblTitulo.Text = "Importação de Planilha"
+        Me.lblTitulo.Text = "Spreadsheet Import"
         Me.lblTitulo.Font = New Font("Segoe UI", 14, FontStyle.Bold)
         Me.lblTitulo.ForeColor = TemaEscuro.Accent
         Me.lblTitulo.Location = New Point(20, 15)
         Me.lblTitulo.AutoSize = True
 
         Dim lblArq As New Label() With {
-            .Text = "Arquivo:",
+            .Text = "File:",
             .Location = New Point(20, 60),
             .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado
         }
 
         Me.lblArquivo = New Label()
-        Me.lblArquivo.Text = "(nenhum)"
+        Me.lblArquivo.Text = "(none)"
         Me.lblArquivo.Location = New Point(75, 60)
         Me.lblArquivo.Size = New Size(500, 20)
         Me.lblArquivo.ForeColor = TemaEscuro.TextoMutado
         Me.lblArquivo.Font = New Font("Segoe UI", 9, FontStyle.Italic)
 
         Me.btnSelecionar = New Button()
-        Me.btnSelecionar.Text = "Selecionar Planilha..."
+        Me.btnSelecionar.Text = "Select Spreadsheet..."
         Me.btnSelecionar.Location = New Point(20, 90)
         Me.btnSelecionar.Size = New Size(180, 32)
 
         Me.btnImportar = New Button()
-        Me.btnImportar.Text = "Iniciar Importação"
+        Me.btnImportar.Text = "Start Import"
         Me.btnImportar.Location = New Point(210, 90)
         Me.btnImportar.Size = New Size(180, 32)
         Me.btnImportar.Enabled = False
 
         Me.btnFechar = New Button()
-        Me.btnFechar.Text = "Fechar"
+        Me.btnFechar.Text = "Close"
         Me.btnFechar.Location = New Point(560, 90)
         Me.btnFechar.Size = New Size(120, 32)
 
@@ -72,7 +72,7 @@ Partial Class frmImportacao
         Me.progress.Style = ProgressBarStyle.Continuous
 
         Me.lblStatus = New Label()
-        Me.lblStatus.Text = "Aguardando..."
+        Me.lblStatus.Text = "Waiting..."
         Me.lblStatus.Location = New Point(20, 165)
         Me.lblStatus.Size = New Size(660, 20)
         Me.lblStatus.ForeColor = TemaEscuro.TextoMutado
@@ -90,25 +90,25 @@ Partial Class frmImportacao
                                     End Sub
 
         Dim lblCab As New Label() With {
-            .Text = "Resultado",
+            .Text = "Results",
             .Location = New Point(15, 12),
             .AutoSize = True,
             .ForeColor = TemaEscuro.Accent,
             .Font = New Font("Segoe UI", 10, FontStyle.Bold)
         }
 
-        Me.lblInseridos = criarInfo(15, 45, "Inseridos: —", TemaEscuro.Accent)
-        Me.lblAtualizados = criarInfo(15, 70, "Atualizados: —", TemaEscuro.Texto)
-        Me.lblAbas = criarInfo(15, 95, "Abas processadas: —", TemaEscuro.Texto)
-        Me.lblLinhas = criarInfo(15, 120, "Linhas lidas: —", TemaEscuro.Texto)
-        Me.lblErros = criarInfo(330, 45, "Erros: 0", TemaEscuro.TextoMutado)
+        Me.lblInseridos = criarInfo(15, 45, "Inserted: —", TemaEscuro.Accent)
+        Me.lblAtualizados = criarInfo(15, 70, "Updated: —", TemaEscuro.Texto)
+        Me.lblAbas = criarInfo(15, 95, "Sheets processed: —", TemaEscuro.Texto)
+        Me.lblLinhas = criarInfo(15, 120, "Lines read: —", TemaEscuro.Texto)
+        Me.lblErros = criarInfo(330, 45, "Errors: 0", TemaEscuro.TextoMutado)
 
         pnlResult.Controls.AddRange({lblCab, lblInseridos, lblAtualizados,
                                       lblAbas, lblLinhas, lblErros})
 
         ' TextBox de erros
         Dim lblDetErros As New Label() With {
-            .Text = "Detalhes dos erros:",
+            .Text = "Error details:",
             .Location = New Point(20, 375),
             .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado

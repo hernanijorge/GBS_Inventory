@@ -14,15 +14,19 @@ Partial Class frmPrincipal
     Friend WithEvents pnlContainer As Panel
     Friend WithEvents tabPrincipal As TabControl
     Friend WithEvents tabDashboard As TabPage
+    Friend WithEvents tabCadastro As TabPage
     Friend WithEvents tabEstoque As TabPage
     Friend WithEvents tabRemessas As TabPage
     Friend WithEvents tabUpgrades As TabPage
     Friend WithEvents tabImportacao As TabPage
+    Friend WithEvents tabInvoice As TabPage
     Friend WithEvents pnlAcoes As Panel
     Friend WithEvents btnBuscarUID As Button
     Friend WithEvents btnScanner As Button
     Friend WithEvents btnImportarPlanilha As Button
     Friend WithEvents btnAtualizar As Button
+    Friend WithEvents btnClientes As Button
+    Friend WithEvents btnInvoice As Button
     Friend WithEvents txtPesquisa As TextBox
     Friend WithEvents lblPesquisa As Label
     Friend WithEvents dgvEstoque As DataGridView
@@ -32,10 +36,16 @@ Partial Class frmPrincipal
     Friend WithEvents lblCondicaoBoa As Label
     Friend WithEvents lblUpgrades30d As Label
     Friend WithEvents lblRemessasAtivas As Label
+    Friend WithEvents lblDashboardResumo As Label
+    Friend WithEvents dgvDashboardResumo As DataGridView
+    Friend WithEvents dgvDashManufacturer As DataGridView
+    Friend WithEvents dgvDashModel        As DataGridView
+    Friend WithEvents dgvDashCPU          As DataGridView
     Friend WithEvents lblVersao As Label
     Friend WithEvents lblStatus As Label
     Friend WithEvents dgvRemessas As DataGridView
     Friend WithEvents dgvUpgrades As DataGridView
+    Friend WithEvents btnGerenciarUpgrade As Button
 
     ' Controles da aba Remessas
     Friend WithEvents lblRemessasTit       As Label
@@ -46,6 +56,9 @@ Partial Class frmPrincipal
     Friend WithEvents lblUpgradesTit       As Label
     Friend WithEvents lblUpgradesTotal     As Label
     Friend WithEvents btnAtualizarUpgrades As Button
+    Friend WithEvents txtUpgradeBusca      As TextBox
+    Friend WithEvents btnUpgradeBuscar     As Button
+    Friend WithEvents btnUpgradeScanner    As Button
 
     ' Controles da aba Importação
     Friend WithEvents lblImpArquivo As Label
@@ -135,10 +148,12 @@ Partial Class frmPrincipal
         Me.tabPrincipal.Font = New Font("Segoe UI", 10)
 
         Me.tabDashboard = New TabPage("Dashboard")
-        Me.tabEstoque = New TabPage("Estoque")
-        Me.tabRemessas = New TabPage("Remessas")
+        Me.tabCadastro = New TabPage("Registration")
+        Me.tabEstoque = New TabPage("Inventory")
+        Me.tabRemessas = New TabPage("Shipments")
         Me.tabUpgrades = New TabPage("Upgrades")
-        Me.tabImportacao = New TabPage("Importação")
+        Me.tabImportacao = New TabPage("Import")
+        Me.tabInvoice = New TabPage("Invoice")
 
         ' ─── ABA DASHBOARD ────────────────────────────────────────────
         Me.pnlDashboard = New Panel()
@@ -154,6 +169,100 @@ Partial Class frmPrincipal
         Me.lblUpgrades30d = criarCardDashboard("Upgrades 30d", "—", 740, 20)
         Me.lblRemessasAtivas = criarCardDashboard("Remessas Ativas", "—", 980, 20)
 
+        Me.lblDashboardResumo = New Label() With {
+            .Text = "Inventory by Manufacturer / Model / CPU Family",
+            .Location = New Point(20, 150),
+            .Size = New Size(520, 24),
+            .ForeColor = TemaEscuro.Accent,
+            .Font = New Font("Segoe UI", 10, FontStyle.Bold)
+        }
+
+        Me.dgvDashboardResumo = New DataGridView()
+        Me.dgvDashboardResumo.Location = New Point(20, 180)
+        Me.dgvDashboardResumo.Size = New Size(1180, 420)
+        Me.dgvDashboardResumo.Anchor = AnchorStyles.Left Or AnchorStyles.Top Or AnchorStyles.Right Or AnchorStyles.Bottom
+        Me.dgvDashboardResumo.ReadOnly = True
+        Me.dgvDashboardResumo.MultiSelect = False
+        Me.dgvDashboardResumo.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+
+        ' ── Dashboard breakdown grids ────────────────────────────────
+        Dim lblDashMfr As New Label() With {
+            .Text      = "Manufacturer",
+            .Location  = New Point(20, 148),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent,
+            .Font      = New Font("Segoe UI", 10, FontStyle.Bold)
+        }
+
+        Me.dgvDashManufacturer = New DataGridView()
+        Me.dgvDashManufacturer.Location      = New Point(20, 172)
+        Me.dgvDashManufacturer.Size          = New Size(370, 330)
+        Me.dgvDashManufacturer.ReadOnly      = True
+        Me.dgvDashManufacturer.MultiSelect   = False
+        Me.dgvDashManufacturer.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        Me.dgvDashManufacturer.Anchor        = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Bottom
+
+        Dim lblDashMdl As New Label() With {
+            .Text      = "Model",
+            .Location  = New Point(410, 148),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent,
+            .Font      = New Font("Segoe UI", 10, FontStyle.Bold)
+        }
+
+        Me.dgvDashModel = New DataGridView()
+        Me.dgvDashModel.Location      = New Point(410, 172)
+        Me.dgvDashModel.Size          = New Size(370, 330)
+        Me.dgvDashModel.ReadOnly      = True
+        Me.dgvDashModel.MultiSelect   = False
+        Me.dgvDashModel.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        Me.dgvDashModel.Anchor        = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Bottom
+
+        Dim lblDashCpu As New Label() With {
+            .Text      = "CPU Family",
+            .Location  = New Point(800, 148),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent,
+            .Font      = New Font("Segoe UI", 10, FontStyle.Bold)
+        }
+
+        Me.dgvDashCPU = New DataGridView()
+        Me.dgvDashCPU.Location      = New Point(800, 172)
+        Me.dgvDashCPU.Size          = New Size(370, 330)
+        Me.dgvDashCPU.ReadOnly      = True
+        Me.dgvDashCPU.MultiSelect   = False
+        Me.dgvDashCPU.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        Me.dgvDashCPU.Anchor        = AnchorStyles.Top Or AnchorStyles.Right Or AnchorStyles.Bottom
+
+        Me.pnlDashboard.Controls.Add(lblDashboardResumo)
+        Me.pnlDashboard.Controls.Add(dgvDashboardResumo)
+        Me.pnlDashboard.Controls.AddRange({lblDashMfr, dgvDashManufacturer,
+                                            lblDashMdl, dgvDashModel,
+                                            lblDashCpu, dgvDashCPU})
+
+        ' --- ABA CADASTRO ---
+        Dim pnlCadastro As New Panel() With {
+            .Dock = DockStyle.Fill,
+            .BackColor = TemaEscuro.Fundo
+        }
+
+        Dim lblCadastro As New Label() With {
+            .Text = "Registrations",
+            .Location = New Point(30, 30),
+            .AutoSize = True,
+            .Font = New Font("Segoe UI", 14, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent
+        }
+
+        Me.btnClientes = New Button()
+        Me.btnClientes.Text = "Clients"
+        Me.btnClientes.Location = New Point(30, 80)
+        Me.btnClientes.Size = New Size(160, 34)
+
+        pnlCadastro.Controls.Add(lblCadastro)
+        pnlCadastro.Controls.Add(btnClientes)
+        Me.tabCadastro.Controls.Add(pnlCadastro)
+
         ' ─── ABA ESTOQUE ──────────────────────────────────────────────
         Me.pnlAcoes = New Panel()
         Me.pnlAcoes.Dock = DockStyle.Top
@@ -162,7 +271,7 @@ Partial Class frmPrincipal
         Me.pnlAcoes.Padding = New Padding(8)
 
         Me.lblPesquisa = New Label()
-        Me.lblPesquisa.Text = "Pesquisa (UID / Serial / Modelo):"
+        Me.lblPesquisa.Text = "Search (UID / Serial / Model):"
         Me.lblPesquisa.Location = New Point(10, 15)
         Me.lblPesquisa.AutoSize = True
         Me.lblPesquisa.ForeColor = TemaEscuro.TextoMutado
@@ -172,7 +281,7 @@ Partial Class frmPrincipal
         Me.txtPesquisa.Size = New Size(250, 24)
 
         Me.btnBuscarUID = New Button()
-        Me.btnBuscarUID.Text = "Buscar"
+        Me.btnBuscarUID.Text = "Search"
         Me.btnBuscarUID.Location = New Point(475, 10)
         Me.btnBuscarUID.Size = New Size(85, 28)
 
@@ -182,12 +291,12 @@ Partial Class frmPrincipal
         Me.btnScanner.Size = New Size(110, 28)
 
         Me.btnImportarPlanilha = New Button()
-        Me.btnImportarPlanilha.Text = "Importar Planilha"
+        Me.btnImportarPlanilha.Text = "Import Spreadsheet"
         Me.btnImportarPlanilha.Location = New Point(690, 10)
         Me.btnImportarPlanilha.Size = New Size(130, 28)
 
         Me.btnAtualizar = New Button()
-        Me.btnAtualizar.Text = "Atualizar"
+        Me.btnAtualizar.Text = "Refresh"
         Me.btnAtualizar.Location = New Point(830, 10)
         Me.btnAtualizar.Size = New Size(90, 28)
 
@@ -211,19 +320,19 @@ Partial Class frmPrincipal
         }
 
         Me.lblRemessasTit           = New Label()
-        Me.lblRemessasTit.Text      = "Remessas Ativas"
+        Me.lblRemessasTit.Text      = "Active Shipments"
         Me.lblRemessasTit.Font      = New Font("Segoe UI", 11, FontStyle.Bold)
         Me.lblRemessasTit.ForeColor = TemaEscuro.Accent
         Me.lblRemessasTit.Location  = New Point(15, 15)
         Me.lblRemessasTit.AutoSize  = True
 
         Me.btnNovaRemessa            = New Button()
-        Me.btnNovaRemessa.Text       = "+ Nova Remessa"
+        Me.btnNovaRemessa.Text       = "+ New Shipment"
         Me.btnNovaRemessa.Location   = New Point(200, 10)
         Me.btnNovaRemessa.Size       = New Size(150, 30)
 
         Me.btnAtualizarRemessas            = New Button()
-        Me.btnAtualizarRemessas.Text       = "Atualizar"
+        Me.btnAtualizarRemessas.Text       = "Refresh"
         Me.btnAtualizarRemessas.Location   = New Point(360, 10)
         Me.btnAtualizarRemessas.Size       = New Size(90, 30)
 
@@ -240,31 +349,60 @@ Partial Class frmPrincipal
 
         Dim pnlUpgTop As New Panel() With {
             .Dock      = DockStyle.Top,
-            .Height    = 50,
+            .Height    = 90,
             .BackColor = TemaEscuro.Surface,
             .Padding   = New Padding(8)
         }
 
         Me.lblUpgradesTit           = New Label()
-        Me.lblUpgradesTit.Text      = "Upgrades (últimos 90 dias)"
+        Me.lblUpgradesTit.Text      = "Upgrades (last 90 days)"
         Me.lblUpgradesTit.Font      = New Font("Segoe UI", 11, FontStyle.Bold)
         Me.lblUpgradesTit.ForeColor = TemaEscuro.Accent
-        Me.lblUpgradesTit.Location  = New Point(15, 15)
+        Me.lblUpgradesTit.Location  = New Point(15, 12)
         Me.lblUpgradesTit.AutoSize  = True
 
         Me.lblUpgradesTotal           = New Label()
         Me.lblUpgradesTotal.Text      = "Total: 0"
         Me.lblUpgradesTotal.Font      = New Font("Segoe UI", 10)
         Me.lblUpgradesTotal.ForeColor = TemaEscuro.TextoMutado
-        Me.lblUpgradesTotal.Location  = New Point(290, 17)
+        Me.lblUpgradesTotal.Location  = New Point(290, 14)
         Me.lblUpgradesTotal.AutoSize  = True
 
         Me.btnAtualizarUpgrades            = New Button()
-        Me.btnAtualizarUpgrades.Text       = "Atualizar"
-        Me.btnAtualizarUpgrades.Location   = New Point(420, 10)
-        Me.btnAtualizarUpgrades.Size       = New Size(90, 30)
+        Me.btnAtualizarUpgrades.Text       = "Refresh"
+        Me.btnAtualizarUpgrades.Location   = New Point(420, 8)
+        Me.btnAtualizarUpgrades.Size       = New Size(90, 28)
 
-        pnlUpgTop.Controls.AddRange({lblUpgradesTit, lblUpgradesTotal, btnAtualizarUpgrades})
+        Me.btnGerenciarUpgrade = New Button()
+        Me.btnGerenciarUpgrade.Text = "Apply Upgrade"
+        Me.btnGerenciarUpgrade.Location = New Point(520, 8)
+        Me.btnGerenciarUpgrade.Size = New Size(140, 28)
+
+        ' Segunda linha — busca rápida por UID/Serial
+        Dim lblUpgBusca As New Label() With {
+            .Text      = "UID / Serial:",
+            .Location  = New Point(15, 55),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        Me.txtUpgradeBusca          = New TextBox()
+        Me.txtUpgradeBusca.Location = New Point(110, 52)
+        Me.txtUpgradeBusca.Size     = New Size(220, 26)
+
+        Me.btnUpgradeBuscar          = New Button()
+        Me.btnUpgradeBuscar.Text     = "Search"
+        Me.btnUpgradeBuscar.Location = New Point(340, 51)
+        Me.btnUpgradeBuscar.Size     = New Size(85, 28)
+
+        Me.btnUpgradeScanner          = New Button()
+        Me.btnUpgradeScanner.Text     = "Scanner UID"
+        Me.btnUpgradeScanner.Location = New Point(435, 51)
+        Me.btnUpgradeScanner.Size     = New Size(120, 28)
+
+        pnlUpgTop.Controls.AddRange({lblUpgradesTit, lblUpgradesTotal, btnAtualizarUpgrades, btnGerenciarUpgrade,
+                                      lblUpgBusca, txtUpgradeBusca, btnUpgradeBuscar, btnUpgradeScanner})
 
         Me.dgvUpgrades      = New DataGridView()
         Me.dgvUpgrades.Dock = DockStyle.Fill
@@ -276,7 +414,7 @@ Partial Class frmPrincipal
         Me.tabImportacao.Padding = New Padding(20)
 
         Dim lblImpTit As New Label() With {
-            .Text = "Importação de Planilha Excel",
+            .Text = "Excel Spreadsheet Import",
             .Font = New Font("Segoe UI", 14, FontStyle.Bold),
             .ForeColor = TemaEscuro.Accent,
             .Location = New Point(20, 15),
@@ -284,33 +422,33 @@ Partial Class frmPrincipal
         }
 
         Dim lblImpSub As New Label() With {
-            .Text = "Carregue a planilha da GBS (.xlsx). Todas as abas serão processadas com UPSERT.",
+            .Text = "Load the GBS spreadsheet (.xlsx). All sheets will be processed with UPSERT.",
             .Location = New Point(20, 45),
             .Size = New Size(900, 20),
             .ForeColor = TemaEscuro.TextoMutado
         }
 
         Dim lblImpArq As New Label() With {
-            .Text = "Arquivo:",
+            .Text = "File:",
             .Location = New Point(20, 90),
             .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado
         }
 
         Me.lblImpArquivo = New Label()
-        Me.lblImpArquivo.Text = "(nenhum selecionado)"
+        Me.lblImpArquivo.Text = "(none selected)"
         Me.lblImpArquivo.Location = New Point(90, 90)
         Me.lblImpArquivo.Size = New Size(800, 20)
         Me.lblImpArquivo.ForeColor = TemaEscuro.TextoMutado
         Me.lblImpArquivo.Font = New Font("Segoe UI", 9, FontStyle.Italic)
 
         Me.btnImpSelecionar = New Button()
-        Me.btnImpSelecionar.Text = "Selecionar Planilha..."
+        Me.btnImpSelecionar.Text = "Select Spreadsheet..."
         Me.btnImpSelecionar.Location = New Point(20, 120)
         Me.btnImpSelecionar.Size = New Size(200, 36)
 
         Me.btnImpIniciar = New Button()
-        Me.btnImpIniciar.Text = "Iniciar Importação"
+        Me.btnImpIniciar.Text = "Start Import"
         Me.btnImpIniciar.Location = New Point(230, 120)
         Me.btnImpIniciar.Size = New Size(200, 36)
         Me.btnImpIniciar.Enabled = False
@@ -322,16 +460,16 @@ Partial Class frmPrincipal
         Me.progImp.Visible = False
 
         Me.lblImpStatus = New Label()
-        Me.lblImpStatus.Text = "Aguardando..."
+        Me.lblImpStatus.Text = "Waiting..."
         Me.lblImpStatus.Location = New Point(20, 200)
         Me.lblImpStatus.Size = New Size(900, 22)
         Me.lblImpStatus.ForeColor = TemaEscuro.TextoMutado
 
-        Me.lblImpInseridos = New Label() With {.Location = New Point(20, 240), .Size = New Size(280, 22), .Text = "Inseridos: —", .Font = New Font("Segoe UI", 10, FontStyle.Bold), .ForeColor = TemaEscuro.Accent}
-        Me.lblImpAtualizados = New Label() With {.Location = New Point(20, 265), .Size = New Size(280, 22), .Text = "Atualizados: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
-        Me.lblImpAbas = New Label() With {.Location = New Point(20, 290), .Size = New Size(280, 22), .Text = "Abas processadas: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
-        Me.lblImpLinhas = New Label() With {.Location = New Point(320, 240), .Size = New Size(280, 22), .Text = "Linhas lidas: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
-        Me.lblImpErros = New Label() With {.Location = New Point(320, 265), .Size = New Size(280, 22), .Text = "Erros: 0", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.TextoMutado}
+        Me.lblImpInseridos = New Label() With {.Location = New Point(20, 240), .Size = New Size(280, 22), .Text = "Inserted: —", .Font = New Font("Segoe UI", 10, FontStyle.Bold), .ForeColor = TemaEscuro.Accent}
+        Me.lblImpAtualizados = New Label() With {.Location = New Point(20, 265), .Size = New Size(280, 22), .Text = "Updated: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpAbas = New Label() With {.Location = New Point(20, 290), .Size = New Size(280, 22), .Text = "Sheets processed: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpLinhas = New Label() With {.Location = New Point(320, 240), .Size = New Size(280, 22), .Text = "Lines read: —", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.Texto}
+        Me.lblImpErros = New Label() With {.Location = New Point(320, 265), .Size = New Size(280, 22), .Text = "Errors: 0", .Font = New Font("Segoe UI", 10), .ForeColor = TemaEscuro.TextoMutado}
 
         Me.txtImpErros = New TextBox()
         Me.txtImpErros.Location = New Point(20, 340)
@@ -347,18 +485,41 @@ Partial Class frmPrincipal
                                              lblImpStatus, lblImpInseridos, lblImpAtualizados,
                                              lblImpAbas, lblImpLinhas, lblImpErros, txtImpErros})
 
+        ' --- ABA INVOICE ---
+        Dim pnlInvoice As New Panel() With {
+            .Dock = DockStyle.Fill,
+            .BackColor = TemaEscuro.Fundo
+        }
+
+        Dim lblInvoice As New Label() With {
+            .Text = "Invoice",
+            .Location = New Point(30, 30),
+            .AutoSize = True,
+            .Font = New Font("Segoe UI", 14, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent
+        }
+
+        Me.btnInvoice = New Button()
+        Me.btnInvoice.Text = "Open Invoice"
+        Me.btnInvoice.Location = New Point(30, 80)
+        Me.btnInvoice.Size = New Size(160, 34)
+
+        pnlInvoice.Controls.Add(lblInvoice)
+        pnlInvoice.Controls.Add(btnInvoice)
+        Me.tabInvoice.Controls.Add(pnlInvoice)
+
         ' ═════════════════════════════════════════════════════════════
         ' MONTAGEM DO TABCONTROL
         ' ═════════════════════════════════════════════════════════════
-        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabEstoque, tabRemessas, tabUpgrades, tabImportacao})
-        Me.tabPrincipal.SelectedIndex = 1
+        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabImportacao, tabInvoice})
+        Me.tabPrincipal.SelectedIndex = 0
         Me.pnlContainer.Controls.Add(tabPrincipal)
 
         ' ═════════════════════════════════════════════════════════════
         ' STATUS BAR
         ' ═════════════════════════════════════════════════════════════
         Me.lblStatus = New Label()
-        Me.lblStatus.Text = "Conectado ao Oracle"
+        Me.lblStatus.Text = "Connected to Oracle"
         Me.lblStatus.Dock = DockStyle.Bottom
         Me.lblStatus.Height = 22
         Me.lblStatus.TextAlign = ContentAlignment.MiddleLeft

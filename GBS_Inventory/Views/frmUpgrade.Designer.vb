@@ -29,7 +29,7 @@ Partial Class frmUpgrade
 
         Me.SuspendLayout()
 
-        Me.Text = "Registrar Upgrade"
+        Me.Text = "Register Upgrade"
         Me.Size = New Size(600, 560)
         Me.StartPosition = FormStartPosition.CenterParent
         Me.BackColor = TemaEscuro.Fundo
@@ -40,7 +40,7 @@ Partial Class frmUpgrade
 
         ' Título
         Me.lblTitulo = New Label()
-        Me.lblTitulo.Text = "Novo Upgrade de Componente"
+        Me.lblTitulo.Text = "New Component Upgrade"
         Me.lblTitulo.Font = New Font("Segoe UI", 13, FontStyle.Bold)
         Me.lblTitulo.ForeColor = TemaEscuro.Accent
         Me.lblTitulo.Location = New Point(20, 15)
@@ -55,7 +55,7 @@ Partial Class frmUpgrade
 
         ' Componente
         Me.lblComponente = New Label()
-        Me.lblComponente.Text = "Componente *"
+        Me.lblComponente.Text = "Component *"
         Me.lblComponente.Location = New Point(20, 85)
         Me.lblComponente.AutoSize = True
         Me.lblComponente.ForeColor = TemaEscuro.TextoMutado
@@ -67,7 +67,7 @@ Partial Class frmUpgrade
 
         ' Origem
         Me.lblOrigem = New Label()
-        Me.lblOrigem.Text = "Origem da peça *"
+        Me.lblOrigem.Text = "Part Source *"
         Me.lblOrigem.Location = New Point(240, 85)
         Me.lblOrigem.AutoSize = True
         Me.lblOrigem.ForeColor = TemaEscuro.TextoMutado
@@ -79,7 +79,7 @@ Partial Class frmUpgrade
 
         ' Custo
         Me.lblCusto = New Label()
-        Me.lblCusto.Text = "Custo (USD)"
+        Me.lblCusto.Text = "Cost (USD)"
         Me.lblCusto.Location = New Point(460, 85)
         Me.lblCusto.AutoSize = True
         Me.lblCusto.ForeColor = TemaEscuro.TextoMutado
@@ -92,7 +92,7 @@ Partial Class frmUpgrade
 
         ' Valor antes
         Me.lblValorAntes = New Label()
-        Me.lblValorAntes.Text = "Valor ANTES (ex: 8 GB)"
+        Me.lblValorAntes.Text = "Value BEFORE (e.g.: 8 GB)"
         Me.lblValorAntes.Location = New Point(20, 145)
         Me.lblValorAntes.AutoSize = True
         Me.lblValorAntes.ForeColor = TemaEscuro.TextoMutado
@@ -103,7 +103,7 @@ Partial Class frmUpgrade
 
         ' Valor depois
         Me.lblValorDepois = New Label()
-        Me.lblValorDepois.Text = "Valor DEPOIS (ex: 16 GB) *"
+        Me.lblValorDepois.Text = "Value AFTER (e.g.: 16 GB) *"
         Me.lblValorDepois.Location = New Point(300, 145)
         Me.lblValorDepois.AutoSize = True
         Me.lblValorDepois.ForeColor = TemaEscuro.Accent
@@ -114,7 +114,7 @@ Partial Class frmUpgrade
 
         ' Part Serial
         Me.lblPartSerial = New Label()
-        Me.lblPartSerial.Text = "Serial da peça (se aplicável)"
+        Me.lblPartSerial.Text = "Part Serial (if applicable)"
         Me.lblPartSerial.Location = New Point(20, 205)
         Me.lblPartSerial.AutoSize = True
         Me.lblPartSerial.ForeColor = TemaEscuro.TextoMutado
@@ -125,7 +125,7 @@ Partial Class frmUpgrade
 
         ' Técnico
         Me.lblTecnico = New Label()
-        Me.lblTecnico.Text = "Técnico responsável"
+        Me.lblTecnico.Text = "Technician"
         Me.lblTecnico.Location = New Point(300, 205)
         Me.lblTecnico.AutoSize = True
         Me.lblTecnico.ForeColor = TemaEscuro.TextoMutado
@@ -136,7 +136,7 @@ Partial Class frmUpgrade
 
         ' Notas
         Me.lblNotas = New Label()
-        Me.lblNotas.Text = "Observações"
+        Me.lblNotas.Text = "Notes"
         Me.lblNotas.Location = New Point(20, 265)
         Me.lblNotas.AutoSize = True
         Me.lblNotas.ForeColor = TemaEscuro.TextoMutado
@@ -149,12 +149,12 @@ Partial Class frmUpgrade
 
         ' Botões
         Me.btnCancelar = New Button()
-        Me.btnCancelar.Text = "Cancelar"
+        Me.btnCancelar.Text = "Cancel"
         Me.btnCancelar.Location = New Point(320, 440)
         Me.btnCancelar.Size = New Size(110, 35)
 
         Me.btnSalvar = New Button()
-        Me.btnSalvar.Text = "Salvar Upgrade"
+        Me.btnSalvar.Text = "Save Upgrade"
         Me.btnSalvar.Location = New Point(440, 440)
         Me.btnSalvar.Size = New Size(120, 35)
         Me.btnSalvar.Font = New Font("Segoe UI", 9, FontStyle.Bold)

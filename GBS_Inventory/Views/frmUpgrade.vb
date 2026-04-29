@@ -19,7 +19,7 @@ Public Class frmUpgrade
         vIdEquipamento = pIdEquipamento
         sInternalUID   = pInternalUID
 
-        TemaEscuro.aplicar(Me)
+        TemaEscuro.aplicarHelius(Me)
 
         lblUID.Text = "UID: " & pInternalUID
 
@@ -32,7 +32,7 @@ Public Class frmUpgrade
         cboComponente.SelectedIndex = 0
 
         cboOrigem.Items.Clear()
-        cboOrigem.Items.AddRange({"REMESSA_EXTRA", "NEW_PURCHASE", "TRANSFERRED", "WARRANTY", "OTHER"})
+        cboOrigem.Items.AddRange({"SHIPMENT_SURPLUS", "NEW_PURCHASE", "TRANSFERRED", "WARRANTY", "OTHER"})
         cboOrigem.SelectedIndex = 0
 
     End Sub
@@ -40,7 +40,7 @@ Public Class frmUpgrade
     Private Sub btnSalvar_Click(sender As Object, e As EventArgs) Handles btnSalvar.Click
 
         If String.IsNullOrWhiteSpace(txtValorDepois.Text) Then
-            MessageBox.Show("Preencha o VALOR DEPOIS (ex: 16 GB, 512 GB).", "Atenção",
+            MessageBox.Show("Fill in the VALUE AFTER (e.g.: 16 GB, 512 GB).", "Warning",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning)
             txtValorDepois.Focus()
             Return
@@ -68,7 +68,7 @@ Public Class frmUpgrade
 
             oController.incluir(up)
 
-            MessageBox.Show("Upgrade registrado com sucesso!", "Sucesso",
+            MessageBox.Show("Upgrade registered successfully!", "Success",
                             MessageBoxButtons.OK, MessageBoxIcon.Information)
 
             Me.DialogResult = DialogResult.OK
@@ -76,7 +76,7 @@ Public Class frmUpgrade
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro ao salvar upgrade: " & ex.Message, "Erro",
+            MessageBox.Show("Error saving upgrade: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try

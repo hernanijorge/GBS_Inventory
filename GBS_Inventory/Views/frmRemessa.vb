@@ -2,16 +2,18 @@ Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Data
 Imports System.Diagnostics
+Imports System.Globalization
 Imports GBS_Inventory.Models
 
 ''' <summary>
 ''' Formulário de gerenciamento de Remessas (FedEx, UPS, USPS).
 ''' Lista remessas ativas e permite criar novas, atualizar status e abrir URL de rastreamento.
 ''' </summary>
-Public Class frmRemessa
+Partial Public Class frmRemessa
 
     Private oController As RemessaController
     Private vIdRemessaSelecionada As Integer = 0
+    Private vItensParaIncluir As New List(Of ItemRemessa)()
 
     Public Sub New()
 
@@ -19,7 +21,7 @@ Public Class frmRemessa
 
         oController = New RemessaController()
 
-        TemaEscuro.aplicar(Me)
+        TemaEscuro.aplicarHelius(Me)
 
     End Sub
 
@@ -36,7 +38,9 @@ Public Class frmRemessa
                                        "EXCEPTION", "RETURNED"})
         cboNovoStatus.SelectedIndex = 0
 
+        configurarGridItens()
         carregarRemessas()
+        atualizarGridItens()
 
     End Sub
 
@@ -48,7 +52,7 @@ Public Class frmRemessa
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
                 dgvRemessas.DataSource = ds.Tables(0)
-                lblTotal.Text = "Total ativas: " & ds.Tables(0).Rows.Count.ToString()
+                lblTotal.Text = "Active total: " & ds.Tables(0).Rows.Count.ToString()
             End If
 
         Catch ex As Exception
@@ -67,7 +71,7 @@ Public Class frmRemessa
         Dim row As DataGridViewRow = dgvRemessas.Rows(e.RowIndex)
         vIdRemessaSelecionada = CInt(row.Cells("ID_REMESSA").Value)
 
-        lblSelecionada.Text = $"Selecionada: {row.Cells("REMESSA_REF").Value} · Tracking: {row.Cells("TRACKING_NUMBER").Value}"
+        lblSelecionada.Text = $"Selected: {row.Cells("REMESSA_REF").Value} - Tracking: {row.Cells("TRACKING_NUMBER").Value}"
 
         btnAtualizarStatus.Enabled = True
         btnAbrirRastreio.Enabled   = True
@@ -77,7 +81,7 @@ Public Class frmRemessa
     Private Sub btnNovaRemessa_Click(sender As Object, e As EventArgs) Handles btnNovaRemessa.Click
 
         If String.IsNullOrWhiteSpace(txtTracking.Text) OrElse String.IsNullOrWhiteSpace(txtRecipientName.Text) Then
-            MessageBox.Show("Preencha Tracking Number e Nome do Destinatário.", "Atenção",
+            MessageBox.Show("Fill in Tracking Number and Recipient Name.", "Warning",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning)
             Return
         End If
@@ -108,20 +112,108 @@ Public Class frmRemessa
 
             Dim sRefGerada As String = ""
 
-            Dim idGerado As Integer = oController.incluirRemessa(r, New List(Of ItemRemessa)(), sRefGerada)
+            Dim idGerado As Integer = oController.incluirRemessa(r, vItensParaIncluir, sRefGerada)
 
-            MessageBox.Show($"Remessa criada!{vbCrLf}Ref: {sRefGerada}{vbCrLf}ID: {idGerado}",
-                            "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Shipment created!{vbCrLf}Ref: {sRefGerada}{vbCrLf}ID: {idGerado}",
+                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
             limparCampos()
             carregarRemessas()
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro ao criar remessa: " & ex.Message, "Erro",
+            MessageBox.Show("Error creating shipment: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try
+
+    End Sub
+
+    Private Sub btnBuscarEquip_Click(sender As Object, e As EventArgs) Handles btnBuscarEquip.Click
+
+        Try
+
+            Dim ds As DataSet = oController.buscarEquipamentosDisponiveis(txtBuscarEquip.Text.Trim())
+
+            If ds Is Nothing OrElse ds.Tables.Count = 0 Then
+                dgvResultadoBusca.DataSource = Nothing
+                Return
+            End If
+
+            dgvResultadoBusca.DataSource = ds.Tables(0)
+            dgvResultadoBusca.ReadOnly = True
+            dgvResultadoBusca.MultiSelect = False
+            dgvResultadoBusca.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            dgvResultadoBusca.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            If dgvResultadoBusca.Columns.Contains("ID_EQUIPAMENTO") Then
+                dgvResultadoBusca.Columns("ID_EQUIPAMENTO").Visible = False
+            End If
+
+        Catch ex As Exception
+
+            MessageBox.Show("Error searching equipment: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+        End Try
+
+    End Sub
+
+    Private Sub btnAdicionarItem_Click(sender As Object, e As EventArgs) Handles btnAdicionarItem.Click
+
+        If dgvResultadoBusca.SelectedRows.Count = 0 Then
+            MessageBox.Show("Select an equipment in the search results.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim row As DataGridViewRow = dgvResultadoBusca.SelectedRows(0)
+        Dim idEquipamento As Integer = ObterInt(row.Cells("ID_EQUIPAMENTO").Value)
+
+        If idEquipamento <= 0 Then
+            MessageBox.Show("Invalid equipment.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        If ItemJaSelecionado(idEquipamento) Then
+            MessageBox.Show("This equipment has already been added.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim item As New ItemRemessa() With {
+            .IdEquipamento = idEquipamento,
+            .InternalUID = ObterTextoCelula(row, "INTERNAL_UID"),
+            .Manufacturer = ObterTextoCelula(row, "MARCA"),
+            .Model = ObterTextoCelula(row, "MODEL"),
+            .ConditionAtShip = "GOOD",
+            .SalePriceUsd = ParseDecimalNullable(txtPrecoItem.Text),
+            .Notes = txtNotaItem.Text.Trim()
+        }
+
+        vItensParaIncluir.Add(item)
+        atualizarGridItens()
+
+        txtPrecoItem.Clear()
+        txtNotaItem.Clear()
+
+    End Sub
+
+    Private Sub btnRemoverItem_Click(sender As Object, e As EventArgs) Handles btnRemoverItem.Click
+
+        If dgvItensSelecionados.SelectedRows.Count = 0 Then
+            MessageBox.Show("Select an item to remove.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim idx As Integer = dgvItensSelecionados.SelectedRows(0).Index
+
+        If idx >= 0 AndAlso idx < vItensParaIncluir.Count Then
+            vItensParaIncluir.RemoveAt(idx)
+            atualizarGridItens()
+        End If
 
     End Sub
 
@@ -140,14 +232,14 @@ Public Class frmRemessa
 
             oController.atualizarStatus(vIdRemessaSelecionada, sNovoStatus, dataEntrega)
 
-            MessageBox.Show("Status atualizado com sucesso!", "Sucesso",
+            MessageBox.Show("Status updated successfully!", "Success",
                             MessageBoxButtons.OK, MessageBoxIcon.Information)
 
             carregarRemessas()
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro ao atualizar status: " & ex.Message, "Erro",
+            MessageBox.Show("Error updating status: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try
@@ -171,7 +263,7 @@ Public Class frmRemessa
             }
 
             If String.IsNullOrEmpty(r.UrlRastreio) Then
-                MessageBox.Show("Carrier não suportado para rastreamento automático.", "Atenção",
+                MessageBox.Show("Carrier not supported for automatic tracking.", "Warning",
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
@@ -180,7 +272,7 @@ Public Class frmRemessa
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro ao abrir rastreio: " & ex.Message, "Erro",
+            MessageBox.Show("Error opening tracking: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try
@@ -195,10 +287,143 @@ Public Class frmRemessa
         txtPeso.Clear()
         txtCustoEnvio.Clear()
         txtNotes.Clear()
+        txtBuscarEquip.Clear()
+        txtPrecoItem.Clear()
+        txtNotaItem.Clear()
+        dgvResultadoBusca.DataSource = Nothing
+        vItensParaIncluir.Clear()
+        atualizarGridItens()
     End Sub
 
     Private Sub btnFechar_Click(sender As Object, e As EventArgs) Handles btnFechar.Click
         Me.Close()
     End Sub
+
+    Private Sub configurarGridItens()
+
+        dgvItensSelecionados.AutoGenerateColumns = False
+        dgvItensSelecionados.Columns.Clear()
+        dgvItensSelecionados.ReadOnly = True
+        dgvItensSelecionados.MultiSelect = False
+        dgvItensSelecionados.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvItensSelecionados.AllowUserToAddRows = False
+        dgvItensSelecionados.AllowUserToDeleteRows = False
+        dgvItensSelecionados.AllowUserToResizeRows = False
+
+        Dim colUid As New DataGridViewTextBoxColumn() With {
+            .Name = "COL_UID",
+            .HeaderText = "UID",
+            .Width = 140
+        }
+
+        Dim colMarca As New DataGridViewTextBoxColumn() With {
+            .Name = "COL_MARCA",
+            .HeaderText = "Brand",
+            .Width = 120
+        }
+
+        Dim colModelo As New DataGridViewTextBoxColumn() With {
+            .Name = "COL_MODELO",
+            .HeaderText = "Model",
+            .Width = 160
+        }
+
+        Dim colCondicao As New DataGridViewTextBoxColumn() With {
+            .Name = "COL_CONDICAO",
+            .HeaderText = "Condition",
+            .Width = 100
+        }
+
+        Dim colUsd As New DataGridViewTextBoxColumn() With {
+            .Name = "COL_USD",
+            .HeaderText = "USD",
+            .Width = 100,
+            .DefaultCellStyle = New DataGridViewCellStyle() With {
+                .Alignment = DataGridViewContentAlignment.MiddleRight,
+                .Format = "0.00"
+            }
+        }
+
+        dgvItensSelecionados.Columns.AddRange({colUid, colMarca, colModelo, colCondicao, colUsd})
+        dgvItensSelecionados.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+        dgvResultadoBusca.ReadOnly = True
+        dgvResultadoBusca.MultiSelect = False
+        dgvResultadoBusca.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvResultadoBusca.AllowUserToAddRows = False
+        dgvResultadoBusca.AllowUserToDeleteRows = False
+        dgvResultadoBusca.AllowUserToResizeRows = False
+
+    End Sub
+
+    Private Sub atualizarGridItens()
+
+        dgvItensSelecionados.Rows.Clear()
+
+        For Each item As ItemRemessa In vItensParaIncluir
+            dgvItensSelecionados.Rows.Add(item.InternalUID,
+                                          item.Manufacturer,
+                                          item.Model,
+                                          item.ConditionAtShip,
+                                          If(item.SalePriceUsd.HasValue, item.SalePriceUsd.Value, 0D))
+        Next
+
+        lblContadorItens.Text = "Items: " & vItensParaIncluir.Count.ToString()
+
+    End Sub
+
+    Private Function ItemJaSelecionado(pIdEquipamento As Integer) As Boolean
+
+        For Each item As ItemRemessa In vItensParaIncluir
+            If item.IdEquipamento = pIdEquipamento Then
+                Return True
+            End If
+        Next
+
+        Return False
+
+    End Function
+
+    Private Function ParseDecimalNullable(pValor As String) As Decimal?
+
+        If String.IsNullOrWhiteSpace(pValor) Then
+            Return Nothing
+        End If
+
+        Dim s As String = pValor.Trim().Replace(",", ".")
+        Dim v As Decimal
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, v) Then
+            Return v
+        End If
+
+        Return Nothing
+
+    End Function
+
+    Private Function ObterTextoCelula(pRow As DataGridViewRow, pColuna As String) As String
+
+        If pRow Is Nothing OrElse pRow.Cells Is Nothing Then Return ""
+        If Not pRow.DataGridView.Columns.Contains(pColuna) Then Return ""
+
+        Dim valor As Object = pRow.Cells(pColuna).Value
+        If valor Is Nothing OrElse IsDBNull(valor) Then Return ""
+
+        Return valor.ToString()
+
+    End Function
+
+    Private Function ObterInt(pValor As Object) As Integer
+
+        If pValor Is Nothing OrElse IsDBNull(pValor) Then Return 0
+
+        Dim i As Integer
+        If Integer.TryParse(pValor.ToString(), i) Then
+            Return i
+        End If
+
+        Return 0
+
+    End Function
 
 End Class

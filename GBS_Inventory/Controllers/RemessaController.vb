@@ -112,6 +112,10 @@ Public Class RemessaController
         Return oLeitura.selecionarItensRemessa(pIdRemessa)
     End Function
 
+    Public Function buscarEquipamentosDisponiveis(pPesquisa As String) As DataSet
+        Return oLeitura.selecionarEquipamentosDisponiveis(pPesquisa)
+    End Function
+
 #End Region
 
 End Class

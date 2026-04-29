@@ -1,12 +1,14 @@
 Imports Oracle.ManagedDataAccess.Client
-Imports Oracle.ManagedDataAccess.Types
 Imports System.Configuration
+Imports System.Data
+Imports System.Text
+Imports System.Text.RegularExpressions
 Imports GBS_Inventory.OracleHelper
 Imports GBS_Inventory.Models
 
 ''' <summary>
-''' Classe de gravação de Upgrades (RAM, SSD, etc)
-''' 
+''' Classe de gravacao de upgrades.
+''' Ajustada para a assinatura atual do PACK_UPGRADE no Oracle.
 ''' </summary>
 Public Class clsGravacaoUpgrade
 
@@ -39,7 +41,7 @@ Public Class clsGravacaoUpgrade
 
 #End Region
 
-#Region "Transação"
+#Region "Transacao"
 
     Public Function beginTransacao() As Boolean
 
@@ -59,8 +61,6 @@ Public Class clsGravacaoUpgrade
 
             Throw New Exception(ex.ToString)
 
-            Return False
-
         End Try
 
     End Function
@@ -76,8 +76,6 @@ Public Class clsGravacaoUpgrade
             Return True
 
         Catch ex As Exception
-
-            Return False
 
             Throw New Exception(ex.ToString)
 
@@ -97,8 +95,6 @@ Public Class clsGravacaoUpgrade
 
         Catch ex As Exception
 
-            Return False
-
             Throw New Exception(ex.ToString)
 
         End Try
@@ -107,42 +103,97 @@ Public Class clsGravacaoUpgrade
 
 #End Region
 
-#Region "Métodos Transacionais"
+#Region "Metodos Transacionais"
+
+    Private Function ExtrairNumeroInteiro(pValor As String) As Integer
+
+        If String.IsNullOrWhiteSpace(pValor) Then
+            Return 0
+        End If
+
+        Dim vMatch As Match = Regex.Match(pValor, "\d+")
+
+        If Not vMatch.Success Then
+            Return 0
+        End If
+
+        Dim vNumero As Integer
+        Integer.TryParse(vMatch.Value, vNumero)
+        Return vNumero
+
+    End Function
+
+    Private Function MontarObservacao(pUpgrade As Upgrade) As String
+
+        Dim vSb As New StringBuilder()
+
+        If Not String.IsNullOrWhiteSpace(pUpgrade.Notes) Then
+            vSb.Append(pUpgrade.Notes.Trim())
+        End If
+
+        If Not String.IsNullOrWhiteSpace(pUpgrade.PartSerial) Then
+            If vSb.Length > 0 Then vSb.Append(" | ")
+            vSb.Append("PartSerial: ").Append(pUpgrade.PartSerial.Trim())
+        End If
+
+        If Not String.IsNullOrWhiteSpace(pUpgrade.SourceOrigem) Then
+            If vSb.Length > 0 Then vSb.Append(" | ")
+            vSb.Append("Source: ").Append(pUpgrade.SourceOrigem.Trim())
+        End If
+
+        If pUpgrade.CostUsd.HasValue Then
+            If vSb.Length > 0 Then vSb.Append(" | ")
+            vSb.Append("CostUSD: ").Append(pUpgrade.CostUsd.Value.ToString("0.00"))
+        End If
+
+        Return If(vSb.Length = 0, Nothing, vSb.ToString())
+
+    End Function
 
     Public Function incluirUpgrade(pUpgrade As Upgrade) As Integer
 
-        Dim oPar(10) As OracleParameter
+        Dim oPar(7) As OracleParameter
+        Dim vRamAnterior As Integer = 0
+        Dim vRamNova As Integer = 0
+        Dim vStorageAnterior As Integer = 0
+        Dim vStorageNova As Integer = 0
+        Dim vTipo As String = If(pUpgrade.ComponentType, String.Empty).Trim().ToUpperInvariant()
+        Dim vObservacao As String = MontarObservacao(pUpgrade)
 
-        oPar(0)  = New OracleParameter("V_ID_EQUIPAMENTO", OracleDbType.Int32,    ParameterDirection.Input)
-        oPar(1)  = New OracleParameter("V_INTERNAL_UID",   OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(2)  = New OracleParameter("V_COMPONENT_TYPE", OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(3)  = New OracleParameter("V_VALUE_BEFORE",   OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(4)  = New OracleParameter("V_VALUE_AFTER",    OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(5)  = New OracleParameter("V_PART_SERIAL",    OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(6)  = New OracleParameter("V_SOURCE_ORIGEM",  OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(7)  = New OracleParameter("V_COST_USD",       OracleDbType.Decimal,  ParameterDirection.Input)
-        oPar(8)  = New OracleParameter("V_TECHNICIAN",     OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(9)  = New OracleParameter("V_NOTES",          OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(10) = New OracleParameter("V_ID",             OracleDbType.Int32,    ParameterDirection.Output)
+        Select Case vTipo
+            Case "RAM"
+                vRamAnterior = ExtrairNumeroInteiro(pUpgrade.ValueBefore)
+                vRamNova = ExtrairNumeroInteiro(pUpgrade.ValueAfter)
 
-        Dim vIdGerado As OracleDecimal
+            Case "SSD", "HDD", "STORAGE"
+                vStorageAnterior = ExtrairNumeroInteiro(pUpgrade.ValueBefore)
+                vStorageNova = ExtrairNumeroInteiro(pUpgrade.ValueAfter)
+
+            Case Else
+                ' Componentes nao mapeados ainda nao alteram RAM/STORAGE no banco.
+        End Select
+
+        oPar(0) = New OracleParameter("P_ID_EQUIPAMENTO", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(1) = New OracleParameter("P_TIPO_UPGRADE", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(2) = New OracleParameter("P_RAM_ANTERIOR_GB", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(3) = New OracleParameter("P_RAM_NOVA_GB", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(4) = New OracleParameter("P_STORAGE_ANTERIOR_GB", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(5) = New OracleParameter("P_STORAGE_NOVO_GB", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(6) = New OracleParameter("P_TECNICO", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(7) = New OracleParameter("P_OBSERVACAO", OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
             oPar(0).Value = pUpgrade.IdEquipamento
-            oPar(1).Value = pUpgrade.InternalUID
-            oPar(2).Value = pUpgrade.ComponentType
-            oPar(3).Value = If(String.IsNullOrEmpty(pUpgrade.ValueBefore), DBNull.Value, CObj(pUpgrade.ValueBefore))
-            oPar(4).Value = pUpgrade.ValueAfter
-            oPar(5).Value = If(String.IsNullOrEmpty(pUpgrade.PartSerial), DBNull.Value, CObj(pUpgrade.PartSerial))
-            oPar(6).Value = pUpgrade.SourceOrigem
-            oPar(7).Value = If(pUpgrade.CostUsd.HasValue, CObj(pUpgrade.CostUsd.Value), DBNull.Value)
-            oPar(8).Value = If(String.IsNullOrEmpty(pUpgrade.Technician), DBNull.Value, CObj(pUpgrade.Technician))
-            oPar(9).Value = If(String.IsNullOrEmpty(pUpgrade.Notes), DBNull.Value, CObj(pUpgrade.Notes))
+            oPar(1).Value = vTipo
+            oPar(2).Value = vRamAnterior
+            oPar(3).Value = vRamNova
+            oPar(4).Value = vStorageAnterior
+            oPar(5).Value = vStorageNova
+            oPar(6).Value = If(String.IsNullOrWhiteSpace(pUpgrade.Technician), DBNull.Value, CObj(pUpgrade.Technician.Trim()))
+            oPar(7).Value = If(String.IsNullOrWhiteSpace(vObservacao), DBNull.Value, CObj(vObservacao))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_UPGRADE.PROC_INSERT_UPGRADE", oPar)
-
-            vIdGerado = CType(oPar(10).Value, OracleDecimal)
 
         Catch ex As Exception
 
@@ -150,7 +201,7 @@ Public Class clsGravacaoUpgrade
 
         End Try
 
-        Return CInt(vIdGerado.Value)
+        Return 0
 
     End Function
 

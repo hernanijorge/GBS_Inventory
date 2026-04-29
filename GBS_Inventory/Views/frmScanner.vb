@@ -16,7 +16,7 @@ Public Class frmScanner
         InitializeComponent()
         oController        = New EquipamentoController()
         oUpgradeController = New UpgradeController()
-        TemaEscuro.aplicar(Me)
+        TemaEscuro.aplicarHelius(Me)
     End Sub
 
     Private Sub frmScanner_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -38,7 +38,7 @@ Public Class frmScanner
 
         Dim sUID As String = txtUID.Text.Trim()
         If String.IsNullOrEmpty(sUID) Then
-            lblResultado.Text = "⚠ Digite ou escaneie um Internal UID"
+            lblResultado.Text = "⚠ Enter or scan an Internal UID"
             lblResultado.ForeColor = TemaEscuro.Vermelho
             limparDetalhes()
             Return
@@ -53,21 +53,24 @@ Public Class frmScanner
                 Dim row As DataRow = ds.Tables(0).Rows(0)
                 vIdEquipamentoAtual = CInt(row("ID_EQUIPAMENTO"))
 
-                lblResultado.Text     = "✓ Equipamento encontrado"
+                lblResultado.Text     = "✓ Equipment found"
                 lblResultado.ForeColor = TemaEscuro.Accent
 
-                lblManufacturer.Text = row("MANUFACTURER").ToString() & " " & row("MODEL").ToString()
+                lblManufacturer.Text = row("MARCA").ToString() & " " & row("MODEL").ToString()
                 lblSerial.Text       = "Serial: "    & row("SERIAL_NUMBER").ToString()
-                lblCPU.Text          = "CPU: "       & row("CPU_MODEL").ToString()  & " · " & row("CPU_SPEED_GHZ").ToString() & " GHz"
-                lblRAM.Text          = "Memória: "   & row("RAM_GB").ToString()
-                lblStorage.Text      = "Storage: "   & row("STORAGE_GB").ToString() & " " & row("HARD_DRIVE_TYPE").ToString()
-                lblCondition.Text    = "Condição: "  & row("CONDITION_STATUS").ToString()
+                lblCPU.Text          = "CPU: "       & row("PROCESSADOR").ToString()
+                lblRAM.Text          = "Memory: "    & row("RAM_GB").ToString() & " GB"
+                lblStorage.Text      = "Storage: "   & row("STORAGE_GB").ToString() & " GB"
+                lblCondition.Text    = ""
                 lblStatus.Text       = "Status: "    & row("STATUS_DESCRICAO").ToString()
 
                 Dim upgrades As Integer = 0
-                If Not IsDBNull(row("TOTAL_UPGRADES")) Then
-                    upgrades = CInt(row("TOTAL_UPGRADES"))
-                End If
+                Try
+                    If Not IsDBNull(row("TOTAL_UPGRADES")) Then
+                        upgrades = CInt(row("TOTAL_UPGRADES"))
+                    End If
+                Catch
+                End Try
                 lblUpgrades.Text     = "Upgrades: " & upgrades.ToString()
 
                 ' Carrega grid de upgrades
@@ -77,7 +80,7 @@ Public Class frmScanner
 
             Else
 
-                lblResultado.Text = "✗ UID não encontrado: " & sUID
+                lblResultado.Text = "✗ UID not found: " & sUID
                 lblResultado.ForeColor = TemaEscuro.Vermelho
                 limparDetalhes()
 
@@ -87,7 +90,7 @@ Public Class frmScanner
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro na busca: " & ex.Message, "Erro",
+            MessageBox.Show("Search error: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try

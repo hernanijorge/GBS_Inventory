@@ -47,6 +47,17 @@ Public Class TemaEscuro
 
 #End Region
 
+#Region "Paleta Helius"
+
+    Public Shared ReadOnly HeliusFundo        As Color = Color.FromArgb(60, 62, 66)
+    Public Shared ReadOnly HeliusSurface      As Color = Color.FromArgb(68, 70, 74)
+    Public Shared ReadOnly HeliusSurfaceClaro As Color = Color.FromArgb(78, 80, 84)
+    Public Shared ReadOnly HeliusBorda        As Color = Color.FromArgb(126, 130, 136)
+    Public Shared ReadOnly HeliusTexto        As Color = Color.FromArgb(230, 232, 235)
+    Public Shared ReadOnly HeliusTextoMutado  As Color = Color.FromArgb(196, 199, 203)
+
+#End Region
+
 #Region "Aplicar tema ao formulário"
 
     ''' <summary>
@@ -59,6 +70,19 @@ Public Class TemaEscuro
         pForm.Font      = New Font("Segoe UI", 9)
 
         aplicarControles(pForm.Controls)
+
+    End Sub
+
+    ''' <summary>
+    ''' Aplica variante visual inspirada no Helius (cinza industrial).
+    ''' </summary>
+    Public Shared Sub aplicarHelius(pForm As Form)
+
+        pForm.BackColor = HeliusFundo
+        pForm.ForeColor = HeliusTexto
+        pForm.Font = New Font("Segoe UI", 9)
+
+        aplicarControlesHelius(pForm.Controls)
 
     End Sub
 
@@ -109,6 +133,53 @@ Public Class TemaEscuro
 
     End Sub
 
+    Private Shared Sub aplicarControlesHelius(pCtrls As Control.ControlCollection)
+
+        For Each ctrl As Control In pCtrls
+
+            Select Case True
+
+                Case TypeOf ctrl Is Panel
+                    ctrl.BackColor = HeliusSurface
+                    ctrl.ForeColor = HeliusTexto
+
+                Case TypeOf ctrl Is Label
+                    ctrl.BackColor = Color.Transparent
+                    ctrl.ForeColor = HeliusTexto
+
+                Case TypeOf ctrl Is Button
+                    estilizarBotaoHelius(CType(ctrl, Button))
+
+                Case TypeOf ctrl Is TextBox
+                    estilizarTextBoxHelius(CType(ctrl, TextBox))
+
+                Case TypeOf ctrl Is ComboBox
+                    estilizarComboBoxHelius(CType(ctrl, ComboBox))
+
+                Case TypeOf ctrl Is DataGridView
+                    estilizarGridHelius(CType(ctrl, DataGridView))
+
+                Case TypeOf ctrl Is TabControl
+                    estilizarTabs(CType(ctrl, TabControl))
+
+                Case TypeOf ctrl Is GroupBox
+                    ctrl.BackColor = HeliusSurface
+                    ctrl.ForeColor = HeliusTexto
+
+                Case TypeOf ctrl Is CheckBox, TypeOf ctrl Is RadioButton
+                    ctrl.BackColor = Color.Transparent
+                    ctrl.ForeColor = HeliusTexto
+
+            End Select
+
+            If ctrl.HasChildren Then
+                aplicarControlesHelius(ctrl.Controls)
+            End If
+
+        Next
+
+    End Sub
+
 #End Region
 
 #Region "Estilizadores individuais"
@@ -152,6 +223,76 @@ Public Class TemaEscuro
         pTxt.ForeColor   = Texto
         pTxt.BorderStyle = BorderStyle.FixedSingle
         pTxt.Font        = New Font("Segoe UI", 9)
+
+    End Sub
+
+    Public Shared Sub estilizarBotaoHelius(pBtn As Button)
+
+        pBtn.FlatStyle = FlatStyle.Flat
+        pBtn.BackColor = HeliusSurface
+        pBtn.ForeColor = HeliusTexto
+        pBtn.FlatAppearance.BorderColor = HeliusBorda
+        pBtn.FlatAppearance.BorderSize = 1
+        pBtn.FlatAppearance.MouseOverBackColor = HeliusSurfaceClaro
+        pBtn.FlatAppearance.MouseDownBackColor = Color.FromArgb(88, 90, 95)
+        pBtn.Font = New Font("Segoe UI", 9, FontStyle.Regular)
+        pBtn.Cursor = Cursors.Hand
+        pBtn.Height = Math.Max(pBtn.Height, 28)
+
+    End Sub
+
+    Public Shared Sub estilizarTextBoxHelius(pTxt As TextBox)
+
+        pTxt.BackColor = HeliusSurfaceClaro
+        pTxt.ForeColor = HeliusTexto
+        pTxt.BorderStyle = BorderStyle.FixedSingle
+        pTxt.Font = New Font("Segoe UI", 9)
+
+    End Sub
+
+    Public Shared Sub estilizarComboBoxHelius(pCbo As ComboBox)
+
+        pCbo.BackColor = HeliusSurfaceClaro
+        pCbo.ForeColor = HeliusTexto
+        pCbo.FlatStyle = FlatStyle.Flat
+        pCbo.Font = New Font("Segoe UI", 9)
+
+    End Sub
+
+    Public Shared Sub estilizarGridHelius(pGrid As DataGridView)
+
+        With pGrid
+            .BackgroundColor = HeliusSurface
+            .BorderStyle = BorderStyle.None
+            .GridColor = HeliusBorda
+            .EnableHeadersVisualStyles = False
+            .ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+            .CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
+
+            .ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(74, 76, 80)
+            .ColumnHeadersDefaultCellStyle.ForeColor = HeliusTexto
+            .ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+            .ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(74, 76, 80)
+            .ColumnHeadersHeight = 32
+
+            .DefaultCellStyle.BackColor = HeliusSurface
+            .DefaultCellStyle.ForeColor = HeliusTexto
+            .DefaultCellStyle.SelectionBackColor = Color.FromArgb(96, 98, 104)
+            .DefaultCellStyle.SelectionForeColor = HeliusTexto
+            .DefaultCellStyle.Font = New Font("Segoe UI", 9)
+
+            .AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(63, 65, 70)
+
+            .RowTemplate.Height = 26
+            .RowHeadersVisible = False
+            .AllowUserToAddRows = False
+            .AllowUserToDeleteRows = False
+            .AllowUserToResizeRows = False
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            .MultiSelect = False
+            .ReadOnly = True
+            .AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        End With
 
     End Sub
 
