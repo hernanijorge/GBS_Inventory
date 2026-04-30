@@ -246,6 +246,41 @@ Public Class frmPrincipal
 
         dgvEstoque.DataSource = dtFiltrada
         adicionarColunaCheckBox()
+        AtualizarRodapeEstoque()
+
+    End Sub
+
+    Private Sub AtualizarRodapeEstoque()
+
+        If lblEstoqueFooter Is Nothing Then Return
+
+        Dim dtAtual As DataTable = TryCast(dgvEstoque.DataSource, DataTable)
+        Dim showing As Integer   = If(dtAtual IsNot Nothing, dtAtual.Rows.Count, 0)
+
+        Dim inStock  As Integer = 0
+        Dim sold     As Integer = 0
+        Dim inRepair As Integer = 0
+
+        If dtAtual IsNot Nothing AndAlso dtAtual.Columns.Contains("STATUS") Then
+            For Each row As DataRow In dtAtual.Rows
+                Dim st As String = If(IsDBNull(row("STATUS")), "",
+                                      row("STATUS").ToString().ToUpperInvariant().Trim())
+                Select Case st
+                    Case "IN_STOCK"  : inStock  += 1
+                    Case "SOLD"      : sold     += 1
+                    Case "IN_REPAIR" : inRepair += 1
+                End Select
+            Next
+        End If
+
+        Dim totalDB As Integer = If(dtEstoqueCompleto IsNot Nothing, dtEstoqueCompleto.Rows.Count, 0)
+
+        lblEstoqueFooter.Text =
+            "Showing: "   & showing.ToString()  & "  |  " &
+            "IN_STOCK: "  & inStock.ToString()  & "  |  " &
+            "SOLD: "      & sold.ToString()     & "  |  " &
+            "IN_REPAIR: " & inRepair.ToString() & "  |  " &
+            "Total in DB: " & totalDB.ToString()
 
     End Sub
 
@@ -387,6 +422,23 @@ Public Class frmPrincipal
 
     Private Sub btnExportExcel_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         ExportarExcel()
+    End Sub
+
+    Private Sub btnAddEquipamento_Click(sender As Object, e As EventArgs) Handles btnAddEquipamento.Click
+
+        Try
+            Dim frm As New frmAddEquipamento()
+            If frm.ShowDialog(Me) = DialogResult.OK Then
+                carregarEstoque()
+                carregarDashboard()
+                MessageBox.Show("Equipment added successfully!" & vbCrLf & "UID: " & frm.SavedUID,
+                                "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        Catch ex As Exception
+            MessageBox.Show("Error opening Add Equipment form: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
     End Sub
 
     Private Sub btnImportarPlanilha_Click(sender As Object, e As EventArgs) Handles btnImportarPlanilha.Click

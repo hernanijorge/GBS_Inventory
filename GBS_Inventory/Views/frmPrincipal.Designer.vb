@@ -61,6 +61,13 @@ Partial Class frmPrincipal
     Friend WithEvents btnUpgradeBuscar     As Button
     Friend WithEvents btnUpgradeScanner    As Button
 
+    ' Botão de adição manual de equipamento
+    Friend WithEvents btnAddEquipamento As Button
+
+    ' Rodapé da aba Inventory
+    Friend WithEvents pnlEstoqueFooter As Panel
+    Friend WithEvents lblEstoqueFooter As Label
+
     ' Painel de filtros da aba Inventory
     Friend WithEvents pnlFiltros            As Panel
     Friend WithEvents cboFilterManufacturer As ComboBox
@@ -313,8 +320,17 @@ Partial Class frmPrincipal
         Me.btnAtualizar.Location = New Point(830, 10)
         Me.btnAtualizar.Size = New Size(90, 28)
 
+        Me.btnAddEquipamento = New Button()
+        Me.btnAddEquipamento.Text      = "+ Add Equipment"
+        Me.btnAddEquipamento.Location  = New Point(930, 10)
+        Me.btnAddEquipamento.Size      = New Size(120, 28)
+        Me.btnAddEquipamento.BackColor = TemaEscuro.Accent
+        Me.btnAddEquipamento.ForeColor = TemaEscuro.Fundo
+        Me.btnAddEquipamento.FlatStyle = FlatStyle.Flat
+
         Me.pnlAcoes.Controls.AddRange({lblPesquisa, txtPesquisa, btnBuscarUID,
-                                        btnScanner, btnImportarPlanilha, btnAtualizar})
+                                        btnScanner, btnImportarPlanilha, btnAtualizar,
+                                        btnAddEquipamento})
 
         ' ── Painel de filtros ─────────────────────────────────────────
         Me.pnlFiltros = New Panel()
@@ -391,9 +407,27 @@ Partial Class frmPrincipal
         Me.dgvEstoque = New DataGridView()
         Me.dgvEstoque.Dock = DockStyle.Fill
 
-        ' Dock=Top empilha de baixo pra cima; dgvEstoque (Fill) fica no fundo,
-        ' pnlFiltros aparece acima dele, pnlAcoes acima do pnlFiltros.
+        ' ── Rodapé da aba Inventory ────────────────────────────────────
+        Me.pnlEstoqueFooter = New Panel()
+        Me.pnlEstoqueFooter.Dock      = DockStyle.Bottom
+        Me.pnlEstoqueFooter.Height    = 26
+        Me.pnlEstoqueFooter.BackColor = Color.FromArgb(20, 20, 28)
+
+        Me.lblEstoqueFooter = New Label()
+        Me.lblEstoqueFooter.AutoSize  = False
+        Me.lblEstoqueFooter.Dock      = DockStyle.Fill
+        Me.lblEstoqueFooter.Font      = New Font("Segoe UI", 9)
+        Me.lblEstoqueFooter.ForeColor = Color.FromArgb(140, 140, 150)
+        Me.lblEstoqueFooter.TextAlign = ContentAlignment.MiddleLeft
+        Me.lblEstoqueFooter.Padding   = New Padding(10, 0, 0, 0)
+        Me.lblEstoqueFooter.Text      = "Showing: 0 items"
+
+        Me.pnlEstoqueFooter.Controls.Add(Me.lblEstoqueFooter)
+
+        ' Ordem de adição determina o docking (último adicionado = maior z-order = layout primeiro):
+        '   pnlAcoes (Top) → pnlFiltros (Top) → pnlEstoqueFooter (Bottom) → dgvEstoque (Fill)
         Me.tabEstoque.Controls.Add(dgvEstoque)
+        Me.tabEstoque.Controls.Add(pnlEstoqueFooter)
         Me.tabEstoque.Controls.Add(pnlFiltros)
         Me.tabEstoque.Controls.Add(pnlAcoes)
 
