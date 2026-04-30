@@ -1,7 +1,3 @@
--- ============================================================================
--- PACK_CLIENTE - Cadastro de clientes
--- ============================================================================
-
 CREATE OR REPLACE PACKAGE PACK_CLIENTE IS
 
     FUNCTION FUNC_PROXIMO_CLIENTE
@@ -54,7 +50,7 @@ CREATE OR REPLACE PACKAGE PACK_CLIENTE IS
         V_CURSOR   OUT SYS_REFCURSOR);
 
 END PACK_CLIENTE;
-/
+
 
 CREATE OR REPLACE PACKAGE BODY PACK_CLIENTE IS
 
@@ -65,6 +61,9 @@ AS
 BEGIN
     SELECT SEQ_CLIENTE.NEXTVAL INTO V_ID FROM DUAL;
     RETURN V_ID;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Erro ao obter proximo ID de cliente: ' || SQLERRM);
 END;
 
 PROCEDURE PROC_INSERT_CLIENTE (
@@ -95,6 +94,10 @@ BEGIN
            LOWER(TRIM(V_EMAIL)), TRIM(V_TELEFONE), TRIM(V_ENDERECO1), TRIM(V_ENDERECO2),
            TRIM(V_CIDADE), TRIM(V_ESTADO), TRIM(V_ZIP_CODE), NVL(TRIM(V_PAIS),'USA'),
            NVL(UPPER(V_ATIVO),'Y'), V_OBSERVACOES, SYSDATE);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20002, 'Erro ao incluir cliente: ' || SQLERRM);
 END;
 
 PROCEDURE PROC_UPDATE_CLIENTE (
@@ -130,18 +133,40 @@ BEGIN
            OBSERVACOES   = V_OBSERVACOES,
            DATA_ALTERACAO = SYSDATE
      WHERE ID_CLIENTE = V_ID;
+
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Cliente nao encontrado para alteracao: ID=' || V_ID);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 
+-- CORRECAO [BAIXO]: Verificacao de existencia do ID antes de agir.
 PROCEDURE PROC_DELETE_CLIENTE (V_ID IN NUMBER)
 AS
-    V_TOTAL NUMBER;
+    V_TOTAL       NUMBER;
+    V_EXISTE      NUMBER;
 BEGIN
+    -- verifica se o cliente existe
+    SELECT COUNT(*)
+      INTO V_EXISTE
+      FROM TBL_CLIENTE
+     WHERE ID_CLIENTE = V_ID;
+
+    IF V_EXISTE = 0 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'Cliente nao encontrado para exclusao: ID=' || V_ID);
+    END IF;
+
+    -- verifica se possui invoices vinculadas
     SELECT COUNT(*)
       INTO V_TOTAL
       FROM TBL_INVOICE
      WHERE ID_CLIENTE = V_ID;
 
     IF V_TOTAL > 0 THEN
+        -- inativacao logica
         UPDATE TBL_CLIENTE
            SET ATIVO = 'N',
                DATA_ALTERACAO = SYSDATE
@@ -150,6 +175,10 @@ BEGIN
         DELETE FROM TBL_CLIENTE
          WHERE ID_CLIENTE = V_ID;
     END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 
 PROCEDURE PROC_SELECT_CLIENTE (
@@ -161,6 +190,9 @@ BEGIN
         SELECT C.*
           FROM TBL_CLIENTE C
          WHERE C.ID_CLIENTE = V_ID;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Erro ao consultar cliente: ' || SQLERRM);
 END;
 
 PROCEDURE PROC_SELECT_CLIENTES (
@@ -173,6 +205,9 @@ BEGIN
           FROM TBL_CLIENTE C
          WHERE (V_ATIVO IS NULL OR C.ATIVO = UPPER(V_ATIVO))
          ORDER BY C.NOME_RAZAO;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20006, 'Erro ao listar clientes: ' || SQLERRM);
 END;
 
 PROCEDURE PROC_SELECT_CLIENTES_FILTRO (
@@ -192,7 +227,9 @@ BEGIN
                 OR UPPER(NVL(C.DOCUMENTO,'')) LIKE V_PESQ
                 OR UPPER(NVL(C.EMAIL,'')) LIKE V_PESQ)
          ORDER BY C.NOME_RAZAO;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20007, 'Erro ao pesquisar clientes: ' || SQLERRM);
 END;
 
 END PACK_CLIENTE;
-/

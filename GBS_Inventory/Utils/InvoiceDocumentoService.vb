@@ -4,9 +4,14 @@ Imports System.Drawing.Imaging
 Imports System.IO
 Imports System.Text
 Imports GBS_Inventory.Models
+Imports iTextSharp.text
+Imports iTextSharp.text.pdf
+Imports iTextSharp.text.pdf.draw
+Imports PdfFont = iTextSharp.text.Font
+Imports PdfRect = iTextSharp.text.Rectangle
 
 ''' <summary>
-''' Gera arquivos de invoice em Word (.doc html) e PDF simples.
+''' Gera arquivos de invoice em Word (.doc html) e PDF (iTextSharp).
 ''' </summary>
 Public Class InvoiceDocumentoService
 
@@ -32,8 +37,7 @@ Public Class InvoiceDocumentoService
         Dim html As String = MontarHtml(pInvoice, pCliente, pItens, logoEfetivo)
         File.WriteAllText(pWordPath, html, Encoding.UTF8)
 
-        Dim linhasPdf As List(Of String) = MontarLinhasPdf(pInvoice, pCliente, pItens)
-        SimplePdfWriter.WriteTextPdf(pPdfPath, linhasPdf, logoEfetivo)
+        PdfInvoiceWriter.GerarPdf(pPdfPath, pInvoice, pCliente, pItens, logoEfetivo)
 
     End Sub
 
@@ -120,57 +124,6 @@ Public Class InvoiceDocumentoService
 
     End Function
 
-    Private Shared Function MontarLinhasPdf(pInvoice As Invoice,
-                                            pCliente As Cliente,
-                                            pItens As List(Of InvoiceItem)) As List(Of String)
-
-        Dim linhas As New List(Of String)()
-        Dim subtotal As Decimal = 0D
-
-        linhas.Add("Global Business Solution - Invoice")
-        linhas.Add("Invoice Number: " & pInvoice.InvoiceNumber)
-        linhas.Add("Issue Date: " & pInvoice.IssueDate.ToString("yyyy-MM-dd"))
-        linhas.Add("Due Date: " & If(pInvoice.DueDate.HasValue, pInvoice.DueDate.Value.ToString("yyyy-MM-dd"), "-"))
-        linhas.Add("")
-        linhas.Add("Bill To: " & pCliente.NomeRazao)
-        linhas.Add("Document: " & pCliente.Documento)
-        linhas.Add("Email: " & pCliente.Email & " | Phone: " & pCliente.Telefone)
-        linhas.Add("Address: " & pCliente.Endereco1 & " " & pCliente.Endereco2)
-        linhas.Add("City/State: " & pCliente.Cidade & " - " & pCliente.Estado & " " & pCliente.ZipCode & " / " & pCliente.Pais)
-
-        linhas.Add("")
-        linhas.Add("Items:")
-
-        For Each item As InvoiceItem In pItens
-            item.RecalcularTotal()
-            subtotal += item.LineTotalUsd
-            linhas.Add("- " & item.Description &
-                       " | Qty: " & item.Qty.ToString("0.##", CultureInfo.InvariantCulture) &
-                       " | Unit: " & item.UnitPriceUsd.ToString("0.00", CultureInfo.InvariantCulture) &
-                       " | Total: " & item.LineTotalUsd.ToString("0.00", CultureInfo.InvariantCulture))
-        Next
-
-        Dim total As Decimal = subtotal - pInvoice.DiscountUsd + pInvoice.ShippingUsd + pInvoice.TaxUsd
-
-        linhas.Add("")
-        linhas.Add("Subtotal: " & subtotal.ToString("0.00", CultureInfo.InvariantCulture))
-        linhas.Add("Discount: -" & pInvoice.DiscountUsd.ToString("0.00", CultureInfo.InvariantCulture))
-        linhas.Add("Shipping: " & pInvoice.ShippingUsd.ToString("0.00", CultureInfo.InvariantCulture))
-        linhas.Add("Tax: " & pInvoice.TaxUsd.ToString("0.00", CultureInfo.InvariantCulture))
-        linhas.Add("TOTAL: " & total.ToString("0.00", CultureInfo.InvariantCulture))
-
-        If Not String.IsNullOrWhiteSpace(pInvoice.Notes) Then
-            linhas.Add("")
-            linhas.Add("Notes:")
-            For Each linha As String In pInvoice.Notes.Replace(vbCrLf, vbLf).Split(ControlChars.Lf)
-                linhas.Add(linha)
-            Next
-        End If
-
-        Return linhas
-
-    End Function
-
     Private Shared Function HtmlEncode(pTexto As String) As String
         If pTexto Is Nothing Then Return ""
 
@@ -218,183 +171,245 @@ Public Class InvoiceDocumentoService
 
 End Class
 
-Friend Class SimplePdfWriter
+Friend Class PdfInvoiceWriter
 
-    Public Shared Sub WriteTextPdf(pCaminho As String, pLinhas As List(Of String), pLogoPath As String)
+    Private Shared ReadOnly ColorGrayHeader As BaseColor = New BaseColor(55, 65, 81)
+    Private Shared ReadOnly ColorRowAlt As BaseColor = New BaseColor(249, 250, 251)
+    Private Shared ReadOnly ColorSeparator As BaseColor = New BaseColor(209, 213, 219)
+    Private Shared ReadOnly ColorMuted As BaseColor = New BaseColor(107, 114, 128)
+    Private Shared ReadOnly ColorDark As BaseColor = New BaseColor(31, 41, 55)
+    Private Shared ReadOnly ColorLabel As BaseColor = New BaseColor(75, 85, 99)
 
-        Dim linhasExpandida As New List(Of String)()
+    Public Shared Sub GerarPdf(pCaminho As String,
+                               pInvoice As Invoice,
+                               pCliente As Cliente,
+                               pItens As List(Of InvoiceItem),
+                               pLogoPath As String)
 
-        For Each linha As String In pLinhas
-            If linha Is Nothing Then
-                linhasExpandida.Add("")
-            ElseIf linha.Length <= 105 Then
-                linhasExpandida.Add(linha)
+        Dim bf As BaseFont = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
+        Dim bfBold As BaseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
+
+        Dim fNormal As New PdfFont(bf, 9, PdfFont.NORMAL, BaseColor.BLACK)
+        Dim fBold As New PdfFont(bfBold, 9, PdfFont.BOLD, BaseColor.BLACK)
+        Dim fSmall As New PdfFont(bf, 8, PdfFont.NORMAL, ColorLabel)
+        Dim fTitle As New PdfFont(bfBold, 14, PdfFont.BOLD, ColorDark)
+        Dim fSubtitle As New PdfFont(bf, 11, PdfFont.NORMAL, ColorDark)
+        Dim fTableHeader As New PdfFont(bfBold, 9, PdfFont.BOLD, BaseColor.WHITE)
+        Dim fTotalLabel As New PdfFont(bfBold, 10, PdfFont.BOLD, BaseColor.BLACK)
+
+        Dim doc As New Document(PageSize.A4, 40, 40, 70, 60)
+        Dim footerEvent As New InvoiceFooterEvent(pItens.Count, bf)
+
+        Using fs As New FileStream(pCaminho, FileMode.Create)
+            Dim writer As PdfWriter = PdfWriter.GetInstance(doc, fs)
+            writer.PageEvent = footerEvent
+            doc.Open()
+
+            ' ── Header: logo + title ──────────────────────────────────────
+            Dim tblHeader As New PdfPTable(2)
+            tblHeader.WidthPercentage = 100
+            tblHeader.SetWidths(New Single() {0.45F, 0.55F})
+            tblHeader.DefaultCell.Border = PdfRect.NO_BORDER
+            tblHeader.SpacingAfter = 6
+
+            Dim cellLogo As New PdfPCell()
+            cellLogo.Border = PdfRect.NO_BORDER
+            cellLogo.VerticalAlignment = Element.ALIGN_MIDDLE
+
+            If Not String.IsNullOrWhiteSpace(pLogoPath) AndAlso File.Exists(pLogoPath) Then
+                Try
+                    Dim logo As iTextSharp.text.Image = iTextSharp.text.Image.GetInstance(pLogoPath)
+                    Dim maxW As Single = 130F
+                    Dim maxH As Single = 50F
+                    If logo.Width > maxW OrElse logo.Height > maxH Then
+                        logo.ScaleToFit(maxW, maxH)
+                    End If
+                    logo.Alignment = Element.ALIGN_LEFT
+                    cellLogo.AddElement(logo)
+                Catch
+                    cellLogo.AddElement(New Phrase("Global Business Solution", fTitle))
+                End Try
             Else
-                Dim i As Integer = 0
-                While i < linha.Length
-                    Dim tam As Integer = Math.Min(105, linha.Length - i)
-                    linhasExpandida.Add(linha.Substring(i, tam))
-                    i += tam
-                End While
+                cellLogo.AddElement(New Phrase("Global Business Solution", fTitle))
             End If
-        Next
+            tblHeader.AddCell(cellLogo)
 
-        Dim logoJpeg As Byte() = Nothing
-        Dim logoWidthPx As Integer = 0
-        Dim logoHeightPx As Integer = 0
-        Dim temLogo As Boolean = False
+            Dim cellTitle As New PdfPCell()
+            cellTitle.Border = PdfRect.NO_BORDER
+            cellTitle.HorizontalAlignment = Element.ALIGN_RIGHT
+            cellTitle.VerticalAlignment = Element.ALIGN_MIDDLE
+            cellTitle.AddElement(New Paragraph("Global Business Solution", fTitle) With {.Alignment = Element.ALIGN_RIGHT})
+            cellTitle.AddElement(New Paragraph("INVOICE", fSubtitle) With {.Alignment = Element.ALIGN_RIGHT})
+            tblHeader.AddCell(cellTitle)
 
-        If Not String.IsNullOrWhiteSpace(pLogoPath) AndAlso File.Exists(pLogoPath) Then
-            logoJpeg = ConverterImagemParaJpeg(pLogoPath, logoWidthPx, logoHeightPx)
-            temLogo = (logoJpeg IsNot Nothing AndAlso logoJpeg.Length > 0 AndAlso logoWidthPx > 0 AndAlso logoHeightPx > 0)
-        End If
+            doc.Add(tblHeader)
 
-        Dim sbConteudo As New StringBuilder()
+            ' ── Separator ─────────────────────────────────────────────────
+            Dim sep As New LineSeparator(0.5F, 100F, ColorSeparator, Element.ALIGN_CENTER, -2)
+            doc.Add(New Chunk(sep))
+            doc.Add(Chunk.NEWLINE)
 
-        If temLogo Then
-            Dim drawW As Decimal = 130D
-            Dim drawH As Decimal = drawW * CDec(logoHeightPx) / CDec(logoWidthPx)
-            If drawH > 70D Then
-                drawH = 70D
-                drawW = drawH * CDec(logoWidthPx) / CDec(logoHeightPx)
+            ' ── Invoice info + Bill To ────────────────────────────────────
+            Dim tblInfo As New PdfPTable(2)
+            tblInfo.WidthPercentage = 100
+            tblInfo.SetWidths(New Single() {0.5F, 0.5F})
+            tblInfo.DefaultCell.Border = PdfRect.NO_BORDER
+            tblInfo.SpacingAfter = 10
+
+            Dim cellInvoiceInfo As New PdfPCell()
+            cellInvoiceInfo.Border = PdfRect.NO_BORDER
+            cellInvoiceInfo.AddElement(CriarLinhaInfo("Invoice #:", pInvoice.InvoiceNumber, fBold, fNormal))
+            cellInvoiceInfo.AddElement(CriarLinhaInfo("Issue Date:", pInvoice.IssueDate.ToString("yyyy-MM-dd"), fBold, fNormal))
+            cellInvoiceInfo.AddElement(CriarLinhaInfo("Due Date:", If(pInvoice.DueDate.HasValue, pInvoice.DueDate.Value.ToString("yyyy-MM-dd"), "-"), fBold, fNormal))
+            tblInfo.AddCell(cellInvoiceInfo)
+
+            Dim cellBillTo As New PdfPCell()
+            cellBillTo.Border = PdfRect.NO_BORDER
+            Dim pBillTo As New Paragraph()
+            pBillTo.Add(New Chunk("Bill To" & vbLf, fBold))
+            pBillTo.Add(New Chunk(If(pCliente.NomeRazao, "") & vbLf, fNormal))
+            If Not String.IsNullOrWhiteSpace(pCliente.Documento) Then
+                pBillTo.Add(New Chunk(pCliente.Documento & vbLf, fSmall))
             End If
-
-            Dim posX As Decimal = 40D
-            Dim posY As Decimal = 842D - 40D - drawH
-
-            sbConteudo.AppendLine("q")
-            sbConteudo.AppendLine(drawW.ToString("0.##", CultureInfo.InvariantCulture) & " 0 0 " &
-                                  drawH.ToString("0.##", CultureInfo.InvariantCulture) & " " &
-                                  posX.ToString("0.##", CultureInfo.InvariantCulture) & " " &
-                                  posY.ToString("0.##", CultureInfo.InvariantCulture) & " cm")
-            sbConteudo.AppendLine("/Im1 Do")
-            sbConteudo.AppendLine("Q")
-        End If
-
-        sbConteudo.AppendLine("BT")
-        sbConteudo.AppendLine("/F1 10 Tf")
-        Dim yInicialTexto As String = If(temLogo, "700", "800")
-        sbConteudo.AppendLine("40 " & yInicialTexto & " Td")
-
-        Dim primeira As Boolean = True
-        Dim limiteLinhas As Integer = Math.Min(If(temLogo, 50, 55), linhasExpandida.Count)
-
-        For i As Integer = 0 To limiteLinhas - 1
-            Dim textoEscapado As String = EscapePdfText(linhasExpandida(i))
-
-            If primeira Then
-                sbConteudo.AppendLine("(" & textoEscapado & ") Tj")
-                primeira = False
-            Else
-                sbConteudo.AppendLine("0 -14 Td")
-                sbConteudo.AppendLine("(" & textoEscapado & ") Tj")
+            If Not String.IsNullOrWhiteSpace(pCliente.Email) Then
+                pBillTo.Add(New Chunk(pCliente.Email & vbLf, fSmall))
             End If
-        Next
-
-        sbConteudo.AppendLine("ET")
-
-        Dim bytesConteudo As Byte() = Encoding.ASCII.GetBytes(sbConteudo.ToString())
-
-        Using ms As New MemoryStream()
-            Dim enc As Encoding = Encoding.ASCII
-            Dim offsets As New Dictionary(Of Integer, Integer)()
-
-            Dim cabecalho As Byte() = enc.GetBytes("%PDF-1.4" & vbLf)
-            ms.Write(cabecalho, 0, cabecalho.Length)
-
-            offsets(1) = CInt(ms.Position)
-            EscreverAscii(ms, "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj" & vbLf)
-
-            offsets(2) = CInt(ms.Position)
-            EscreverAscii(ms, "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj" & vbLf)
-
-            offsets(3) = CInt(ms.Position)
-            Dim recursos As String
-            If temLogo Then
-                recursos = "/Resources << /Font << /F1 5 0 R >> /XObject << /Im1 6 0 R >> >>"
-            Else
-                recursos = "/Resources << /Font << /F1 5 0 R >> >>"
+            If Not String.IsNullOrWhiteSpace(pCliente.Endereco1) Then
+                pBillTo.Add(New Chunk((pCliente.Endereco1 & " " & pCliente.Endereco2).Trim() & vbLf, fSmall))
             End If
-            EscreverAscii(ms, "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " & recursos & " /Contents 4 0 R >> endobj" & vbLf)
-
-            offsets(4) = CInt(ms.Position)
-            EscreverAscii(ms, "4 0 obj << /Length " & bytesConteudo.Length.ToString() & " >> stream" & vbLf)
-            ms.Write(bytesConteudo, 0, bytesConteudo.Length)
-            EscreverAscii(ms, vbLf & "endstream endobj" & vbLf)
-
-            offsets(5) = CInt(ms.Position)
-            EscreverAscii(ms, "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj" & vbLf)
-
-            Dim maxObj As Integer = 5
-
-            If temLogo Then
-                offsets(6) = CInt(ms.Position)
-                EscreverAscii(ms,
-                              "6 0 obj << /Type /XObject /Subtype /Image /Width " & logoWidthPx.ToString() &
-                              " /Height " & logoHeightPx.ToString() &
-                              " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " & logoJpeg.Length.ToString() &
-                              " >> stream" & vbLf)
-                ms.Write(logoJpeg, 0, logoJpeg.Length)
-                EscreverAscii(ms, vbLf & "endstream endobj" & vbLf)
-                maxObj = 6
+            If Not String.IsNullOrWhiteSpace(pCliente.Cidade) Then
+                Dim localidade As String = (pCliente.Cidade & " - " & pCliente.Estado & " " & pCliente.ZipCode & " / " & pCliente.Pais).Trim()
+                pBillTo.Add(New Chunk(localidade, fSmall))
             End If
+            cellBillTo.AddElement(pBillTo)
+            tblInfo.AddCell(cellBillTo)
 
-            Dim xrefPos As Integer = CInt(ms.Position)
-            Dim sbXref As New StringBuilder()
-            sbXref.AppendLine("xref")
-            sbXref.AppendLine("0 " & (maxObj + 1).ToString())
-            sbXref.AppendLine("0000000000 65535 f ")
+            doc.Add(tblInfo)
 
-            For i As Integer = 1 To maxObj
-                sbXref.AppendLine(offsets(i).ToString("0000000000") & " 00000 n ")
+            ' ── Items Table ───────────────────────────────────────────────
+            Dim tblItens As New PdfPTable(4)
+            tblItens.WidthPercentage = 100
+            tblItens.SetWidths(New Single() {0.55F, 0.1F, 0.175F, 0.175F})
+            tblItens.SpacingAfter = 12
+            tblItens.HeaderRows = 1
+
+            Dim headerCols As String() = {"Description", "Qty", "Unit (USD)", "Total (USD)"}
+            For Each col As String In headerCols
+                Dim hCell As New PdfPCell(New Phrase(col, fTableHeader))
+                hCell.BackgroundColor = ColorGrayHeader
+                hCell.Padding = 5
+                hCell.HorizontalAlignment = If(col = "Description", Element.ALIGN_LEFT, Element.ALIGN_RIGHT)
+                tblItens.AddCell(hCell)
             Next
 
-            sbXref.AppendLine("trailer << /Size " & (maxObj + 1).ToString() & " /Root 1 0 R >>")
-            sbXref.AppendLine("startxref")
-            sbXref.AppendLine(xrefPos.ToString())
-            sbXref.AppendLine("%%EOF")
+            Dim subtotal As Decimal = 0D
+            Dim rowIdx As Integer = 0
 
-            Dim bXref As Byte() = enc.GetBytes(sbXref.ToString())
-            ms.Write(bXref, 0, bXref.Length)
+            For Each item As InvoiceItem In pItens
+                item.RecalcularTotal()
+                subtotal += item.LineTotalUsd
 
-            File.WriteAllBytes(pCaminho, ms.ToArray())
+                Dim bg As BaseColor = If(rowIdx Mod 2 = 0, BaseColor.WHITE, ColorRowAlt)
+
+                Dim cDesc As New PdfPCell(New Phrase(If(item.Description, ""), fNormal))
+                cDesc.BackgroundColor = bg : cDesc.Padding = 4 : cDesc.HorizontalAlignment = Element.ALIGN_LEFT
+                tblItens.AddCell(cDesc)
+
+                Dim cQty As New PdfPCell(New Phrase(item.Qty.ToString("0.##", CultureInfo.InvariantCulture), fNormal))
+                cQty.BackgroundColor = bg : cQty.Padding = 4 : cQty.HorizontalAlignment = Element.ALIGN_RIGHT
+                tblItens.AddCell(cQty)
+
+                Dim cUnit As New PdfPCell(New Phrase(item.UnitPriceUsd.ToString("0.00", CultureInfo.InvariantCulture), fNormal))
+                cUnit.BackgroundColor = bg : cUnit.Padding = 4 : cUnit.HorizontalAlignment = Element.ALIGN_RIGHT
+                tblItens.AddCell(cUnit)
+
+                Dim cLinha As New PdfPCell(New Phrase(item.LineTotalUsd.ToString("0.00", CultureInfo.InvariantCulture), fNormal))
+                cLinha.BackgroundColor = bg : cLinha.Padding = 4 : cLinha.HorizontalAlignment = Element.ALIGN_RIGHT
+                tblItens.AddCell(cLinha)
+
+                rowIdx += 1
+            Next
+
+            doc.Add(tblItens)
+
+            ' ── Totals ────────────────────────────────────────────────────
+            Dim totalFinal As Decimal = subtotal - pInvoice.DiscountUsd + pInvoice.ShippingUsd + pInvoice.TaxUsd
+
+            Dim tblTotals As New PdfPTable(2)
+            tblTotals.HorizontalAlignment = Element.ALIGN_RIGHT
+            tblTotals.TotalWidth = 260
+            tblTotals.LockedWidth = True
+            tblTotals.SpacingAfter = 14
+
+            AdicionarLinhaTotal(tblTotals, "Subtotal", subtotal.ToString("0.00", CultureInfo.InvariantCulture), False, fNormal)
+            AdicionarLinhaTotal(tblTotals, "Discount", "-" & pInvoice.DiscountUsd.ToString("0.00", CultureInfo.InvariantCulture), False, fNormal)
+            AdicionarLinhaTotal(tblTotals, "Shipping", pInvoice.ShippingUsd.ToString("0.00", CultureInfo.InvariantCulture), False, fNormal)
+            AdicionarLinhaTotal(tblTotals, "Tax", pInvoice.TaxUsd.ToString("0.00", CultureInfo.InvariantCulture), False, fNormal)
+            AdicionarLinhaTotal(tblTotals, "TOTAL USD", totalFinal.ToString("0.00", CultureInfo.InvariantCulture), True, fTotalLabel)
+
+            doc.Add(tblTotals)
+
+            ' ── Notes ─────────────────────────────────────────────────────
+            If Not String.IsNullOrWhiteSpace(pInvoice.Notes) Then
+                doc.Add(New Paragraph("Notes", fBold) With {.SpacingAfter = 4})
+                doc.Add(New Paragraph(pInvoice.Notes, fNormal) With {.SpacingAfter = 6})
+            End If
+
+            doc.Close()
         End Using
 
     End Sub
 
-    Private Shared Sub EscreverAscii(pStream As Stream, pTexto As String)
-        Dim b As Byte() = Encoding.ASCII.GetBytes(pTexto)
-        pStream.Write(b, 0, b.Length)
+    Private Shared Function CriarLinhaInfo(pLabel As String, pValor As String,
+                                           fLabel As PdfFont, fValor As PdfFont) As Paragraph
+        Dim p As New Paragraph()
+        p.Add(New Chunk(pLabel & " ", fLabel))
+        p.Add(New Chunk(If(pValor, ""), fValor))
+        p.SpacingAfter = 2
+        Return p
+    End Function
+
+    Private Shared Sub AdicionarLinhaTotal(tbl As PdfPTable, pLabel As String, pValor As String,
+                                           pDestaque As Boolean, fUsada As PdfFont)
+        Dim bordaTipo As Integer = If(pDestaque, PdfRect.TOP_BORDER, PdfRect.NO_BORDER)
+
+        Dim cLabel As New PdfPCell(New Phrase(pLabel, fUsada))
+        cLabel.HorizontalAlignment = Element.ALIGN_LEFT
+        cLabel.Padding = 4
+        cLabel.Border = bordaTipo
+        tbl.AddCell(cLabel)
+
+        Dim cValor As New PdfPCell(New Phrase(pValor, fUsada))
+        cValor.HorizontalAlignment = Element.ALIGN_RIGHT
+        cValor.Padding = 4
+        cValor.Border = bordaTipo
+        tbl.AddCell(cValor)
     End Sub
 
-    Private Shared Function ConverterImagemParaJpeg(pLogoPath As String,
-                                                     ByRef pWidth As Integer,
-                                                     ByRef pHeight As Integer) As Byte()
+End Class
 
-        Try
-            Using img As Image = Image.FromFile(pLogoPath)
-                pWidth = img.Width
-                pHeight = img.Height
+Friend Class InvoiceFooterEvent
+    Inherits PdfPageEventHelper
 
-                Using ms As New MemoryStream()
-                    img.Save(ms, ImageFormat.Jpeg)
-                    Return ms.ToArray()
-                End Using
-            End Using
-        Catch
-            pWidth = 0
-            pHeight = 0
-            Return Nothing
-        End Try
+    Private ReadOnly _itemCount As Integer
+    Private ReadOnly _bf As BaseFont
 
-    End Function
+    Public Sub New(pItemCount As Integer, pBf As BaseFont)
+        _itemCount = pItemCount
+        _bf = pBf
+    End Sub
 
-    Private Shared Function EscapePdfText(pTexto As String) As String
-        If pTexto Is Nothing Then Return ""
+    Public Overrides Sub OnEndPage(writer As PdfWriter, document As Document)
+        Dim cb As PdfContentByte = writer.DirectContent
+        Dim texto As String = "Items: " & _itemCount.ToString() & " | Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+        Dim xCenter As Single = (document.Left + document.Right) / 2
+        Dim yPos As Single = document.Bottom - 20
 
-        Return pTexto.Replace("\", "\\").
-                      Replace("(", "\(").
-                      Replace(")", "\)")
-    End Function
+        cb.BeginText()
+        cb.SetFontAndSize(_bf, 8)
+        cb.SetColorFill(New BaseColor(107, 114, 128))
+        cb.ShowTextAligned(Element.ALIGN_CENTER, texto, xCenter, yPos, 0)
+        cb.EndText()
+    End Sub
 
 End Class

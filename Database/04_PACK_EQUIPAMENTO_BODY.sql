@@ -1,5 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY PACK_EQUIPAMENTO AS
 
+-- ----------------------------------------------------------------------------
 FUNCTION FUNC_PROXIMO RETURN NUMBER IS
     V_ID NUMBER;
 BEGIN
@@ -7,6 +8,7 @@ BEGIN
     RETURN V_ID;
 END;
 
+-- ----------------------------------------------------------------------------
 FUNCTION FUNC_EXISTE_UID(P_INTERNAL_UID IN VARCHAR2) RETURN NUMBER IS
     V_COUNT NUMBER;
 BEGIN
@@ -15,35 +17,36 @@ BEGIN
      WHERE INTERNAL_UID = P_INTERNAL_UID;
     RETURN V_COUNT;
 EXCEPTION
-    WHEN OTHERS THEN
-        RETURN 0;
+    WHEN OTHERS THEN RETURN 0;
 END;
 
+-- ----------------------------------------------------------------------------
 FUNCTION FUNC_STATUS_DESCRICAO(P_STATUS IN VARCHAR2) RETURN VARCHAR2 IS
 BEGIN
     RETURN CASE P_STATUS
-        WHEN 'IN_STOCK' THEN 'In Stock'
-        WHEN 'AVAILABLE' THEN 'Available'
-        WHEN 'SHIPPED' THEN 'Shipped'
-        WHEN 'SOLD' THEN 'Sold'
-        WHEN 'SCRAPPED' THEN 'Scrapped'
-        WHEN 'IN_REPAIR' THEN 'In Repair'
-        WHEN 'RESERVED' THEN 'Reserved'
-        WHEN 'OTHER' THEN 'Other'
-        ELSE P_STATUS
-    END;
+               WHEN 'IN_STOCK'  THEN 'In Stock'
+               WHEN 'AVAILABLE' THEN 'Available'
+               WHEN 'SHIPPED'   THEN 'Shipped'
+               WHEN 'SOLD'      THEN 'Sold'
+               WHEN 'SCRAPPED'  THEN 'Scrapped'
+               WHEN 'IN_REPAIR' THEN 'In Repair'
+               WHEN 'RESERVED'  THEN 'Reserved'
+               WHEN 'OTHER'     THEN 'Other'
+               ELSE P_STATUS
+           END;
 END;
 
+-- ----------------------------------------------------------------------------
 PROCEDURE PROC_INSERT(
-    P_INTERNAL_UID IN VARCHAR2,
-    P_SERIAL_NUMBER IN VARCHAR2,
-    P_MODELO IN VARCHAR2,
-    P_MARCA IN VARCHAR2,
-    P_PROCESSADOR IN VARCHAR2,
-    P_RAM_GB IN NUMBER,
-    P_STORAGE_GB IN NUMBER,
+    P_INTERNAL_UID       IN VARCHAR2,
+    P_SERIAL_NUMBER      IN VARCHAR2,
+    P_MODELO             IN VARCHAR2,
+    P_MARCA              IN VARCHAR2,
+    P_PROCESSADOR        IN VARCHAR2,
+    P_RAM_GB             IN NUMBER,
+    P_STORAGE_GB         IN NUMBER,
     P_STATUS_EQUIPAMENTO IN VARCHAR2,
-    P_OBSERVACAO IN VARCHAR2
+    P_OBSERVACAO         IN VARCHAR2
 ) IS
 BEGIN
     INSERT INTO TBL_EQUIPAMENTO
@@ -54,10 +57,8 @@ BEGIN
                 NVL(P_STATUS_EQUIPAMENTO, 'IN_STOCK'), P_OBSERVACAO, SYSDATE);
 END;
 
-PROCEDURE PROC_UPDATE_STATUS(
-    P_INTERNAL_UID IN VARCHAR2,
-    P_STATUS IN VARCHAR2
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_UPDATE_STATUS(P_INTERNAL_UID IN VARCHAR2, P_STATUS IN VARCHAR2) IS
 BEGIN
     UPDATE TBL_EQUIPAMENTO
        SET STATUS = P_STATUS,
@@ -65,16 +66,17 @@ BEGIN
      WHERE INTERNAL_UID = P_INTERNAL_UID;
 END;
 
+-- ----------------------------------------------------------------------------
 PROCEDURE PROC_UPSERT_EQUIPAMENTO(
-    P_INTERNAL_UID IN VARCHAR2,
+    P_INTERNAL_UID  IN VARCHAR2,
     P_SERIAL_NUMBER IN VARCHAR2,
-    P_MODEL IN VARCHAR2,
-    P_MARCA IN VARCHAR2,
-    P_PROCESSADOR IN VARCHAR2,
-    P_RAM_GB IN NUMBER,
-    P_STORAGE_GB IN NUMBER,
-    P_STATUS IN VARCHAR2,
-    P_OBSERVACAO IN VARCHAR2
+    P_MODEL         IN VARCHAR2,
+    P_MARCA         IN VARCHAR2,
+    P_PROCESSADOR   IN VARCHAR2,
+    P_RAM_GB        IN NUMBER,
+    P_STORAGE_GB    IN NUMBER,
+    P_STATUS        IN VARCHAR2,
+    P_OBSERVACAO    IN VARCHAR2
 ) IS
     V_COUNT NUMBER;
 BEGIN
@@ -91,21 +93,19 @@ BEGIN
                     NVL(P_STATUS, 'IN_STOCK'), P_OBSERVACAO, SYSDATE);
     ELSE
         UPDATE TBL_EQUIPAMENTO
-           SET MODEL = P_MODEL,
-               MARCA = P_MARCA,
-               PROCESSADOR = P_PROCESSADOR,
-               RAM_GB = NVL(P_RAM_GB, RAM_GB),
-               STORAGE_GB = NVL(P_STORAGE_GB, STORAGE_GB),
-               OBSERVACAO = P_OBSERVACAO,
+           SET MODEL            = P_MODEL,
+               MARCA            = P_MARCA,
+               PROCESSADOR      = P_PROCESSADOR,
+               RAM_GB           = NVL(P_RAM_GB, RAM_GB),
+               STORAGE_GB       = NVL(P_STORAGE_GB, STORAGE_GB),
+               OBSERVACAO       = P_OBSERVACAO,
                DATA_ATUALIZACAO = SYSDATE
          WHERE INTERNAL_UID = P_INTERNAL_UID;
     END IF;
 END;
 
-PROCEDURE PROC_SELECT_UID(
-    P_INTERNAL_UID IN VARCHAR2,
-    P_CURSOR OUT SYS_REFCURSOR
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_SELECT_UID(P_INTERNAL_UID IN VARCHAR2, P_CURSOR OUT SYS_REFCURSOR) IS
 BEGIN
     OPEN P_CURSOR FOR
          SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER,
@@ -118,15 +118,15 @@ BEGIN
           WHERE UPPER(TRIM(E.INTERNAL_UID)) = UPPER(TRIM(P_INTERNAL_UID));
 END;
 
+-- ----------------------------------------------------------------------------
 PROCEDURE PROC_SELECT_FILTRO(
-    P_FILTRO IN VARCHAR2,
+    P_FILTRO             IN VARCHAR2,
     P_STATUS_EQUIPAMENTO IN VARCHAR2,
-    P_CURSOR OUT SYS_REFCURSOR
+    P_CURSOR             OUT SYS_REFCURSOR
 ) IS
     V_PESQ VARCHAR2(200);
 BEGIN
     V_PESQ := '%' || UPPER(TRIM(NVL(P_FILTRO, ''))) || '%';
-
     OPEN P_CURSOR FOR
          SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER,
                 E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB,
@@ -134,34 +134,31 @@ BEGIN
                 FUNC_STATUS_DESCRICAO(E.STATUS) AS STATUS_DESCRICAO
            FROM TBL_EQUIPAMENTO E
           WHERE (P_FILTRO IS NULL
-                 OR UPPER(E.INTERNAL_UID) LIKE V_PESQ
+                 OR UPPER(E.INTERNAL_UID)  LIKE V_PESQ
                  OR UPPER(E.SERIAL_NUMBER) LIKE V_PESQ
-                 OR UPPER(E.MODEL) LIKE V_PESQ
-                 OR UPPER(E.MARCA) LIKE V_PESQ
-                 OR UPPER(E.PROCESSADOR) LIKE V_PESQ)
+                 OR UPPER(E.MODEL)         LIKE V_PESQ
+                 OR UPPER(E.MARCA)         LIKE V_PESQ
+                 OR UPPER(E.PROCESSADOR)   LIKE V_PESQ)
             AND (P_STATUS_EQUIPAMENTO IS NULL OR UPPER(E.STATUS) = UPPER(P_STATUS_EQUIPAMENTO))
           ORDER BY E.DATA_CADASTRO DESC;
 END;
 
-PROCEDURE PROC_DASHBOARD(
-    P_CURSOR OUT SYS_REFCURSOR
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_DASHBOARD(P_CURSOR OUT SYS_REFCURSOR) IS
 BEGIN
     OPEN P_CURSOR FOR
          SELECT
-            (SELECT COUNT(*) FROM TBL_EQUIPAMENTO) AS TOTAL_UNIDADES,
-            (SELECT COUNT(*) FROM TBL_EQUIPAMENTO WHERE STATUS = 'IN_STOCK') AS EM_ESTOQUE,
+            (SELECT COUNT(*) FROM TBL_EQUIPAMENTO)                              AS TOTAL_UNIDADES,
+            (SELECT COUNT(*) FROM TBL_EQUIPAMENTO WHERE STATUS = 'IN_STOCK')    AS EM_ESTOQUE,
             (SELECT COUNT(*) FROM TBL_EQUIPAMENTO_UPGRADE
-              WHERE DATA_UPGRADE >= TRUNC(SYSDATE) - 30) AS UPGRADES_30D,
+              WHERE DATA_UPGRADE >= TRUNC(SYSDATE) - 30)                        AS UPGRADES_30D,
             (SELECT COUNT(*) FROM TBL_REMESSA
-              WHERE STATUS_REMESSA NOT IN ('DELIVERED','RETURNED')) AS REMESSAS_ATIVAS
+              WHERE STATUS_REMESSA NOT IN ('DELIVERED','RETURNED'))              AS REMESSAS_ATIVAS
            FROM DUAL;
 END;
 
-PROCEDURE PROC_SELECT_ID(
-    P_ID IN NUMBER,
-    P_CURSOR OUT SYS_REFCURSOR
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_SELECT_ID(P_ID IN NUMBER, P_CURSOR OUT SYS_REFCURSOR) IS
 BEGIN
     OPEN P_CURSOR FOR
          SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER,
@@ -174,10 +171,8 @@ BEGIN
           WHERE E.ID_EQUIPAMENTO = P_ID;
 END;
 
-PROCEDURE PROC_SELECT_SERIAL(
-    P_SERIAL IN VARCHAR2,
-    P_CURSOR OUT SYS_REFCURSOR
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_SELECT_SERIAL(P_SERIAL IN VARCHAR2, P_CURSOR OUT SYS_REFCURSOR) IS
 BEGIN
     OPEN P_CURSOR FOR
          SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER,
@@ -190,9 +185,8 @@ BEGIN
           WHERE UPPER(TRIM(E.SERIAL_NUMBER)) = UPPER(TRIM(P_SERIAL));
 END;
 
-PROCEDURE PROC_RESUMO_WHATSAPP(
-    P_CURSOR OUT SYS_REFCURSOR
-) IS
+-- ----------------------------------------------------------------------------
+PROCEDURE PROC_RESUMO_WHATSAPP(P_CURSOR OUT SYS_REFCURSOR) IS
 BEGIN
     OPEN P_CURSOR FOR
          SELECT MARCA, MODEL, COUNT(*) AS QTD
@@ -203,4 +197,3 @@ BEGIN
 END;
 
 END PACK_EQUIPAMENTO;
-/

@@ -2,6 +2,7 @@ Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Data
 Imports System.IO
+Imports Oracle.ManagedDataAccess.Client
 
 ''' <summary>
 ''' Tela principal do GBS Inventory Manager
@@ -20,6 +21,7 @@ Public Class frmPrincipal
     Private dtResumoManufacturer As DataTable
     Private dtResumoModel As DataTable
     Private dtResumoCpuFamily As DataTable
+    Private dtEstoqueCompleto As DataTable
 
 #End Region
 
@@ -36,6 +38,7 @@ Public Class frmPrincipal
 
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
+        ConfigurarMenuContextoEstoque()
 
     End Sub
 
@@ -96,6 +99,7 @@ Public Class frmPrincipal
 
         End Try
 
+
     End Sub
 
     Private Sub carregarEstoque()
@@ -105,7 +109,9 @@ Public Class frmPrincipal
             Dim ds As DataSet = oEquipController.buscarTodos(1)
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
-                dgvEstoque.DataSource = ds.Tables(0)
+                dtEstoqueCompleto = ds.Tables(0)
+                popularCombosFilter()
+                aplicarFiltrosEstoque()
             End If
 
         Catch ex As Exception
@@ -117,34 +123,270 @@ Public Class frmPrincipal
 
     End Sub
 
+    Private Sub popularCombosFilter()
+
+        If dtEstoqueCompleto Is Nothing Then Return
+
+        Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        PopularComboDistinto(cboFilterManufacturer, colMarca)
+        ' cboFilterModel é populado pelo cboFilterManufacturer_SelectedIndexChanged
+
+    End Sub
+
+    Private Sub recarregarModelosPorManufacturer()
+
+        If dtEstoqueCompleto Is Nothing Then Return
+
+        Dim colMarca  As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
+        If String.IsNullOrEmpty(colModelo) Then Return
+
+        Dim sMarca As String = If(cboFilterManufacturer.SelectedIndex > 0,
+                                  cboFilterManufacturer.SelectedItem.ToString(), "")
+        Dim selAtual As String = If(cboFilterModel.SelectedIndex > 0,
+                                    cboFilterModel.SelectedItem.ToString(), "")
+
+        Dim modelos As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In dtEstoqueCompleto.Rows
+            If Not String.IsNullOrEmpty(sMarca) AndAlso Not String.IsNullOrEmpty(colMarca) Then
+                If Not row(colMarca).ToString().Equals(sMarca, StringComparison.OrdinalIgnoreCase) Then Continue For
+            End If
+            If Not IsDBNull(row(colModelo)) Then
+                Dim v As String = row(colModelo).ToString().Trim()
+                If Not String.IsNullOrEmpty(v) Then modelos.Add(v)
+            End If
+        Next
+
+        cboFilterModel.Items.Clear()
+        cboFilterModel.Items.Add("(All)")
+        For Each m As String In modelos
+            cboFilterModel.Items.Add(m)
+        Next
+
+        Dim idx As Integer = cboFilterModel.Items.IndexOf(selAtual)
+        cboFilterModel.SelectedIndex = If(idx > 0, idx, 0)
+
+    End Sub
+
+    Private Sub PopularComboDistinto(pCombo As ComboBox, pColuna As String)
+
+        Dim selAtual As String = If(pCombo.SelectedIndex > 0, pCombo.SelectedItem.ToString(), "")
+        pCombo.Items.Clear()
+        pCombo.Items.Add("(All)")
+
+        If String.IsNullOrEmpty(pColuna) OrElse dtEstoqueCompleto Is Nothing Then
+            pCombo.SelectedIndex = 0
+            Return
+        End If
+
+        Dim valores As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In dtEstoqueCompleto.Rows
+            If Not IsDBNull(row(pColuna)) Then
+                Dim v As String = row(pColuna).ToString().Trim()
+                If Not String.IsNullOrEmpty(v) Then valores.Add(v)
+            End If
+        Next
+
+        For Each v As String In valores
+            pCombo.Items.Add(v)
+        Next
+
+        Dim idx As Integer = pCombo.Items.IndexOf(selAtual)
+        pCombo.SelectedIndex = If(idx > 0, idx, 0)
+
+    End Sub
+
+    Private Sub aplicarFiltrosEstoque()
+
+        If dtEstoqueCompleto Is Nothing Then Return
+
+        Dim texto  As String = txtPesquisa.Text.Trim().ToUpperInvariant()
+        Dim sMarca As String = If(cboFilterManufacturer.SelectedIndex > 0, cboFilterManufacturer.SelectedItem.ToString(), "")
+        Dim sModel As String = If(cboFilterModel.SelectedIndex > 0,        cboFilterModel.SelectedItem.ToString(), "")
+        Dim sStatus As String = If(cboFilterStatus.SelectedIndex > 0,      cboFilterStatus.SelectedItem.ToString(), "")
+        Dim colMarca  As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
+
+        Dim dtFiltrada As DataTable = dtEstoqueCompleto.Clone()
+
+        For Each row As DataRow In dtEstoqueCompleto.Rows
+
+            ' texto livre
+            If Not String.IsNullOrEmpty(texto) Then
+                Dim encontrou As Boolean = False
+                For Each col As String In {"INTERNAL_UID", "SERIAL_NUMBER", "MODEL", "MODELO",
+                                           "MARCA", "MANUFACTURER", "PROCESSADOR", "CPU_MODEL", "CPU_FAMILY"}
+                    If dtEstoqueCompleto.Columns.Contains(col) AndAlso Not IsDBNull(row(col)) Then
+                        If row(col).ToString().ToUpperInvariant().Contains(texto) Then
+                            encontrou = True
+                            Exit For
+                        End If
+                    End If
+                Next
+                If Not encontrou Then Continue For
+            End If
+
+            ' manufacturer
+            If Not String.IsNullOrEmpty(sMarca) AndAlso Not String.IsNullOrEmpty(colMarca) Then
+                If Not row(colMarca).ToString().Equals(sMarca, StringComparison.OrdinalIgnoreCase) Then Continue For
+            End If
+
+            ' model
+            If Not String.IsNullOrEmpty(sModel) AndAlso Not String.IsNullOrEmpty(colModelo) Then
+                If Not row(colModelo).ToString().Equals(sModel, StringComparison.OrdinalIgnoreCase) Then Continue For
+            End If
+
+            ' status
+            If Not String.IsNullOrEmpty(sStatus) AndAlso dtEstoqueCompleto.Columns.Contains("STATUS") Then
+                If Not row("STATUS").ToString().Equals(sStatus, StringComparison.OrdinalIgnoreCase) Then Continue For
+            End If
+
+            dtFiltrada.ImportRow(row)
+        Next
+
+        dgvEstoque.DataSource = dtFiltrada
+        adicionarColunaCheckBox()
+
+    End Sub
+
+    Private Sub ExportarExcel()
+
+        Dim itens As List(Of DataRow) = ColetarItensRelatorio()
+        If itens.Count = 0 Then Return
+
+        Try
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+
+            If Not System.IO.Directory.Exists(outputPath) Then
+                System.IO.Directory.CreateDirectory(outputPath)
+            End If
+
+            Dim caminho As String = ReportService.GerarExcel(itens, outputPath)
+
+            System.Diagnostics.Process.Start(caminho)
+
+            MessageBox.Show("Excel exported successfully!" & vbCrLf & vbCrLf &
+                            "File: " & caminho & vbCrLf &
+                            "Items: " & itens.Count.ToString(),
+                            "Export Excel", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            MessageBox.Show("Error exporting Excel: " & ex.Message, "Export Excel",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+    End Sub
+
+    Private Sub adicionarColunaCheckBox()
+
+        If dgvEstoque.Columns.Contains("_SEL") Then Return
+
+        Dim chk As New DataGridViewCheckBoxColumn()
+        chk.Name        = "_SEL"
+        chk.HeaderText  = ""
+        chk.Width       = 30
+        chk.ReadOnly    = False
+        chk.FillWeight  = 1
+        dgvEstoque.Columns.Insert(0, chk)
+
+    End Sub
+
+    Private Function ColetarItensRelatorio() As List(Of DataRow)
+
+        Dim marcadas As New List(Of DataRow)
+        If dgvEstoque.Columns.Contains("_SEL") Then
+            For Each gridRow As DataGridViewRow In dgvEstoque.Rows
+                Dim cell As DataGridViewCheckBoxCell = TryCast(gridRow.Cells("_SEL"), DataGridViewCheckBoxCell)
+                If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
+                    Dim drv As DataRowView = TryCast(gridRow.DataBoundItem, DataRowView)
+                    If drv IsNot Nothing Then marcadas.Add(drv.Row)
+                End If
+            Next
+        End If
+
+        If marcadas.Count > 0 Then Return marcadas
+
+        Dim todos As New List(Of DataRow)
+        For Each gridRow As DataGridViewRow In dgvEstoque.Rows
+            Dim drv As DataRowView = TryCast(gridRow.DataBoundItem, DataRowView)
+            If drv IsNot Nothing Then todos.Add(drv.Row)
+        Next
+        Return todos
+
+    End Function
+
+    Private Sub GerarRelatorio()
+
+        Dim itens As List(Of DataRow) = ColetarItensRelatorio()
+        If itens.Count = 0 Then Return
+
+        Try
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
+
+            If Not System.IO.Directory.Exists(outputPath) Then
+                System.IO.Directory.CreateDirectory(outputPath)
+            End If
+
+            Dim caminho As String = ReportService.GerarRelatorio(itens, outputPath, logoPath)
+
+            System.Diagnostics.Process.Start(caminho)
+
+            MessageBox.Show("Report generated successfully!" & vbCrLf & vbCrLf &
+                            "File: " & caminho & vbCrLf &
+                            "Items: " & itens.Count.ToString(),
+                            "Generate Report", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating report: " & ex.Message, "Generate Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+    End Sub
+
+    Private Function ObterNomeColuna(pTabela As DataTable, pCandidatos As String()) As String
+
+        For Each nome As String In pCandidatos
+            If pTabela.Columns.Contains(nome) Then Return nome
+        Next
+        Return ""
+
+    End Function
+
 #End Region
 
 #Region "Ações dos botões"
 
     Private Sub btnBuscarUID_Click(sender As Object, e As EventArgs) Handles btnBuscarUID.Click
+        aplicarFiltrosEstoque()
+    End Sub
 
-        Dim sUID As String = txtPesquisa.Text.Trim()
+    Private Sub cboFilterManufacturer_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboFilterManufacturer.SelectedIndexChanged
+        recarregarModelosPorManufacturer()
+    End Sub
 
-        If String.IsNullOrEmpty(sUID) Then
-            carregarEstoque()
-            Return
-        End If
+    Private Sub btnApplyFilter_Click(sender As Object, e As EventArgs) Handles btnApplyFilter.Click
+        aplicarFiltrosEstoque()
+    End Sub
 
-        Try
+    Private Sub btnClearFilter_Click(sender As Object, e As EventArgs) Handles btnClearFilter.Click
+        txtPesquisa.Text = ""
+        cboFilterManufacturer.SelectedIndex = 0
+        cboFilterModel.SelectedIndex = 0
+        cboFilterStatus.SelectedIndex = 0
+        aplicarFiltrosEstoque()
+    End Sub
 
-            Dim ds As DataSet = oEquipController.buscarPorFiltro(sUID, "", "", "")
+    Private Sub btnGenerateReport_Click(sender As Object, e As EventArgs) Handles btnGenerateReport.Click
+        GerarRelatorio()
+    End Sub
 
-            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
-                dgvEstoque.DataSource = ds.Tables(0)
-            End If
-
-        Catch ex As Exception
-
-            MessageBox.Show("Search error: " & ex.Message, "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error)
-
-        End Try
-
+    Private Sub btnExportExcel_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
+        ExportarExcel()
     End Sub
 
     Private Sub btnImportarPlanilha_Click(sender As Object, e As EventArgs) Handles btnImportarPlanilha.Click
@@ -352,7 +594,39 @@ Public Class frmPrincipal
 
     Private Sub dgvEstoque_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvEstoque.CellDoubleClick
         If e.RowIndex < 0 Then Return
-        AbrirUpgradeDoEstoqueSelecionado()
+        AbrirHistoricoEquipamento()
+    End Sub
+
+    Private Sub AbrirHistoricoEquipamento()
+
+        If dgvEstoque Is Nothing OrElse dgvEstoque.CurrentRow Is Nothing Then Return
+
+        Dim row As DataGridViewRow = dgvEstoque.CurrentRow
+        Dim id  As Integer = 0
+        Dim uid As String  = ""
+
+        If row.DataGridView.Columns.Contains("ID_EQUIPAMENTO") AndAlso row.Cells("ID_EQUIPAMENTO").Value IsNot Nothing Then
+            Integer.TryParse(row.Cells("ID_EQUIPAMENTO").Value.ToString(), id)
+        End If
+
+        If row.DataGridView.Columns.Contains("INTERNAL_UID") AndAlso row.Cells("INTERNAL_UID").Value IsNot Nothing Then
+            uid = row.Cells("INTERNAL_UID").Value.ToString()
+        End If
+
+        If id <= 0 Then
+            MessageBox.Show("Equipment ID not found in selected row.", "History",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Try
+            Dim frm As New frmHistoricoEquipamento(id, uid)
+            frm.ShowDialog(Me)
+        Catch ex As Exception
+            MessageBox.Show("Error opening history: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
     End Sub
 
     Private Sub AbrirUpgradeDoEstoqueSelecionado()
@@ -480,6 +754,7 @@ Public Class frmPrincipal
     End Sub
 
 #End Region
+
 
     Private Sub carregarDashboardResumoCards(pTabela As DataTable)
 
@@ -747,5 +1022,194 @@ Public Class frmPrincipal
         Return s
 
     End Function
+
+#Region "Menu de Contexto — Grid Inventory"
+
+    Private Sub ConfigurarMenuContextoEstoque()
+
+        Dim ctx As New ContextMenuStrip()
+
+        ' ── Change Status → submenu ────────────────────────────────────
+        Dim mnuStatus As New ToolStripMenuItem("Change Status")
+        For Each sta As String In {"IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"}
+            Dim item As New ToolStripMenuItem(sta)
+            item.Tag = sta
+            AddHandler item.Click, AddressOf mnuStatus_Click
+            mnuStatus.DropDownItems.Add(item)
+        Next
+        ctx.Items.Add(mnuStatus)
+
+        ' ── Edit Notes ─────────────────────────────────────────────────
+        Dim mnuNotes As New ToolStripMenuItem("Edit Notes")
+        AddHandler mnuNotes.Click, AddressOf mnuEditNotes_Click
+        ctx.Items.Add(mnuNotes)
+
+        ctx.Items.Add(New ToolStripSeparator())
+
+        ' ── View History ───────────────────────────────────────────────
+        Dim mnuHistory As New ToolStripMenuItem("View History")
+        AddHandler mnuHistory.Click, AddressOf mnuViewHistory_Click
+        ctx.Items.Add(mnuHistory)
+
+        AddHandler ctx.Opening, AddressOf ctxEstoque_Opening
+        dgvEstoque.ContextMenuStrip = ctx
+
+    End Sub
+
+    ' Seleciona a linha ao clicar com botão direito antes do menu abrir
+    Private Sub dgvEstoque_MouseDown(sender As Object, e As MouseEventArgs) Handles dgvEstoque.MouseDown
+        If e.Button <> MouseButtons.Right Then Return
+        Dim hit As DataGridView.HitTestInfo = dgvEstoque.HitTest(e.X, e.Y)
+        If hit.RowIndex >= 0 AndAlso hit.ColumnIndex >= 0 Then
+            dgvEstoque.ClearSelection()
+            dgvEstoque.Rows(hit.RowIndex).Selected = True
+            dgvEstoque.CurrentCell = dgvEstoque.Rows(hit.RowIndex).Cells(hit.ColumnIndex)
+        End If
+    End Sub
+
+    Private Sub ctxEstoque_Opening(sender As Object, e As System.ComponentModel.CancelEventArgs)
+        If dgvEstoque.CurrentRow Is Nothing OrElse dgvEstoque.CurrentRow.Index < 0 Then
+            e.Cancel = True
+        End If
+    End Sub
+
+    ' Retorna (ID_EQUIPAMENTO, INTERNAL_UID, válido) da linha selecionada
+    Private Function ObterDadosLinhaSelecionada() As (Id As Integer, UID As String, Valid As Boolean)
+        If dgvEstoque Is Nothing OrElse dgvEstoque.CurrentRow Is Nothing Then
+            Return (0, "", False)
+        End If
+        Dim row As DataGridViewRow = dgvEstoque.CurrentRow
+        Dim id  As Integer = 0
+        Dim uid As String  = ""
+        If row.DataGridView.Columns.Contains("ID_EQUIPAMENTO") AndAlso
+           row.Cells("ID_EQUIPAMENTO").Value IsNot Nothing Then
+            Integer.TryParse(row.Cells("ID_EQUIPAMENTO").Value.ToString(), id)
+        End If
+        If row.DataGridView.Columns.Contains("INTERNAL_UID") AndAlso
+           row.Cells("INTERNAL_UID").Value IsNot Nothing Then
+            uid = row.Cells("INTERNAL_UID").Value.ToString()
+        End If
+        Return (id, uid, id > 0)
+    End Function
+
+    Private Sub mnuStatus_Click(sender As Object, e As EventArgs)
+        Dim item As ToolStripMenuItem = TryCast(sender, ToolStripMenuItem)
+        If item Is Nothing Then Return
+        Dim novoStatus As String = item.Tag.ToString()
+        Dim dados = ObterDadosLinhaSelecionada()
+        If Not dados.Valid Then Return
+
+        Dim res As DialogResult = MessageBox.Show(
+            "Change status of UID [" & dados.UID & "] to [" & novoStatus & "]?" & vbCrLf &
+            "This action will be logged.",
+            "Change Status", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+        If res <> DialogResult.Yes Then Return
+
+        ' Executa o UPDATE imediatamente (antes do menu fechar)
+        Dim erroMsg As String = Nothing
+        Try
+            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim p0 As New OracleParameter("P_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
+            Dim p1 As New OracleParameter("P_ID",     OracleDbType.Int32,    ParameterDirection.Input)
+            p0.Value = novoStatus
+            p1.Value = dados.Id
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO SET STATUS = :P_STATUS, DATA_ATUALIZACAO = SYSDATE" &
+                " WHERE ID_EQUIPAMENTO = :P_ID", p0, p1)
+        Catch ex As Exception
+            erroMsg = ex.Message
+        End Try
+
+        ' Adia o reload e o MessageBox para depois do ContextMenuStrip fechar completamente.
+        ' Alterar DataSource dentro do handler do menu causa crash pois o DGV ainda está
+        ' processando eventos do ContextMenuStrip no mesmo ciclo de mensagens.
+        Dim uid    As String = dados.UID
+        Dim status As String = novoStatus
+        Me.BeginInvoke(Sub()
+            If erroMsg IsNot Nothing Then
+                MessageBox.Show("Error updating status: " & erroMsg, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End If
+            Try
+                carregarEstoque()
+                carregarDashboard()
+                MessageBox.Show("Status updated successfully!" & vbCrLf &
+                                "UID: " & uid & "  →  " & status,
+                                "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Catch ex As Exception
+                MessageBox.Show("Error reloading grid: " & ex.Message, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Sub)
+    End Sub
+
+    Private Sub mnuEditNotes_Click(sender As Object, e As EventArgs)
+        Dim dados = ObterDadosLinhaSelecionada()
+        If Not dados.Valid Then Return
+
+        Dim obsAtual As String = ""
+        Dim row As DataGridViewRow = dgvEstoque.CurrentRow
+        For Each colName As String In {"OBSERVACAO", "NOTES"}
+            If row.DataGridView.Columns.Contains(colName) AndAlso
+               row.Cells(colName).Value IsNot Nothing Then
+                obsAtual = row.Cells(colName).Value.ToString()
+                Exit For
+            End If
+        Next
+
+        Dim novaObs As String = InputBox("Notes for UID: " & dados.UID, "Edit Notes", obsAtual)
+        If novaObs = obsAtual Then Return
+
+        ' Executa o UPDATE antes do menu fechar
+        Dim erroMsg As String = Nothing
+        Try
+            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim p0 As New OracleParameter("P_OBS", OracleDbType.Varchar2, ParameterDirection.Input)
+            Dim p1 As New OracleParameter("P_ID",  OracleDbType.Int32,    ParameterDirection.Input)
+            p0.Value = If(String.IsNullOrWhiteSpace(novaObs), DBNull.Value, CObj(novaObs.Trim()))
+            p1.Value = dados.Id
+
+            Try
+                OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                    "UPDATE TBL_EQUIPAMENTO SET OBSERVACAO = :P_OBS, DATA_ATUALIZACAO = SYSDATE" &
+                    " WHERE ID_EQUIPAMENTO = :P_ID", p0, p1)
+            Catch exObs As Exception
+                If Not exObs.ToString().ToUpperInvariant().Contains("ORA-00904") Then Throw
+                Dim p0b As New OracleParameter("P_OBS", OracleDbType.Varchar2, ParameterDirection.Input)
+                Dim p1b As New OracleParameter("P_ID",  OracleDbType.Int32,    ParameterDirection.Input)
+                p0b.Value = If(String.IsNullOrWhiteSpace(novaObs), DBNull.Value, CObj(novaObs.Trim()))
+                p1b.Value = dados.Id
+                OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                    "UPDATE TBL_EQUIPAMENTO SET NOTES = :P_OBS, DATA_ATUALIZACAO = SYSDATE" &
+                    " WHERE ID_EQUIPAMENTO = :P_ID", p0b, p1b)
+            End Try
+        Catch ex As Exception
+            erroMsg = ex.Message
+        End Try
+
+        ' Reload adiado — mesma razão do mnuStatus_Click
+        Me.BeginInvoke(Sub()
+            If erroMsg IsNot Nothing Then
+                MessageBox.Show("Error updating notes: " & erroMsg, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End If
+            Try
+                carregarEstoque()
+                MessageBox.Show("Notes updated successfully!", "Success",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Catch ex As Exception
+                MessageBox.Show("Error reloading grid: " & ex.Message, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Sub)
+    End Sub
+
+    Private Sub mnuViewHistory_Click(sender As Object, e As EventArgs)
+        AbrirHistoricoEquipamento()
+    End Sub
+
+#End Region
 
 End Class

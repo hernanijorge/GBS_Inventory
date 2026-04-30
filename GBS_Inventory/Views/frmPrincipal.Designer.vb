@@ -41,6 +41,7 @@ Partial Class frmPrincipal
     Friend WithEvents dgvDashManufacturer As DataGridView
     Friend WithEvents dgvDashModel        As DataGridView
     Friend WithEvents dgvDashCPU          As DataGridView
+
     Friend WithEvents lblVersao As Label
     Friend WithEvents lblStatus As Label
     Friend WithEvents dgvRemessas As DataGridView
@@ -59,6 +60,16 @@ Partial Class frmPrincipal
     Friend WithEvents txtUpgradeBusca      As TextBox
     Friend WithEvents btnUpgradeBuscar     As Button
     Friend WithEvents btnUpgradeScanner    As Button
+
+    ' Painel de filtros da aba Inventory
+    Friend WithEvents pnlFiltros            As Panel
+    Friend WithEvents cboFilterManufacturer As ComboBox
+    Friend WithEvents cboFilterModel        As ComboBox
+    Friend WithEvents cboFilterStatus       As ComboBox
+    Friend WithEvents btnApplyFilter        As Button
+    Friend WithEvents btnClearFilter        As Button
+    Friend WithEvents btnGenerateReport     As Button
+    Friend WithEvents btnExportExcel        As Button
 
     ' Controles da aba Importação
     Friend WithEvents lblImpArquivo As Label
@@ -232,7 +243,7 @@ Partial Class frmPrincipal
         Me.dgvDashCPU.ReadOnly      = True
         Me.dgvDashCPU.MultiSelect   = False
         Me.dgvDashCPU.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        Me.dgvDashCPU.Anchor        = AnchorStyles.Top Or AnchorStyles.Right Or AnchorStyles.Bottom
+        Me.dgvDashCPU.Anchor        = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Bottom
 
         Me.pnlDashboard.Controls.Add(lblDashboardResumo)
         Me.pnlDashboard.Controls.Add(dgvDashboardResumo)
@@ -264,6 +275,8 @@ Partial Class frmPrincipal
         Me.tabCadastro.Controls.Add(pnlCadastro)
 
         ' ─── ABA ESTOQUE ──────────────────────────────────────────────
+
+        ' ── Barra de ação (busca + botões) ────────────────────────────
         Me.pnlAcoes = New Panel()
         Me.pnlAcoes.Dock = DockStyle.Top
         Me.pnlAcoes.Height = 50
@@ -303,10 +316,85 @@ Partial Class frmPrincipal
         Me.pnlAcoes.Controls.AddRange({lblPesquisa, txtPesquisa, btnBuscarUID,
                                         btnScanner, btnImportarPlanilha, btnAtualizar})
 
+        ' ── Painel de filtros ─────────────────────────────────────────
+        Me.pnlFiltros = New Panel()
+        Me.pnlFiltros.Dock = DockStyle.Top
+        Me.pnlFiltros.Height = 50
+        Me.pnlFiltros.BackColor = TemaEscuro.Fundo
+        Me.pnlFiltros.Padding = New Padding(8)
+
+        Dim lblFMfr As New Label() With {
+            .Text = "Manufacturer:", .Location = New Point(10, 15),
+            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        }
+
+        Me.cboFilterManufacturer = New ComboBox()
+        Me.cboFilterManufacturer.Location      = New Point(105, 12)
+        Me.cboFilterManufacturer.Size          = New Size(140, 24)
+        Me.cboFilterManufacturer.DropDownStyle = ComboBoxStyle.DropDownList
+
+        Dim lblFMdl As New Label() With {
+            .Text = "Model:", .Location = New Point(255, 15),
+            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        }
+
+        Me.cboFilterModel = New ComboBox()
+        Me.cboFilterModel.Location      = New Point(300, 12)
+        Me.cboFilterModel.Size          = New Size(140, 24)
+        Me.cboFilterModel.DropDownStyle = ComboBoxStyle.DropDownList
+
+        Dim lblFSt As New Label() With {
+            .Text = "Status:", .Location = New Point(450, 15),
+            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        }
+
+        Me.cboFilterStatus = New ComboBox()
+        Me.cboFilterStatus.Location      = New Point(495, 12)
+        Me.cboFilterStatus.Size          = New Size(130, 24)
+        Me.cboFilterStatus.DropDownStyle = ComboBoxStyle.DropDownList
+        Me.cboFilterStatus.Items.AddRange({"(All)", "IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
+        Me.cboFilterStatus.SelectedIndex = 0
+
+        Me.btnApplyFilter = New Button()
+        Me.btnApplyFilter.Text     = "Apply Filter"
+        Me.btnApplyFilter.Location = New Point(635, 11)
+        Me.btnApplyFilter.Size     = New Size(100, 28)
+
+        Me.btnClearFilter = New Button()
+        Me.btnClearFilter.Text     = "Clear"
+        Me.btnClearFilter.Location = New Point(741, 11)
+        Me.btnClearFilter.Size     = New Size(75, 28)
+
+        Me.btnGenerateReport = New Button()
+        Me.btnGenerateReport.Text      = "Generate Report"
+        Me.btnGenerateReport.Location  = New Point(825, 11)
+        Me.btnGenerateReport.Size      = New Size(125, 28)
+        Me.btnGenerateReport.BackColor = TemaEscuro.Accent
+        Me.btnGenerateReport.ForeColor = TemaEscuro.Fundo
+        Me.btnGenerateReport.FlatStyle = FlatStyle.Flat
+
+        Me.btnExportExcel = New Button()
+        Me.btnExportExcel.Text      = "Export Excel"
+        Me.btnExportExcel.Location  = New Point(956, 11)
+        Me.btnExportExcel.Size      = New Size(110, 28)
+        Me.btnExportExcel.BackColor = Color.FromArgb(21, 128, 61)
+        Me.btnExportExcel.ForeColor = Color.White
+        Me.btnExportExcel.FlatStyle = FlatStyle.Flat
+
+        Me.pnlFiltros.Controls.AddRange({lblFMfr, cboFilterManufacturer,
+                                          lblFMdl, cboFilterModel,
+                                          lblFSt,  cboFilterStatus,
+                                          btnApplyFilter, btnClearFilter,
+                                          btnGenerateReport, btnExportExcel})
+
+        ' ── Grid de estoque ───────────────────────────────────────────
         Me.dgvEstoque = New DataGridView()
         Me.dgvEstoque.Dock = DockStyle.Fill
 
+        ' Dock=Top empilha de baixo pra cima; dgvEstoque (Fill) fica no fundo,
+        ' pnlFiltros aparece acima dele, pnlAcoes acima do pnlFiltros.
         Me.tabEstoque.Controls.Add(dgvEstoque)
+        Me.tabEstoque.Controls.Add(pnlFiltros)
         Me.tabEstoque.Controls.Add(pnlAcoes)
 
         ' ─── ABA REMESSAS ─────────────────────────────────────────────
