@@ -15,18 +15,21 @@ Partial Class frmImportacao
     Friend WithEvents lblAtualizados As Label
     Friend WithEvents lblAbas As Label
     Friend WithEvents lblLinhas As Label
-    Friend WithEvents lblErros As Label
-    Friend WithEvents txtErros As TextBox
+    Friend WithEvents lblErros   As Label
+    Friend WithEvents lblSkipped As Label
+    Friend WithEvents txtErros   As TextBox
 
     Private Sub InitializeComponent()
 
         Me.SuspendLayout()
 
-        Me.Text = "Import Excel Spreadsheet — GBS"
-        Me.Size = New Size(720, 620)
-        Me.StartPosition = FormStartPosition.CenterParent
-        Me.BackColor = TemaEscuro.Fundo
-        Me.Font = New Font("Segoe UI", 9)
+        Me.Text            = "Import Excel Spreadsheet — GBS"
+        Me.Size            = New Size(720, 880)
+        Me.MinimumSize     = New Size(720, 500)
+        Me.FormBorderStyle = FormBorderStyle.Sizable
+        Me.StartPosition   = FormStartPosition.CenterParent
+        Me.BackColor       = TemaEscuro.Fundo
+        Me.Font            = New Font("Segoe UI", 9)
 
         Me.lblTitulo = New Label()
         Me.lblTitulo.Text = "Spreadsheet Import"
@@ -97,14 +100,15 @@ Partial Class frmImportacao
             .Font = New Font("Segoe UI", 10, FontStyle.Bold)
         }
 
-        Me.lblInseridos = criarInfo(15, 45, "Inserted: —", TemaEscuro.Accent)
-        Me.lblAtualizados = criarInfo(15, 70, "Updated: —", TemaEscuro.Texto)
-        Me.lblAbas = criarInfo(15, 95, "Sheets processed: —", TemaEscuro.Texto)
-        Me.lblLinhas = criarInfo(15, 120, "Lines read: —", TemaEscuro.Texto)
-        Me.lblErros = criarInfo(330, 45, "Errors: 0", TemaEscuro.TextoMutado)
+        Me.lblInseridos   = criarInfo(15,  45, "Inserted: —",          TemaEscuro.Accent)
+        Me.lblAtualizados = criarInfo(15,  70, "Updated: —",           TemaEscuro.Texto)
+        Me.lblAbas        = criarInfo(15,  95, "Sheets processed: —",  TemaEscuro.Texto)
+        Me.lblLinhas      = criarInfo(15, 120, "Lines read: —",        TemaEscuro.Texto)
+        Me.lblErros       = criarInfo(330, 45, "Errors: 0",            TemaEscuro.TextoMutado)
+        Me.lblSkipped     = criarInfo(330, 70, "Skipped: 0",           TemaEscuro.TextoMutado)
 
         pnlResult.Controls.AddRange({lblCab, lblInseridos, lblAtualizados,
-                                      lblAbas, lblLinhas, lblErros})
+                                      lblAbas, lblLinhas, lblErros, lblSkipped})
 
         ' TextBox de erros
         Dim lblDetErros As New Label() With {

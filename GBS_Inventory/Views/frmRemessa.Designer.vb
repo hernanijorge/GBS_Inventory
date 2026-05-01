@@ -20,9 +20,11 @@ Partial Class frmRemessa
     Friend WithEvents txtNotes As TextBox
     Friend WithEvents btnNovaRemessa As Button
 
-    Friend WithEvents txtBuscarEquip As TextBox
-    Friend WithEvents btnBuscarEquip As Button
-    Friend WithEvents dgvResultadoBusca As DataGridView
+    Friend WithEvents txtQuickScan       As TextBox
+    Friend WithEvents lblQuickScanStatus As Label
+    Friend WithEvents txtBuscarEquip     As TextBox
+    Friend WithEvents btnBuscarEquip     As Button
+    Friend WithEvents dgvResultadoBusca  As DataGridView
     Friend WithEvents txtPrecoItem As TextBox
     Friend WithEvents txtNotaItem As TextBox
     Friend WithEvents btnAdicionarItem As Button
@@ -40,7 +42,7 @@ Partial Class frmRemessa
         Me.SuspendLayout()
 
         Me.Text = "Shipments - FedEx / UPS / USPS / DHL"
-        Me.Size = New Size(1460, 860)
+        Me.Size = New Size(1460, 900)
         Me.StartPosition = FormStartPosition.CenterParent
         Me.BackColor = TemaEscuro.Fundo
         Me.Font = New Font("Segoe UI", 9)
@@ -72,7 +74,7 @@ Partial Class frmRemessa
 
         Dim pnlCriar As New Panel() With {
             .Location = New Point(730, 55),
-            .Size = New Size(700, 640),
+            .Size = New Size(700, 692),
             .BackColor = TemaEscuro.Surface,
             .Anchor = AnchorStyles.Top Or AnchorStyles.Right Or AnchorStyles.Bottom
         }
@@ -139,60 +141,72 @@ Partial Class frmRemessa
         Me.txtNotes.Location = New Point(500, 225)
         Me.txtNotes.Size = New Size(175, 24)
 
-        Dim lblBusca As New Label() With {.Text = "Search equipment (UID / Serial / Model)", .Location = New Point(15, 260), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblQSHeader As New Label() With {.Text = "Quick Scan (UID / Serial):", .Location = New Point(15, 260), .AutoSize = True, .ForeColor = TemaEscuro.Accent}
+        Me.txtQuickScan = New TextBox()
+        Me.txtQuickScan.Location = New Point(15, 278)
+        Me.txtQuickScan.Size = New Size(440, 30)
+        Me.txtQuickScan.Font = New Font("Segoe UI", 11)
+
+        Me.lblQuickScanStatus = New Label()
+        Me.lblQuickScanStatus.Location = New Point(460, 282)
+        Me.lblQuickScanStatus.Size = New Size(220, 22)
+        Me.lblQuickScanStatus.ForeColor = TemaEscuro.Verde
+        Me.lblQuickScanStatus.Text = ""
+
+        Dim lblBusca As New Label() With {.Text = "Search equipment (UID / Serial / Model)", .Location = New Point(15, 312), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtBuscarEquip = New TextBox()
-        Me.txtBuscarEquip.Location = New Point(15, 280)
+        Me.txtBuscarEquip.Location = New Point(15, 332)
         Me.txtBuscarEquip.Size = New Size(520, 24)
 
         Me.btnBuscarEquip = New Button()
         Me.btnBuscarEquip.Text = "Search"
-        Me.btnBuscarEquip.Location = New Point(545, 278)
+        Me.btnBuscarEquip.Location = New Point(545, 330)
         Me.btnBuscarEquip.Size = New Size(130, 28)
 
         Me.dgvResultadoBusca = New DataGridView()
-        Me.dgvResultadoBusca.Location = New Point(15, 312)
-        Me.dgvResultadoBusca.Size = New Size(660, 130)
+        Me.dgvResultadoBusca.Location = New Point(15, 364)
+        Me.dgvResultadoBusca.Size = New Size(660, 112)
         Me.dgvResultadoBusca.ReadOnly = True
         Me.dgvResultadoBusca.MultiSelect = False
         Me.dgvResultadoBusca.SelectionMode = DataGridViewSelectionMode.FullRowSelect
 
-        Dim lblPrecoItem As New Label() With {.Text = "Item Price (USD)", .Location = New Point(15, 448), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblPrecoItem As New Label() With {.Text = "Item Price (USD)", .Location = New Point(15, 500), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtPrecoItem = New TextBox()
-        Me.txtPrecoItem.Location = New Point(15, 468)
+        Me.txtPrecoItem.Location = New Point(15, 520)
         Me.txtPrecoItem.Size = New Size(130, 24)
         Me.txtPrecoItem.TextAlign = HorizontalAlignment.Right
 
-        Dim lblNotaItem As New Label() With {.Text = "Item Note", .Location = New Point(160, 448), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblNotaItem As New Label() With {.Text = "Item Note", .Location = New Point(160, 500), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtNotaItem = New TextBox()
-        Me.txtNotaItem.Location = New Point(160, 468)
+        Me.txtNotaItem.Location = New Point(160, 520)
         Me.txtNotaItem.Size = New Size(365, 24)
 
         Me.btnAdicionarItem = New Button()
         Me.btnAdicionarItem.Text = "Add Item"
-        Me.btnAdicionarItem.Location = New Point(535, 466)
+        Me.btnAdicionarItem.Location = New Point(535, 518)
         Me.btnAdicionarItem.Size = New Size(140, 28)
 
         Me.lblContadorItens = New Label()
         Me.lblContadorItens.Text = "Items: 0"
-        Me.lblContadorItens.Location = New Point(15, 500)
+        Me.lblContadorItens.Location = New Point(15, 552)
         Me.lblContadorItens.AutoSize = True
         Me.lblContadorItens.ForeColor = TemaEscuro.Accent
 
         Me.dgvItensSelecionados = New DataGridView()
-        Me.dgvItensSelecionados.Location = New Point(15, 520)
-        Me.dgvItensSelecionados.Size = New Size(660, 70)
+        Me.dgvItensSelecionados.Location = New Point(15, 572)
+        Me.dgvItensSelecionados.Size = New Size(660, 60)
         Me.dgvItensSelecionados.ReadOnly = True
         Me.dgvItensSelecionados.MultiSelect = False
         Me.dgvItensSelecionados.SelectionMode = DataGridViewSelectionMode.FullRowSelect
 
         Me.btnRemoverItem = New Button()
         Me.btnRemoverItem.Text = "Remove Item"
-        Me.btnRemoverItem.Location = New Point(385, 600)
+        Me.btnRemoverItem.Location = New Point(385, 652)
         Me.btnRemoverItem.Size = New Size(140, 30)
 
         Me.btnNovaRemessa = New Button()
         Me.btnNovaRemessa.Text = "Create Shipment"
-        Me.btnNovaRemessa.Location = New Point(535, 600)
+        Me.btnNovaRemessa.Location = New Point(535, 652)
         Me.btnNovaRemessa.Size = New Size(140, 30)
         Me.btnNovaRemessa.Font = New Font("Segoe UI", 10, FontStyle.Bold)
 
@@ -200,13 +214,14 @@ Partial Class frmRemessa
                                     lblTrk, txtTracking, lblRec, txtRecipientName,
                                     lblAdr, txtRecipientAddress, lblSvc, txtServiceLevel,
                                     lblPeso, txtPeso, lblCusto, txtCustoEnvio,
-                                    lblNt, txtNotes, lblBusca, txtBuscarEquip, btnBuscarEquip,
+                                    lblNt, txtNotes, lblQSHeader, txtQuickScan,
+                                    lblQuickScanStatus, lblBusca, txtBuscarEquip, btnBuscarEquip,
                                     dgvResultadoBusca, lblPrecoItem, txtPrecoItem, lblNotaItem,
                                     txtNotaItem, btnAdicionarItem, lblContadorItens,
                                     dgvItensSelecionados, btnRemoverItem, btnNovaRemessa})
 
         Dim pnlAcoes As New Panel() With {
-            .Location = New Point(15, 670),
+            .Location = New Point(15, 750),
             .Size = New Size(1415, 100),
             .BackColor = TemaEscuro.Surface,
             .Anchor = AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Bottom

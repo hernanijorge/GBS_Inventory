@@ -22,6 +22,7 @@ Public Class frmPrincipal
     Private dtResumoModel As DataTable
     Private dtResumoCpuFamily As DataTable
     Private dtEstoqueCompleto As DataTable
+    Private _todasSelecionadas As Boolean = False
 
 #End Region
 
@@ -128,8 +129,8 @@ Public Class frmPrincipal
         If dtEstoqueCompleto Is Nothing Then Return
 
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
-        PopularComboDistinto(cboFilterManufacturer, colMarca)
-        ' cboFilterModel é populado pelo cboFilterManufacturer_SelectedIndexChanged
+        PopularCheckedListBox(clbManufacturer, colMarca)
+        recarregarModelosPorManufacturer()
 
     End Sub
 
@@ -137,34 +138,89 @@ Public Class frmPrincipal
 
         If dtEstoqueCompleto Is Nothing Then Return
 
-        Dim colMarca  As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
         If String.IsNullOrEmpty(colModelo) Then Return
 
-        Dim sMarca As String = If(cboFilterManufacturer.SelectedIndex > 0,
-                                  cboFilterManufacturer.SelectedItem.ToString(), "")
-        Dim selAtual As String = If(cboFilterModel.SelectedIndex > 0,
-                                    cboFilterModel.SelectedItem.ToString(), "")
+        Dim marcas As New List(Of String)()
+        For Each item As Object In clbManufacturer.CheckedItems
+            marcas.Add(item.ToString())
+        Next
 
-        Dim modelos As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        PopularCheckedListBox(clbModel, colModelo, pFiltroMarca:=If(marcas.Count > 0, marcas, Nothing))
+        recarregarProcessoresPorModelo()
+
+    End Sub
+
+    Private Sub recarregarProcessoresPorModelo()
+
+        If dtEstoqueCompleto Is Nothing Then Return
+
+        Dim colProc As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
+        If String.IsNullOrEmpty(colProc) Then Return
+
+        Dim marcas As New List(Of String)()
+        For Each item As Object In clbManufacturer.CheckedItems
+            marcas.Add(item.ToString())
+        Next
+
+        Dim modelos As New List(Of String)()
+        For Each item As Object In clbModel.CheckedItems
+            modelos.Add(item.ToString())
+        Next
+
+        PopularCheckedListBox(clbProcessor, colProc,
+                              pFiltroMarca  := If(marcas.Count > 0, marcas, Nothing),
+                              pFiltroModelo := If(modelos.Count > 0, modelos, Nothing))
+
+    End Sub
+
+    Private Sub PopularCheckedListBox(pClb As CheckedListBox, pColuna As String,
+                                      Optional pFiltroMarca  As List(Of String) = Nothing,
+                                      Optional pFiltroModelo As List(Of String) = Nothing)
+
+        Dim checked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each item As Object In pClb.CheckedItems
+            checked.Add(item.ToString())
+        Next
+
+        pClb.Items.Clear()
+
+        If String.IsNullOrEmpty(pColuna) OrElse dtEstoqueCompleto Is Nothing Then Return
+
+        Dim colMarca   As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        Dim colModeloF As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
+        Dim valores As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
         For Each row As DataRow In dtEstoqueCompleto.Rows
-            If Not String.IsNullOrEmpty(sMarca) AndAlso Not String.IsNullOrEmpty(colMarca) Then
-                If Not row(colMarca).ToString().Equals(sMarca, StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            If pFiltroMarca IsNot Nothing AndAlso pFiltroMarca.Count > 0 AndAlso Not String.IsNullOrEmpty(colMarca) Then
+                Dim marca As String = If(IsDBNull(row(colMarca)), "", row(colMarca).ToString())
+                Dim marcaOk As Boolean = False
+                For Each m As String In pFiltroMarca
+                    If String.Equals(m, marca, StringComparison.OrdinalIgnoreCase) Then marcaOk = True : Exit For
+                Next
+                If Not marcaOk Then Continue For
             End If
-            If Not IsDBNull(row(colModelo)) Then
-                Dim v As String = row(colModelo).ToString().Trim()
-                If Not String.IsNullOrEmpty(v) Then modelos.Add(v)
+
+            If pFiltroModelo IsNot Nothing AndAlso pFiltroModelo.Count > 0 AndAlso Not String.IsNullOrEmpty(colModeloF) Then
+                Dim modelo As String = If(IsDBNull(row(colModeloF)), "", row(colModeloF).ToString())
+                Dim modeloOk As Boolean = False
+                For Each m As String In pFiltroModelo
+                    If String.Equals(m, modelo, StringComparison.OrdinalIgnoreCase) Then modeloOk = True : Exit For
+                Next
+                If Not modeloOk Then Continue For
             End If
+
+            If Not IsDBNull(row(pColuna)) Then
+                Dim v As String = row(pColuna).ToString().Trim()
+                If Not String.IsNullOrEmpty(v) Then valores.Add(v)
+            End If
+
         Next
 
-        cboFilterModel.Items.Clear()
-        cboFilterModel.Items.Add("(All)")
-        For Each m As String In modelos
-            cboFilterModel.Items.Add(m)
+        For Each v As String In valores
+            pClb.Items.Add(v, checked.Contains(v))
         Next
-
-        Dim idx As Integer = cboFilterModel.Items.IndexOf(selAtual)
-        cboFilterModel.SelectedIndex = If(idx > 0, idx, 0)
 
     End Sub
 
@@ -200,12 +256,31 @@ Public Class frmPrincipal
 
         If dtEstoqueCompleto Is Nothing Then Return
 
-        Dim texto  As String = txtPesquisa.Text.Trim().ToUpperInvariant()
-        Dim sMarca As String = If(cboFilterManufacturer.SelectedIndex > 0, cboFilterManufacturer.SelectedItem.ToString(), "")
-        Dim sModel As String = If(cboFilterModel.SelectedIndex > 0,        cboFilterModel.SelectedItem.ToString(), "")
-        Dim sStatus As String = If(cboFilterStatus.SelectedIndex > 0,      cboFilterStatus.SelectedItem.ToString(), "")
+        Dim texto As String = txtPesquisa.Text.Trim().ToUpperInvariant()
+
+        Dim marcas As New List(Of String)()
+        For Each item As Object In clbManufacturer.CheckedItems
+            marcas.Add(item.ToString())
+        Next
+
+        Dim modelos As New List(Of String)()
+        For Each item As Object In clbModel.CheckedItems
+            modelos.Add(item.ToString())
+        Next
+
+        Dim statuses As New List(Of String)()
+        For Each item As Object In clbStatus.CheckedItems
+            statuses.Add(item.ToString())
+        Next
+
+        Dim processors As New List(Of String)()
+        For Each item As Object In clbProcessor.CheckedItems
+            processors.Add(item.ToString())
+        Next
+
         Dim colMarca  As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
+        Dim colProc   As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
 
         Dim dtFiltrada As DataTable = dtEstoqueCompleto.Clone()
 
@@ -226,27 +301,55 @@ Public Class frmPrincipal
                 If Not encontrou Then Continue For
             End If
 
-            ' manufacturer
-            If Not String.IsNullOrEmpty(sMarca) AndAlso Not String.IsNullOrEmpty(colMarca) Then
-                If Not row(colMarca).ToString().Equals(sMarca, StringComparison.OrdinalIgnoreCase) Then Continue For
+            ' manufacturer — OR among checked, empty = all
+            If marcas.Count > 0 AndAlso Not String.IsNullOrEmpty(colMarca) Then
+                Dim v As String = If(IsDBNull(row(colMarca)), "", row(colMarca).ToString())
+                Dim ok As Boolean = False
+                For Each m As String In marcas
+                    If String.Equals(m, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
             End If
 
-            ' model
-            If Not String.IsNullOrEmpty(sModel) AndAlso Not String.IsNullOrEmpty(colModelo) Then
-                If Not row(colModelo).ToString().Equals(sModel, StringComparison.OrdinalIgnoreCase) Then Continue For
+            ' model — OR among checked, empty = all
+            If modelos.Count > 0 AndAlso Not String.IsNullOrEmpty(colModelo) Then
+                Dim v As String = If(IsDBNull(row(colModelo)), "", row(colModelo).ToString())
+                Dim ok As Boolean = False
+                For Each m As String In modelos
+                    If String.Equals(m, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
             End If
 
-            ' status
-            If Not String.IsNullOrEmpty(sStatus) AndAlso dtEstoqueCompleto.Columns.Contains("STATUS") Then
-                If Not row("STATUS").ToString().Equals(sStatus, StringComparison.OrdinalIgnoreCase) Then Continue For
+            ' status — OR among checked, empty = all
+            If statuses.Count > 0 AndAlso dtEstoqueCompleto.Columns.Contains("STATUS") Then
+                Dim v As String = If(IsDBNull(row("STATUS")), "", row("STATUS").ToString())
+                Dim ok As Boolean = False
+                For Each s As String In statuses
+                    If String.Equals(s, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
+            End If
+
+            ' processor — OR among checked, empty = all
+            If processors.Count > 0 AndAlso Not String.IsNullOrEmpty(colProc) AndAlso
+               dtEstoqueCompleto.Columns.Contains(colProc) Then
+                Dim v As String = If(IsDBNull(row(colProc)), "", row(colProc).ToString())
+                Dim ok As Boolean = False
+                For Each p As String In processors
+                    If String.Equals(p, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
             End If
 
             dtFiltrada.ImportRow(row)
         Next
 
+        _todasSelecionadas = False
         dgvEstoque.DataSource = dtFiltrada
         adicionarColunaCheckBox()
         AtualizarRodapeEstoque()
+        AtualizarContadorFiltros()
 
     End Sub
 
@@ -260,6 +363,7 @@ Public Class frmPrincipal
         Dim inStock  As Integer = 0
         Dim sold     As Integer = 0
         Dim inRepair As Integer = 0
+        Dim selected As Integer = 0
 
         If dtAtual IsNot Nothing AndAlso dtAtual.Columns.Contains("STATUS") Then
             For Each row As DataRow In dtAtual.Rows
@@ -273,6 +377,15 @@ Public Class frmPrincipal
             Next
         End If
 
+        If dgvEstoque.Columns.Contains("_SEL") Then
+            For Each gridRow As DataGridViewRow In dgvEstoque.Rows
+                Dim cell As DataGridViewCheckBoxCell = TryCast(gridRow.Cells("_SEL"), DataGridViewCheckBoxCell)
+                If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
+                    selected += 1
+                End If
+            Next
+        End If
+
         Dim totalDB As Integer = If(dtEstoqueCompleto IsNot Nothing, dtEstoqueCompleto.Rows.Count, 0)
 
         lblEstoqueFooter.Text =
@@ -280,6 +393,7 @@ Public Class frmPrincipal
             "IN_STOCK: "  & inStock.ToString()  & "  |  " &
             "SOLD: "      & sold.ToString()     & "  |  " &
             "IN_REPAIR: " & inRepair.ToString() & "  |  " &
+            "Selected: "  & selected.ToString() & "  |  " &
             "Total in DB: " & totalDB.ToString()
 
     End Sub
@@ -400,8 +514,38 @@ Public Class frmPrincipal
         aplicarFiltrosEstoque()
     End Sub
 
-    Private Sub cboFilterManufacturer_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboFilterManufacturer.SelectedIndexChanged
-        recarregarModelosPorManufacturer()
+    Private Sub clbManufacturer_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbManufacturer.ItemCheck
+        Me.BeginInvoke(Sub()
+                           recarregarModelosPorManufacturer()
+                           AtualizarContadorFiltros()
+                       End Sub)
+    End Sub
+
+    Private Sub clbModel_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbModel.ItemCheck
+        Me.BeginInvoke(Sub()
+                           recarregarProcessoresPorModelo()
+                           AtualizarContadorFiltros()
+                       End Sub)
+    End Sub
+
+    Private Sub clbStatus_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbStatus.ItemCheck
+        Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
+    End Sub
+
+    Private Sub clbProcessor_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbProcessor.ItemCheck
+        Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
+    End Sub
+
+    Private Sub AtualizarContadorFiltros()
+        If lblFiltrosAtivos Is Nothing Then Return
+        Dim count As Integer = clbManufacturer.CheckedItems.Count +
+                               clbModel.CheckedItems.Count +
+                               clbStatus.CheckedItems.Count +
+                               clbProcessor.CheckedItems.Count
+        lblFiltrosAtivos.Text = If(count = 0, "No filters active",
+                                   If(count = 1, "1 filter active",
+                                      count.ToString() & " filters active"))
+        lblFiltrosAtivos.ForeColor = If(count = 0, TemaEscuro.TextoMutado, TemaEscuro.Accent)
     End Sub
 
     Private Sub btnApplyFilter_Click(sender As Object, e As EventArgs) Handles btnApplyFilter.Click
@@ -410,10 +554,60 @@ Public Class frmPrincipal
 
     Private Sub btnClearFilter_Click(sender As Object, e As EventArgs) Handles btnClearFilter.Click
         txtPesquisa.Text = ""
-        cboFilterManufacturer.SelectedIndex = 0
-        cboFilterModel.SelectedIndex = 0
-        cboFilterStatus.SelectedIndex = 0
+        For i As Integer = 0 To clbManufacturer.Items.Count - 1
+            clbManufacturer.SetItemChecked(i, False)
+        Next
+        For i As Integer = 0 To clbModel.Items.Count - 1
+            clbModel.SetItemChecked(i, False)
+        Next
+        For i As Integer = 0 To clbStatus.Items.Count - 1
+            clbStatus.SetItemChecked(i, False)
+        Next
+        For i As Integer = 0 To clbProcessor.Items.Count - 1
+            clbProcessor.SetItemChecked(i, False)
+        Next
         aplicarFiltrosEstoque()
+    End Sub
+
+    Private Sub btnRemoveSelected_Click(sender As Object, e As EventArgs) Handles btnRemoveSelected.Click
+
+        If Not dgvEstoque.Columns.Contains("_SEL") Then Return
+
+        dgvEstoque.EndEdit()
+
+        Dim count As Integer = 0
+        For i As Integer = dgvEstoque.Rows.Count - 1 To 0 Step -1
+            Dim cell As DataGridViewCheckBoxCell = TryCast(dgvEstoque.Rows(i).Cells("_SEL"), DataGridViewCheckBoxCell)
+            If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
+                count += 1
+            End If
+        Next
+
+        If count = 0 Then
+            MessageBox.Show("No items selected. Check the boxes in the first column to select rows.",
+                            "Remove Selected", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim res As DialogResult = MessageBox.Show(
+            $"Remove {count} item(s) from the report view?" & vbCrLf &
+            "(Database is NOT affected — only removes from current grid view)",
+            "Confirm Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+        If res <> DialogResult.Yes Then Return
+
+        Dim dt As DataTable = TryCast(dgvEstoque.DataSource, DataTable)
+        If dt Is Nothing Then Return
+
+        For i As Integer = dgvEstoque.Rows.Count - 1 To 0 Step -1
+            Dim cell As DataGridViewCheckBoxCell = TryCast(dgvEstoque.Rows(i).Cells("_SEL"), DataGridViewCheckBoxCell)
+            If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
+                Dim drv As DataRowView = TryCast(dgvEstoque.Rows(i).DataBoundItem, DataRowView)
+                If drv IsNot Nothing Then dt.Rows.Remove(drv.Row)
+            End If
+        Next
+
+        AtualizarRodapeEstoque()
+
     End Sub
 
     Private Sub btnGenerateReport_Click(sender As Object, e As EventArgs) Handles btnGenerateReport.Click
@@ -496,6 +690,32 @@ Public Class frmPrincipal
             btnBuscarUID_Click(sender, e)
         End If
 
+    End Sub
+
+    Private Sub dgvEstoque_ColumnHeaderMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgvEstoque.ColumnHeaderMouseClick
+        If e.ColumnIndex < 0 Then Return
+        If dgvEstoque.Columns(e.ColumnIndex).Name <> "_SEL" Then Return
+
+        _todasSelecionadas = Not _todasSelecionadas
+        For Each row As DataGridViewRow In dgvEstoque.Rows
+            row.Cells("_SEL").Value = _todasSelecionadas
+        Next
+        dgvEstoque.EndEdit()
+        AtualizarRodapeEstoque()
+    End Sub
+
+    Private Sub dgvEstoque_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) Handles dgvEstoque.CurrentCellDirtyStateChanged
+        If dgvEstoque.IsCurrentCellDirty AndAlso dgvEstoque.CurrentCell IsNot Nothing AndAlso
+           dgvEstoque.Columns(dgvEstoque.CurrentCell.ColumnIndex).Name = "_SEL" Then
+            dgvEstoque.CommitEdit(DataGridViewDataErrorContexts.Commit)
+        End If
+    End Sub
+
+    Private Sub dgvEstoque_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles dgvEstoque.CellValueChanged
+        If e.ColumnIndex >= 0 AndAlso e.ColumnIndex < dgvEstoque.Columns.Count AndAlso
+           dgvEstoque.Columns(e.ColumnIndex).Name = "_SEL" Then
+            AtualizarRodapeEstoque()
+        End If
     End Sub
 
 #End Region

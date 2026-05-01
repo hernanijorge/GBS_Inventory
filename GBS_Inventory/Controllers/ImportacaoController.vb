@@ -16,7 +16,10 @@ Public Class ImportacaoController
     Public Property TotalInseridos    As Integer = 0
     Public Property TotalAtualizados  As Integer = 0
     Public Property TotalErros        As Integer = 0
+    Public Property TotalSkipped      As Integer = 0
     Public Property Erros             As New List(Of String)
+    Public Property Skipped           As New List(Of String)
+    Public Property UIDsImportados    As New List(Of String)
 
 #End Region
 
@@ -41,10 +44,13 @@ Public Class ImportacaoController
                                      Optional pCallbackProgresso As Action(Of Integer, Integer, String) = Nothing) _
                                      As Boolean
 
-        Me.TotalInseridos   = 0
-        Me.TotalAtualizados = 0
-        Me.TotalErros       = 0
+        Me.TotalInseridos    = 0
+        Me.TotalAtualizados  = 0
+        Me.TotalErros        = 0
+        Me.TotalSkipped      = 0
         Me.Erros.Clear()
+        Me.Skipped.Clear()
+        Me.UIDsImportados.Clear()
 
         Dim listaEquipamentos As List(Of Equipamento)
 
@@ -75,13 +81,24 @@ Public Class ImportacaoController
 
                 vContador += 1
 
+                ' Correction 1: skip rows with no INTERNAL_UID before calling DB
+                If String.IsNullOrWhiteSpace(equip.InternalUID) Then
+                    Me.TotalSkipped += 1
+                    Me.Skipped.Add($"Row {vContador}: skipped — INTERNAL_UID is empty")
+                    Continue For
+                End If
+
                 Try
 
                     Dim sResultado As String = oGravacao.upsertEquipamento(equip)
 
                     Select Case sResultado
-                        Case "INSERTED" : Me.TotalInseridos   += 1
-                        Case "UPDATED"  : Me.TotalAtualizados += 1
+                        Case "INSERTED"
+                            Me.TotalInseridos += 1
+                            Me.UIDsImportados.Add(equip.InternalUID)
+                        Case "UPDATED"
+                            Me.TotalAtualizados += 1
+                            Me.UIDsImportados.Add(equip.InternalUID)
                         Case Else
                             Me.TotalErros += 1
                             Me.Erros.Add($"UID {equip.InternalUID}: {sResultado}")

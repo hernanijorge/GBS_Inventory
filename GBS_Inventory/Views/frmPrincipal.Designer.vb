@@ -69,14 +69,17 @@ Partial Class frmPrincipal
     Friend WithEvents lblEstoqueFooter As Label
 
     ' Painel de filtros da aba Inventory
-    Friend WithEvents pnlFiltros            As Panel
-    Friend WithEvents cboFilterManufacturer As ComboBox
-    Friend WithEvents cboFilterModel        As ComboBox
-    Friend WithEvents cboFilterStatus       As ComboBox
-    Friend WithEvents btnApplyFilter        As Button
-    Friend WithEvents btnClearFilter        As Button
-    Friend WithEvents btnGenerateReport     As Button
-    Friend WithEvents btnExportExcel        As Button
+    Friend WithEvents pnlFiltros         As Panel
+    Friend WithEvents clbManufacturer    As CheckedListBox
+    Friend WithEvents clbModel           As CheckedListBox
+    Friend WithEvents clbStatus          As CheckedListBox
+    Friend WithEvents clbProcessor       As CheckedListBox
+    Friend WithEvents btnApplyFilter     As Button
+    Friend WithEvents btnClearFilter     As Button
+    Friend WithEvents btnRemoveSelected  As Button
+    Friend WithEvents btnGenerateReport  As Button
+    Friend WithEvents btnExportExcel     As Button
+    Friend WithEvents lblFiltrosAtivos   As Label
 
     ' Controles da aba Importação
     Friend WithEvents lblImpArquivo As Label
@@ -334,74 +337,166 @@ Partial Class frmPrincipal
 
         ' ── Painel de filtros ─────────────────────────────────────────
         Me.pnlFiltros = New Panel()
-        Me.pnlFiltros.Dock = DockStyle.Top
-        Me.pnlFiltros.Height = 50
+        Me.pnlFiltros.Dock      = DockStyle.Top
+        Me.pnlFiltros.Height    = 205
         Me.pnlFiltros.BackColor = TemaEscuro.Fundo
-        Me.pnlFiltros.Padding = New Padding(8)
+        Me.pnlFiltros.Padding   = New Padding(0)
 
-        Dim lblFMfr As New Label() With {
-            .Text = "Manufacturer:", .Location = New Point(10, 15),
-            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        ' ── Card: Manufacturer ──────────────────────────────────────
+        Dim pnlGrpMfr As New Panel() With {
+            .Location  = New Point(6, 6),
+            .Size      = New Size(230, 150),
+            .BackColor = TemaEscuro.Surface
         }
-
-        Me.cboFilterManufacturer = New ComboBox()
-        Me.cboFilterManufacturer.Location      = New Point(105, 12)
-        Me.cboFilterManufacturer.Size          = New Size(140, 24)
-        Me.cboFilterManufacturer.DropDownStyle = ComboBoxStyle.DropDownList
-
-        Dim lblFMdl As New Label() With {
-            .Text = "Model:", .Location = New Point(255, 15),
-            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        AddHandler pnlGrpMfr.Paint, Sub(sender, e)
+                                        Using pen As New Pen(TemaEscuro.Borda, 1)
+                                            e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpMfr.Width - 1, pnlGrpMfr.Height - 1)
+                                        End Using
+                                    End Sub
+        Dim lblMfrTitle As New Label() With {
+            .Text      = "Manufacturer",
+            .Location  = New Point(8, 5),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
         }
+        Me.clbManufacturer              = New CheckedListBox()
+        Me.clbManufacturer.Location     = New Point(4, 24)
+        Me.clbManufacturer.Size         = New Size(222, 120)
+        Me.clbManufacturer.CheckOnClick = True
+        Me.clbManufacturer.Font         = New Font("Segoe UI", 9)
+        Me.clbManufacturer.BorderStyle  = BorderStyle.None
+        pnlGrpMfr.Controls.AddRange({lblMfrTitle, clbManufacturer})
 
-        Me.cboFilterModel = New ComboBox()
-        Me.cboFilterModel.Location      = New Point(300, 12)
-        Me.cboFilterModel.Size          = New Size(140, 24)
-        Me.cboFilterModel.DropDownStyle = ComboBoxStyle.DropDownList
-
-        Dim lblFSt As New Label() With {
-            .Text = "Status:", .Location = New Point(450, 15),
-            .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado
+        ' ── Card: Model ─────────────────────────────────────────────
+        Dim pnlGrpMdl As New Panel() With {
+            .Location  = New Point(242, 6),
+            .Size      = New Size(230, 150),
+            .BackColor = TemaEscuro.Surface
         }
+        AddHandler pnlGrpMdl.Paint, Sub(sender, e)
+                                        Using pen As New Pen(TemaEscuro.Borda, 1)
+                                            e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpMdl.Width - 1, pnlGrpMdl.Height - 1)
+                                        End Using
+                                    End Sub
+        Dim lblMdlTitle As New Label() With {
+            .Text      = "Model",
+            .Location  = New Point(8, 5),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbModel              = New CheckedListBox()
+        Me.clbModel.Location     = New Point(4, 24)
+        Me.clbModel.Size         = New Size(222, 120)
+        Me.clbModel.CheckOnClick = True
+        Me.clbModel.Font         = New Font("Segoe UI", 9)
+        Me.clbModel.BorderStyle  = BorderStyle.None
+        pnlGrpMdl.Controls.AddRange({lblMdlTitle, clbModel})
 
-        Me.cboFilterStatus = New ComboBox()
-        Me.cboFilterStatus.Location      = New Point(495, 12)
-        Me.cboFilterStatus.Size          = New Size(130, 24)
-        Me.cboFilterStatus.DropDownStyle = ComboBoxStyle.DropDownList
-        Me.cboFilterStatus.Items.AddRange({"(All)", "IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
-        Me.cboFilterStatus.SelectedIndex = 0
+        ' ── Card: Status ────────────────────────────────────────────
+        Dim pnlGrpSt As New Panel() With {
+            .Location  = New Point(478, 6),
+            .Size      = New Size(165, 150),
+            .BackColor = TemaEscuro.Surface
+        }
+        AddHandler pnlGrpSt.Paint, Sub(sender, e)
+                                       Using pen As New Pen(TemaEscuro.Borda, 1)
+                                           e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpSt.Width - 1, pnlGrpSt.Height - 1)
+                                       End Using
+                                   End Sub
+        Dim lblStTitle As New Label() With {
+            .Text      = "Status",
+            .Location  = New Point(8, 5),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbStatus              = New CheckedListBox()
+        Me.clbStatus.Location     = New Point(4, 24)
+        Me.clbStatus.Size         = New Size(157, 120)
+        Me.clbStatus.CheckOnClick = True
+        Me.clbStatus.Font         = New Font("Segoe UI", 9)
+        Me.clbStatus.BorderStyle  = BorderStyle.None
+        Me.clbStatus.Items.AddRange({"IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
+        pnlGrpSt.Controls.AddRange({lblStTitle, clbStatus})
 
-        Me.btnApplyFilter = New Button()
-        Me.btnApplyFilter.Text     = "Apply Filter"
-        Me.btnApplyFilter.Location = New Point(635, 11)
-        Me.btnApplyFilter.Size     = New Size(100, 28)
+        ' ── Card: Processor ─────────────────────────────────────────
+        Dim pnlGrpProc As New Panel() With {
+            .Location  = New Point(649, 6),
+            .Size      = New Size(230, 150),
+            .BackColor = TemaEscuro.Surface
+        }
+        AddHandler pnlGrpProc.Paint, Sub(sender, e)
+                                         Using pen As New Pen(TemaEscuro.Borda, 1)
+                                             e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpProc.Width - 1, pnlGrpProc.Height - 1)
+                                         End Using
+                                     End Sub
+        Dim lblProcTitle As New Label() With {
+            .Text      = "Processor",
+            .Location  = New Point(8, 5),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbProcessor              = New CheckedListBox()
+        Me.clbProcessor.Location     = New Point(4, 24)
+        Me.clbProcessor.Size         = New Size(222, 120)
+        Me.clbProcessor.CheckOnClick = True
+        Me.clbProcessor.Font         = New Font("Segoe UI", 9)
+        Me.clbProcessor.BorderStyle  = BorderStyle.None
+        pnlGrpProc.Controls.AddRange({lblProcTitle, clbProcessor})
 
-        Me.btnClearFilter = New Button()
-        Me.btnClearFilter.Text     = "Clear"
-        Me.btnClearFilter.Location = New Point(741, 11)
-        Me.btnClearFilter.Size     = New Size(75, 28)
+        ' ── Botões e contador de filtros ativos ─────────────────────
+        Me.btnApplyFilter           = New Button()
+        Me.btnApplyFilter.Text      = "Apply Filter"
+        Me.btnApplyFilter.Location  = New Point(6, 164)
+        Me.btnApplyFilter.Size      = New Size(130, 34)
+        Me.btnApplyFilter.BackColor = Color.FromArgb(0, 188, 212)
+        Me.btnApplyFilter.ForeColor = Color.White
+        Me.btnApplyFilter.FlatStyle = FlatStyle.Flat
+        Me.btnApplyFilter.Font      = New Font("Segoe UI", 9, FontStyle.Bold)
 
-        Me.btnGenerateReport = New Button()
+        Me.btnClearFilter           = New Button()
+        Me.btnClearFilter.Text      = "Clear"
+        Me.btnClearFilter.Location  = New Point(142, 164)
+        Me.btnClearFilter.Size      = New Size(80, 34)
+
+        Me.btnRemoveSelected          = New Button()
+        Me.btnRemoveSelected.Text     = "Remove Selected"
+        Me.btnRemoveSelected.Location = New Point(228, 164)
+        Me.btnRemoveSelected.Size     = New Size(130, 34)
+
+        Me.btnGenerateReport           = New Button()
         Me.btnGenerateReport.Text      = "Generate Report"
-        Me.btnGenerateReport.Location  = New Point(825, 11)
-        Me.btnGenerateReport.Size      = New Size(125, 28)
+        Me.btnGenerateReport.Location  = New Point(364, 164)
+        Me.btnGenerateReport.Size      = New Size(130, 34)
         Me.btnGenerateReport.BackColor = TemaEscuro.Accent
         Me.btnGenerateReport.ForeColor = TemaEscuro.Fundo
         Me.btnGenerateReport.FlatStyle = FlatStyle.Flat
 
-        Me.btnExportExcel = New Button()
+        Me.btnExportExcel           = New Button()
         Me.btnExportExcel.Text      = "Export Excel"
-        Me.btnExportExcel.Location  = New Point(956, 11)
-        Me.btnExportExcel.Size      = New Size(110, 28)
+        Me.btnExportExcel.Location  = New Point(500, 164)
+        Me.btnExportExcel.Size      = New Size(110, 34)
         Me.btnExportExcel.BackColor = Color.FromArgb(21, 128, 61)
         Me.btnExportExcel.ForeColor = Color.White
         Me.btnExportExcel.FlatStyle = FlatStyle.Flat
 
-        Me.pnlFiltros.Controls.AddRange({lblFMfr, cboFilterManufacturer,
-                                          lblFMdl, cboFilterModel,
-                                          lblFSt,  cboFilterStatus,
-                                          btnApplyFilter, btnClearFilter,
-                                          btnGenerateReport, btnExportExcel})
+        Me.lblFiltrosAtivos           = New Label()
+        Me.lblFiltrosAtivos.Text      = "No filters active"
+        Me.lblFiltrosAtivos.Location  = New Point(620, 172)
+        Me.lblFiltrosAtivos.AutoSize  = True
+        Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
+        Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
+
+        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpSt, pnlGrpProc,
+                                          btnApplyFilter, btnClearFilter, btnRemoveSelected,
+                                          btnGenerateReport, btnExportExcel, lblFiltrosAtivos})
 
         ' ── Grid de estoque ───────────────────────────────────────────
         Me.dgvEstoque = New DataGridView()
@@ -424,10 +519,18 @@ Partial Class frmPrincipal
 
         Me.pnlEstoqueFooter.Controls.Add(Me.lblEstoqueFooter)
 
-        ' Ordem de adição determina o docking (último adicionado = maior z-order = layout primeiro):
-        '   pnlAcoes (Top) → pnlFiltros (Top) → pnlEstoqueFooter (Bottom) → dgvEstoque (Fill)
+        ' Separador visual entre filtros e grid
+        Dim pnlSeparador As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 2,
+            .BackColor = TemaEscuro.Borda
+        }
+
+        ' Ordem: Fill → Bottom → Top (last added = highest z-order = laid out first from edge)
+        '   pnlAcoes (Top) → pnlFiltros (Top) → pnlSeparador (Top) → pnlEstoqueFooter (Bottom) → dgvEstoque (Fill)
         Me.tabEstoque.Controls.Add(dgvEstoque)
         Me.tabEstoque.Controls.Add(pnlEstoqueFooter)
+        Me.tabEstoque.Controls.Add(pnlSeparador)
         Me.tabEstoque.Controls.Add(pnlFiltros)
         Me.tabEstoque.Controls.Add(pnlAcoes)
 

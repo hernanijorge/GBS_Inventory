@@ -3,6 +3,7 @@ Imports System.Drawing
 Imports System.Data
 Imports System.Diagnostics
 Imports System.Globalization
+Imports System.Media
 Imports GBS_Inventory.Models
 
 ''' <summary>
@@ -14,6 +15,7 @@ Partial Public Class frmRemessa
     Private oController As RemessaController
     Private vIdRemessaSelecionada As Integer = 0
     Private vItensParaIncluir As New List(Of ItemRemessa)()
+    Private _timerScanFeedback As Timer
 
     Public Sub New()
 
@@ -22,6 +24,9 @@ Partial Public Class frmRemessa
         oController = New RemessaController()
 
         TemaEscuro.aplicarHelius(Me)
+
+        _timerScanFeedback = New Timer() With {.Interval = 2000}
+        AddHandler _timerScanFeedback.Tick, AddressOf TimerScanFeedback_Tick
 
     End Sub
 
@@ -41,6 +46,8 @@ Partial Public Class frmRemessa
         configurarGridItens()
         carregarRemessas()
         atualizarGridItens()
+
+        txtQuickScan.Focus()
 
     End Sub
 
@@ -294,6 +301,103 @@ Partial Public Class frmRemessa
         vItensParaIncluir.Clear()
         atualizarGridItens()
     End Sub
+
+    Private Sub txtQuickScan_KeyDown(sender As Object, e As KeyEventArgs) Handles txtQuickScan.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            e.SuppressKeyPress = True
+            Dim scanValue As String = txtQuickScan.Text.Trim()
+            If Not String.IsNullOrEmpty(scanValue) Then
+                ExecutarQuickScan(scanValue)
+            End If
+        End If
+    End Sub
+
+    Private Sub ExecutarQuickScan(scanValue As String)
+        Try
+            Dim ds As DataSet = oController.buscarEquipamentosDisponiveis(scanValue)
+
+            If ds Is Nothing OrElse ds.Tables.Count = 0 OrElse ds.Tables(0).Rows.Count = 0 Then
+                SystemSounds.Exclamation.Play()
+                MostrarFeedbackScan("Not found: " & scanValue, False)
+                txtQuickScan.Clear()
+                Return
+            End If
+
+            If ds.Tables(0).Rows.Count > 1 Then
+                SystemSounds.Beep.Play()
+                MostrarFeedbackScan("Multiple results — use manual search", Nothing)
+                txtQuickScan.Clear()
+                Return
+            End If
+
+            Dim row As DataRow = ds.Tables(0).Rows(0)
+            Dim idEquipamento As Integer = 0
+            If Not IsDBNull(row("ID_EQUIPAMENTO")) Then
+                Integer.TryParse(row("ID_EQUIPAMENTO").ToString(), idEquipamento)
+            End If
+
+            If idEquipamento <= 0 Then
+                SystemSounds.Exclamation.Play()
+                MostrarFeedbackScan("Invalid equipment", False)
+                txtQuickScan.Clear()
+                Return
+            End If
+
+            Dim uid As String = ObterStrRow(row, "INTERNAL_UID")
+
+            If ItemJaSelecionado(idEquipamento) Then
+                SystemSounds.Beep.Play()
+                MostrarFeedbackScan("Already added: " & uid, Nothing)
+                txtQuickScan.Clear()
+                Return
+            End If
+
+            Dim item As New ItemRemessa() With {
+                .IdEquipamento = idEquipamento,
+                .InternalUID   = uid,
+                .Manufacturer  = ObterStrRow(row, "MARCA"),
+                .Model         = ObterStrRow(row, "MODEL"),
+                .ConditionAtShip = "GOOD",
+                .SalePriceUsd  = Nothing,
+                .Notes         = ""
+            }
+
+            vItensParaIncluir.Add(item)
+            atualizarGridItens()
+
+            SystemSounds.Beep.Play()
+            MostrarFeedbackScan("Added: " & uid, True)
+
+        Catch ex As Exception
+            SystemSounds.Exclamation.Play()
+            MostrarFeedbackScan("Error: " & ex.Message, False)
+        End Try
+
+        txtQuickScan.Clear()
+    End Sub
+
+    Private Sub MostrarFeedbackScan(msg As String, isSuccess As Boolean?)
+        If isSuccess.HasValue Then
+            lblQuickScanStatus.ForeColor = If(isSuccess.Value, TemaEscuro.Verde, TemaEscuro.Vermelho)
+        Else
+            lblQuickScanStatus.ForeColor = TemaEscuro.TextoMutado
+        End If
+        lblQuickScanStatus.Text = msg
+        _timerScanFeedback.Stop()
+        _timerScanFeedback.Start()
+    End Sub
+
+    Private Sub TimerScanFeedback_Tick(sender As Object, e As EventArgs)
+        _timerScanFeedback.Stop()
+        lblQuickScanStatus.Text = ""
+        txtQuickScan.Focus()
+    End Sub
+
+    Private Function ObterStrRow(pRow As DataRow, colName As String) As String
+        If Not pRow.Table.Columns.Contains(colName) Then Return ""
+        If IsDBNull(pRow(colName)) Then Return ""
+        Return pRow(colName).ToString()
+    End Function
 
     Private Sub btnFechar_Click(sender As Object, e As EventArgs) Handles btnFechar.Click
         Me.Close()
