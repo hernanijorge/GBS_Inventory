@@ -119,9 +119,14 @@ Public Class clsGravacaoEquipamento
         Return v
     End Function
 
+    Private Function DbConditionStatus(pValor As String) As Object
+        If String.IsNullOrWhiteSpace(pValor) Then Return "GOOD"
+        Return pValor.Trim().ToUpperInvariant()
+    End Function
+
     Public Function incluirEquipamento(pEquipamento As Equipamento) As Integer
 
-        Dim oPar(8) As OracleParameter
+        Dim oPar(9) As OracleParameter
 
         oPar(0) = New OracleParameter("P_INTERNAL_UID",       OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1) = New OracleParameter("P_SERIAL_NUMBER",      OracleDbType.Varchar2, ParameterDirection.Input)
@@ -130,8 +135,9 @@ Public Class clsGravacaoEquipamento
         oPar(4) = New OracleParameter("P_PROCESSADOR",        OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(5) = New OracleParameter("P_RAM_GB",             OracleDbType.Int32,    ParameterDirection.Input)
         oPar(6) = New OracleParameter("P_STORAGE_GB",         OracleDbType.Int32,    ParameterDirection.Input)
-        oPar(7) = New OracleParameter("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(8) = New OracleParameter("P_OBSERVACAO",         OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(7) = New OracleParameter("P_CONDITION_STATUS",   OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(8) = New OracleParameter("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(9) = New OracleParameter("P_OBSERVACAO",         OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -142,8 +148,9 @@ Public Class clsGravacaoEquipamento
             oPar(4).Value = If(String.IsNullOrEmpty(pEquipamento.CpuModel), DBNull.Value, CObj(pEquipamento.CpuModel))
             oPar(5).Value = ParseGb(pEquipamento.RamGb)
             oPar(6).Value = ParseGb(pEquipamento.StorageGb)
-            oPar(7).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
-            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
+            oPar(7).Value = DbConditionStatus(pEquipamento.ConditionStatus)
+            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
+            oPar(9).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_INSERT", oPar)
 
@@ -159,7 +166,7 @@ Public Class clsGravacaoEquipamento
 
     Public Function alterarEquipamento(pEquipamento As Equipamento) As Boolean
 
-        Dim oPar(8) As OracleParameter
+        Dim oPar(9) As OracleParameter
 
         oPar(0) = New OracleParameter("P_INTERNAL_UID",  OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1) = New OracleParameter("P_SERIAL_NUMBER", OracleDbType.Varchar2, ParameterDirection.Input)
@@ -168,8 +175,9 @@ Public Class clsGravacaoEquipamento
         oPar(4) = New OracleParameter("P_PROCESSADOR",   OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(5) = New OracleParameter("P_RAM_GB",        OracleDbType.Int32,    ParameterDirection.Input)
         oPar(6) = New OracleParameter("P_STORAGE_GB",    OracleDbType.Int32,    ParameterDirection.Input)
-        oPar(7) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(8) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(7) = New OracleParameter("P_CONDITION_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(8) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(9) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -180,8 +188,9 @@ Public Class clsGravacaoEquipamento
             oPar(4).Value = If(String.IsNullOrEmpty(pEquipamento.CpuModel), DBNull.Value, CObj(pEquipamento.CpuModel))
             oPar(5).Value = ParseGb(pEquipamento.RamGb)
             oPar(6).Value = ParseGb(pEquipamento.StorageGb)
-            oPar(7).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
-            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
+            oPar(7).Value = DbConditionStatus(pEquipamento.ConditionStatus)
+            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
+            oPar(9).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_UPSERT_EQUIPAMENTO", oPar)
 
@@ -256,7 +265,7 @@ Public Class clsGravacaoEquipamento
     ''' </summary>
     Public Function upsertEquipamento(pEquipamento As Equipamento) As String
 
-        Dim oPar(8) As OracleParameter
+        Dim oPar(9) As OracleParameter
 
         oPar(0) = New OracleParameter("P_INTERNAL_UID",  OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1) = New OracleParameter("P_SERIAL_NUMBER", OracleDbType.Varchar2, ParameterDirection.Input)
@@ -265,8 +274,9 @@ Public Class clsGravacaoEquipamento
         oPar(4) = New OracleParameter("P_PROCESSADOR",   OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(5) = New OracleParameter("P_RAM_GB",        OracleDbType.Int32,    ParameterDirection.Input)
         oPar(6) = New OracleParameter("P_STORAGE_GB",    OracleDbType.Int32,    ParameterDirection.Input)
-        oPar(7) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(8) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(7) = New OracleParameter("P_CONDITION_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(8) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(9) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -277,8 +287,9 @@ Public Class clsGravacaoEquipamento
             oPar(4).Value = If(String.IsNullOrEmpty(pEquipamento.CpuModel), DBNull.Value, CObj(pEquipamento.CpuModel))
             oPar(5).Value = ParseGb(pEquipamento.RamGb)
             oPar(6).Value = ParseGb(pEquipamento.StorageGb)
-            oPar(7).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
-            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
+            oPar(7).Value = DbConditionStatus(pEquipamento.ConditionStatus)
+            oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
+            oPar(9).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_UPSERT_EQUIPAMENTO", oPar)
 

@@ -206,6 +206,23 @@ Public Class clsLeituraEquipamento
         Dim sqlPt As String =
             "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
             "       E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
+            "       E.CONDITION_STATUS," &
+            "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
+            "       E.STATUS AS STATUS_DESCRICAO " &
+            "  FROM TBL_EQUIPAMENTO E " &
+            " WHERE (:P_FILTRO IS NULL " &
+            "        OR UPPER(E.INTERNAL_UID) LIKE '%' || UPPER(:P_FILTRO) || '%' " &
+            "        OR UPPER(E.SERIAL_NUMBER) LIKE '%' || UPPER(:P_FILTRO) || '%' " &
+            "        OR UPPER(E.MODEL) LIKE '%' || UPPER(:P_FILTRO) || '%' " &
+            "        OR UPPER(E.MARCA) LIKE '%' || UPPER(:P_FILTRO) || '%' " &
+            "        OR UPPER(E.PROCESSADOR) LIKE '%' || UPPER(:P_FILTRO) || '%') " &
+            "   AND (:P_STATUS IS NULL OR UPPER(E.STATUS) = UPPER(:P_STATUS)) " &
+            " ORDER BY E.DATA_CADASTRO DESC"
+
+        Dim sqlPtNoCondition As String =
+            "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
+            "       E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
+            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS," &
             "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
             "       E.STATUS AS STATUS_DESCRICAO " &
             "  FROM TBL_EQUIPAMENTO E " &
@@ -221,6 +238,7 @@ Public Class clsLeituraEquipamento
         Dim sqlEn As String =
             "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
             "       E.MANUFACTURER AS MARCA, E.MODEL, E.CPU_MODEL AS PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
+            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS," &
             "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
             "       E.STATUS AS STATUS_DESCRICAO " &
             "  FROM TBL_EQUIPAMENTO E " &
@@ -235,11 +253,14 @@ Public Class clsLeituraEquipamento
 
         Try
             Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sqlPt, oPar)
-        Catch ex As Exception
-            If IsErroEstruturaColuna(ex) Then
+        Catch ex1 As Exception
+            If Not IsErroEstruturaColuna(ex1) Then Throw
+            Try
+                Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sqlPtNoCondition, oPar)
+            Catch ex2 As Exception
+                If Not IsErroEstruturaColuna(ex2) Then Throw
                 Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sqlEn, oPar)
-            End If
-            Throw
+            End Try
         End Try
 
     End Function

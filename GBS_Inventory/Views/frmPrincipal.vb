@@ -348,6 +348,7 @@ Public Class frmPrincipal
         _todasSelecionadas = False
         dgvEstoque.DataSource = dtFiltrada
         adicionarColunaCheckBox()
+        ConfigurarColunasGrid()
         AtualizarRodapeEstoque()
         AtualizarContadorFiltros()
 
@@ -405,13 +406,14 @@ Public Class frmPrincipal
 
         Try
             Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
             If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
 
             If Not System.IO.Directory.Exists(outputPath) Then
                 System.IO.Directory.CreateDirectory(outputPath)
             End If
 
-            Dim caminho As String = ReportService.GerarExcel(itens, outputPath)
+            Dim caminho As String = ReportService.GerarExcel(itens, outputPath, logoPath)
 
             System.Diagnostics.Process.Start(caminho)
 
@@ -439,6 +441,28 @@ Public Class frmPrincipal
         chk.FillWeight  = 1
         dgvEstoque.Columns.Insert(0, chk)
 
+    End Sub
+
+    Private Sub ConfigurarColunasGrid()
+        ' Hide redundant STATUS alias
+        If dgvEstoque.Columns.Contains("STATUS_DESCRICAO") Then
+            dgvEstoque.Columns("STATUS_DESCRICAO").Visible = False
+        End If
+
+        ' Configure CONDITION_STATUS column
+        If dgvEstoque.Columns.Contains("CONDITION_STATUS") Then
+            With dgvEstoque.Columns("CONDITION_STATUS")
+                .HeaderText          = "Battery Condition"
+                .DataPropertyName    = "CONDITION_STATUS"
+                .Visible             = True
+                .MinimumWidth        = 120
+                .FillWeight          = 70
+            End With
+            If dgvEstoque.Columns.Contains("STORAGE_GB") Then
+                Dim idx As Integer = dgvEstoque.Columns("STORAGE_GB").DisplayIndex
+                dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = idx + 1
+            End If
+        End If
     End Sub
 
     Private Function ColetarItensRelatorio() As List(Of DataRow)
@@ -616,6 +640,69 @@ Public Class frmPrincipal
 
     Private Sub btnExportExcel_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         ExportarExcel()
+    End Sub
+
+    Private Sub btnCleanObs_Click(sender As Object, e As EventArgs) Handles btnCleanObs.Click
+
+        Dim res As DialogResult = MessageBox.Show(
+            "This will NULL out OBSERVACAO entries matching:" & vbCrLf &
+            "  • 'Original Battery%'" & vbCrLf &
+            "  • 'Alt HDD%'  |  'Alt SSD%'  |  'Alt RAM%'" & vbCrLf & vbCrLf &
+            "The DATABASE will be permanently updated. Continue?",
+            "Clean Observations", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+        If res <> DialogResult.Yes Then Return
+
+        Try
+            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO SET OBSERVACAO = NULL" &
+                " WHERE OBSERVACAO LIKE 'Original Battery%'")
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text, "COMMIT")
+
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO SET OBSERVACAO = NULL" &
+                " WHERE OBSERVACAO LIKE 'Alt HDD%'" &
+                "    OR OBSERVACAO LIKE 'Alt SSD%'" &
+                "    OR OBSERVACAO LIKE 'Alt RAM%'")
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text, "COMMIT")
+
+            ' Show top-30 remaining distinct observations for analysis
+            Dim dsDistinct As DataSet = OracleHelper.ExecuteDataset(cs, CommandType.Text,
+                "SELECT DISTINCT OBSERVACAO, COUNT(*) AS QTD" &
+                "  FROM TBL_EQUIPAMENTO" &
+                " WHERE OBSERVACAO IS NOT NULL" &
+                " GROUP BY OBSERVACAO" &
+                " ORDER BY QTD DESC" &
+                " FETCH FIRST 30 ROWS ONLY")
+
+            Dim sb As New System.Text.StringBuilder()
+            sb.AppendLine("Observations cleaned successfully!")
+            sb.AppendLine()
+
+            If dsDistinct IsNot Nothing AndAlso dsDistinct.Tables.Count > 0 AndAlso
+               dsDistinct.Tables(0).Rows.Count > 0 Then
+                sb.AppendLine($"Remaining distinct observations ({dsDistinct.Tables(0).Rows.Count} shown, top 30):")
+                sb.AppendLine(New String("-"c, 50))
+                For Each rowD As DataRow In dsDistinct.Tables(0).Rows
+                    Dim obs As String = If(IsDBNull(rowD("OBSERVACAO")), "", rowD("OBSERVACAO").ToString())
+                    Dim qtd As String = If(IsDBNull(rowD("QTD")), "?", rowD("QTD").ToString())
+                    sb.AppendLine($"  [{qtd}x]  {obs}")
+                Next
+            Else
+                sb.AppendLine("No observations remaining in the database.")
+            End If
+
+            MessageBox.Show(sb.ToString(), "Clean Observations — Remaining",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            carregarEstoque()
+            carregarDashboard()
+
+        Catch ex As Exception
+            MessageBox.Show("Error cleaning observations: " & ex.Message, "Clean Observations",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
     End Sub
 
     Private Sub btnAddEquipamento_Click(sender As Object, e As EventArgs) Handles btnAddEquipamento.Click

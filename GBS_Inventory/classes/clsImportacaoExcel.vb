@@ -220,9 +220,9 @@ Public Class clsImportacaoExcel
             Case "GOOD", "G", "OK"             : Return "GOOD"
             Case "FAIR", "F", "AVG", "AVERAGE" : Return "FAIR"
             Case "POOR", "P", "BAD"            : Return "POOR"
-            Case "NO BATTERY", "NB", "NONE"    : Return "NO_BATTERY"
+            Case "NO BATTERY", "NO_BATTERY", "NB", "NONE" : Return "GOOD"
             Case "Y", "YES"                    : Return "GOOD"
-            Case "N", "NO", "N/A", ""          : Return "N/A"
+            Case "N", "NO", "N/A", "NA", ""    : Return "GOOD"
             Case Else                          : Return "GOOD"
         End Select
 

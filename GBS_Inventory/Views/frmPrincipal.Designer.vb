@@ -79,6 +79,7 @@ Partial Class frmPrincipal
     Friend WithEvents btnRemoveSelected  As Button
     Friend WithEvents btnGenerateReport  As Button
     Friend WithEvents btnExportExcel     As Button
+    Friend WithEvents btnCleanObs        As Button
     Friend WithEvents lblFiltrosAtivos   As Label
 
     ' Controles da aba Importação
@@ -396,9 +397,36 @@ Partial Class frmPrincipal
         Me.clbModel.BorderStyle  = BorderStyle.None
         pnlGrpMdl.Controls.AddRange({lblMdlTitle, clbModel})
 
+        ' ── Card: Processor ─────────────────────────────────────────
+        Dim pnlGrpProc As New Panel() With {
+            .Location  = New Point(478, 6),
+            .Size      = New Size(230, 150),
+            .BackColor = TemaEscuro.Surface
+        }
+        AddHandler pnlGrpProc.Paint, Sub(sender, e)
+                                         Using pen As New Pen(TemaEscuro.Borda, 1)
+                                             e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpProc.Width - 1, pnlGrpProc.Height - 1)
+                                         End Using
+                                     End Sub
+        Dim lblProcTitle As New Label() With {
+            .Text      = "Processor",
+            .Location  = New Point(8, 5),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbProcessor              = New CheckedListBox()
+        Me.clbProcessor.Location     = New Point(4, 24)
+        Me.clbProcessor.Size         = New Size(222, 120)
+        Me.clbProcessor.CheckOnClick = True
+        Me.clbProcessor.Font         = New Font("Segoe UI", 9)
+        Me.clbProcessor.BorderStyle  = BorderStyle.None
+        pnlGrpProc.Controls.AddRange({lblProcTitle, clbProcessor})
+
         ' ── Card: Status ────────────────────────────────────────────
         Dim pnlGrpSt As New Panel() With {
-            .Location  = New Point(478, 6),
+            .Location  = New Point(714, 6),
             .Size      = New Size(165, 150),
             .BackColor = TemaEscuro.Surface
         }
@@ -423,33 +451,6 @@ Partial Class frmPrincipal
         Me.clbStatus.BorderStyle  = BorderStyle.None
         Me.clbStatus.Items.AddRange({"IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
         pnlGrpSt.Controls.AddRange({lblStTitle, clbStatus})
-
-        ' ── Card: Processor ─────────────────────────────────────────
-        Dim pnlGrpProc As New Panel() With {
-            .Location  = New Point(649, 6),
-            .Size      = New Size(230, 150),
-            .BackColor = TemaEscuro.Surface
-        }
-        AddHandler pnlGrpProc.Paint, Sub(sender, e)
-                                         Using pen As New Pen(TemaEscuro.Borda, 1)
-                                             e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpProc.Width - 1, pnlGrpProc.Height - 1)
-                                         End Using
-                                     End Sub
-        Dim lblProcTitle As New Label() With {
-            .Text      = "Processor",
-            .Location  = New Point(8, 5),
-            .AutoSize  = True,
-            .Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold),
-            .ForeColor = TemaEscuro.Accent,
-            .BackColor = Color.Transparent
-        }
-        Me.clbProcessor              = New CheckedListBox()
-        Me.clbProcessor.Location     = New Point(4, 24)
-        Me.clbProcessor.Size         = New Size(222, 120)
-        Me.clbProcessor.CheckOnClick = True
-        Me.clbProcessor.Font         = New Font("Segoe UI", 9)
-        Me.clbProcessor.BorderStyle  = BorderStyle.None
-        pnlGrpProc.Controls.AddRange({lblProcTitle, clbProcessor})
 
         ' ── Botões e contador de filtros ativos ─────────────────────
         Me.btnApplyFilter           = New Button()
@@ -487,16 +488,24 @@ Partial Class frmPrincipal
         Me.btnExportExcel.ForeColor = Color.White
         Me.btnExportExcel.FlatStyle = FlatStyle.Flat
 
+        Me.btnCleanObs           = New Button()
+        Me.btnCleanObs.Text      = "Clean Obs."
+        Me.btnCleanObs.Location  = New Point(618, 164)
+        Me.btnCleanObs.Size      = New Size(110, 34)
+        Me.btnCleanObs.BackColor = Color.FromArgb(160, 50, 30)
+        Me.btnCleanObs.ForeColor = Color.White
+        Me.btnCleanObs.FlatStyle = FlatStyle.Flat
+
         Me.lblFiltrosAtivos           = New Label()
         Me.lblFiltrosAtivos.Text      = "No filters active"
-        Me.lblFiltrosAtivos.Location  = New Point(620, 172)
+        Me.lblFiltrosAtivos.Location  = New Point(742, 172)
         Me.lblFiltrosAtivos.AutoSize  = True
         Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
         Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
 
-        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpSt, pnlGrpProc,
+        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt,
                                           btnApplyFilter, btnClearFilter, btnRemoveSelected,
-                                          btnGenerateReport, btnExportExcel, lblFiltrosAtivos})
+                                          btnGenerateReport, btnExportExcel, btnCleanObs, lblFiltrosAtivos})
 
         ' ── Grid de estoque ───────────────────────────────────────────
         Me.dgvEstoque = New DataGridView()

@@ -32,7 +32,8 @@ Public Class ReportService
     ' ── Excel export ─────────────────────────────────────────────────────────
 
     Public Shared Function GerarExcel(pItens As List(Of DataRow),
-                                       pOutputPath As String) As String
+                                       pOutputPath As String,
+                                       Optional pLogoPath As String = "") As String
 
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
@@ -49,6 +50,7 @@ Public Class ReportService
             ("PROCESSADOR",   "Processor",     20),
             ("RAM_GB",        "RAM GB",        10),
             ("STORAGE_GB",    "Storage GB",    12),
+            ("CONDITION_STATUS", "Battery Condition", 18),
             ("STATUS",        "Status",        14),
             ("OBSERVACAO",    "Notes",         40)
         }
@@ -65,14 +67,37 @@ Public Class ReportService
             If Not tbl.Columns.Contains("MODEL")       AndAlso tbl.Columns.Contains("MODELO")       Then colsReais("MODEL")       = "MODELO"
             If Not tbl.Columns.Contains("PROCESSADOR") AndAlso tbl.Columns.Contains("CPU_MODEL")    Then colsReais("PROCESSADOR") = "CPU_MODEL"
             If Not tbl.Columns.Contains("OBSERVACAO")  AndAlso tbl.Columns.Contains("NOTES")        Then colsReais("OBSERVACAO")  = "NOTES"
+            If Not tbl.Columns.Contains("CONDITION_STATUS") AndAlso tbl.Columns.Contains("BATTERY_CONDITION") Then colsReais("CONDITION_STATUS") = "BATTERY_CONDITION"
         End If
 
         Using pkg As New ExcelPackage()
             Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Inventory Report")
+            Dim linhaCabecalho As Integer = 1
+            Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+
+            If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                Try
+                    Dim logo = ws.Drawings.AddPicture("GBS_Logo", New FileInfo(logoEfetivo))
+                    logo.SetPosition(0, 0, 0, 0)
+                    logo.SetSize(170, 60)
+
+                    ws.Row(1).Height = 24
+                    ws.Row(2).Height = 24
+                    ws.Cells(1, 4).Value = "GBS Inventory Report"
+                    ws.Cells(1, 4).Style.Font.Bold = True
+                    ws.Cells(1, 4).Style.Font.Size = 16
+                    ws.Cells(2, 4).Value = "Generated: " &
+                                            DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                                            " | Total items: " & pItens.Count.ToString()
+                    linhaCabecalho = 5
+                Catch
+                    linhaCabecalho = 1
+                End Try
+            End If
 
             ' ── Cabeçalho ─────────────────────────────────────────────
             For i As Integer = 0 To colunas.Length - 1
-                Dim cell As ExcelRange = ws.Cells(1, i + 1)
+                Dim cell As ExcelRange = ws.Cells(linhaCabecalho, i + 1)
                 cell.Value = colunas(i).Header
                 cell.Style.Font.Bold = True
                 cell.Style.Fill.PatternType = ExcelFillStyle.Solid
@@ -93,12 +118,12 @@ Public Class ReportService
                     If tbl.Columns.Contains(colReal) AndAlso Not IsDBNull(dr(colReal)) Then
                         val = dr(colReal).ToString()
                     End If
-                    ws.Cells(rowIdx + 2, colIdx + 1).Value = val
+                    ws.Cells(linhaCabecalho + rowIdx + 1, colIdx + 1).Value = val
                 Next
 
                 If rowIdx Mod 2 = 1 Then
-                    ws.Cells(rowIdx + 2, 1, rowIdx + 2, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
-                    ws.Cells(rowIdx + 2, 1, rowIdx + 2, colunas.Length).Style.Fill.BackgroundColor.SetColor(corAlternado)
+                    ws.Cells(linhaCabecalho + rowIdx + 1, 1, linhaCabecalho + rowIdx + 1, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
+                    ws.Cells(linhaCabecalho + rowIdx + 1, 1, linhaCabecalho + rowIdx + 1, colunas.Length).Style.Fill.BackgroundColor.SetColor(corAlternado)
                 End If
             Next
 
@@ -108,8 +133,12 @@ Public Class ReportService
             Next
             ws.Column(colunas.Length).Style.WrapText = True
 
+            If pItens.Count > 0 Then
+                ws.Cells(linhaCabecalho, 1, linhaCabecalho + pItens.Count, colunas.Length).AutoFilter = True
+            End If
+
             ' ── Freeze linha de cabeçalho ─────────────────────────────
-            ws.View.FreezePanes(2, 1)
+            ws.View.FreezePanes(linhaCabecalho + 1, 1)
 
             pkg.SaveAs(New FileInfo(caminhoFinal))
         End Using
@@ -165,6 +194,7 @@ Public Class ReportService
             ("PROCESSADOR",   "Processor",     "90px"),
             ("RAM_GB",        "RAM GB",        "50px"),
             ("STORAGE_GB",    "Storage GB",    "60px"),
+            ("CONDITION_STATUS", "Battery Condition", "80px"),
             ("STATUS",        "Status",        "70px"),
             ("OBSERVACAO",    "Notes",        "200px")
         }
@@ -181,6 +211,7 @@ Public Class ReportService
             If Not tbl.Columns.Contains("MODEL")       AndAlso tbl.Columns.Contains("MODELO")       Then colsReais("MODEL")       = "MODELO"
             If Not tbl.Columns.Contains("PROCESSADOR") AndAlso tbl.Columns.Contains("CPU_MODEL")    Then colsReais("PROCESSADOR") = "CPU_MODEL"
             If Not tbl.Columns.Contains("OBSERVACAO")  AndAlso tbl.Columns.Contains("NOTES")        Then colsReais("OBSERVACAO")  = "NOTES"
+            If Not tbl.Columns.Contains("CONDITION_STATUS") AndAlso tbl.Columns.Contains("BATTERY_CONDITION") Then colsReais("CONDITION_STATUS") = "BATTERY_CONDITION"
         End If
 
         ' Tabela com larguras fixas por coluna
