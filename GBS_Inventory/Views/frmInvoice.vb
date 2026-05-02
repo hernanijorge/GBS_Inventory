@@ -2,6 +2,8 @@ Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.IO
+Imports System.Net
+Imports System.Text
 Imports System.Windows.Forms
 Imports GBS_Inventory.Models
 
@@ -368,19 +370,17 @@ Public Class frmInvoice
         Try
 
             Dim destino As String = txtEmail.Text.Trim()
-            Dim assunto As String = "Invoice " & vInvoiceNumeroAtual & " - Global Business Solution"
-            Dim corpo As String
-            If somentePdf Then
-                corpo = "Hello," & vbCrLf & vbCrLf &
-                        "Please find attached your invoice in PDF format." & vbCrLf & vbCrLf &
-                        "Best regards," & vbCrLf &
-                        "Global Business Solution"
-            Else
-                corpo = "Hello," & vbCrLf & vbCrLf &
-                        "Please find attached your invoice in PDF and Word formats." & vbCrLf & vbCrLf &
-                        "Best regards," & vbCrLf &
-                        "Global Business Solution"
+            If String.IsNullOrWhiteSpace(destino) OrElse
+               Not destino.Contains("@") OrElse
+               Not destino.Contains(".") Then
+                MessageBox.Show("Please enter a valid customer email before sending.", "Warning",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                txtEmail.Focus()
+                Return
             End If
+
+            Dim assunto As String = "Invoice " & vInvoiceNumeroAtual & " - Global Business Solutions Inc."
+            Dim corpo As String = MontarCorpoEmailInvoiceHtml(somentePdf)
 
             Dim anexos As New List(Of String) From {vArquivoPdf}
 
@@ -388,11 +388,17 @@ Public Class frmInvoice
                 anexos.Add(vArquivoWord)
             End If
 
-            If Not somentePdf AndAlso Not String.IsNullOrWhiteSpace(txtLogo.Text) AndAlso File.Exists(txtLogo.Text) Then
-                anexos.Add(txtLogo.Text)
-            End If
+            Dim logoInline As String = ObterLogoPathEfetivo()
+            InvoiceEmailService.EnviarInvoice(
+                destino,
+                assunto,
+                corpo,
+                anexos,
+                "",
+                True,
+                logoInline,
+                True)
 
-            InvoiceEmailService.EnviarInvoice(destino, assunto, corpo, anexos)
             oInvoiceController.atualizarStatus(vIdInvoiceAtual, "SENT")
 
             MessageBox.Show("Email sent successfully.", "Success",
@@ -404,6 +410,49 @@ Public Class frmInvoice
         End Try
 
     End Sub
+
+    Private Function MontarCorpoEmailInvoiceHtml(pSomentePdf As Boolean) As String
+
+        Dim totalTexto As String = lblTotal.Text.Replace("Total:", "").Trim()
+        Dim anexosTexto As String = If(pSomentePdf, "PDF format", "PDF and Word formats")
+        Dim customerName As String = ""
+
+        Dim drv As DataRowView = TryCast(cboCliente.SelectedItem, DataRowView)
+        If drv IsNot Nothing AndAlso drv.Row.Table.Columns.Contains("NOME_RAZAO") AndAlso
+           Not IsDBNull(drv("NOME_RAZAO")) Then
+            customerName = drv("NOME_RAZAO").ToString().Trim()
+        End If
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("<html>")
+        sb.AppendLine("<body style='font-family:Segoe UI,Arial,sans-serif;font-size:11pt;color:#1f2937;'>")
+        sb.AppendLine("<p>Hello" & If(String.IsNullOrWhiteSpace(customerName), "", " " & WebUtility.HtmlEncode(customerName)) & ",</p>")
+        sb.AppendLine("<p>Please find attached invoice <strong>" &
+                      WebUtility.HtmlEncode(vInvoiceNumeroAtual) &
+                      "</strong> in " & anexosTexto & ".</p>")
+        sb.AppendLine("<table cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;margin:14px 0;'>")
+        sb.AppendLine("<tr><td style='padding:4px 14px 4px 0;color:#6b7280;'>Invoice Number</td><td style='padding:4px 0;font-weight:600;'>" &
+                      WebUtility.HtmlEncode(vInvoiceNumeroAtual) & "</td></tr>")
+        sb.AppendLine("<tr><td style='padding:4px 14px 4px 0;color:#6b7280;'>Issue Date</td><td style='padding:4px 0;'>" &
+                      dtIssue.Value.ToString("yyyy-MM-dd") & "</td></tr>")
+        sb.AppendLine("<tr><td style='padding:4px 14px 4px 0;color:#6b7280;'>Due Date</td><td style='padding:4px 0;'>" &
+                      dtDue.Value.ToString("yyyy-MM-dd") & "</td></tr>")
+        sb.AppendLine("<tr><td style='padding:4px 14px 4px 0;color:#6b7280;'>Total USD</td><td style='padding:4px 0;font-weight:700;'>" &
+                      WebUtility.HtmlEncode(totalTexto) & "</td></tr>")
+        sb.AppendLine("</table>")
+
+        If Not String.IsNullOrWhiteSpace(txtNotes.Text) Then
+            sb.AppendLine("<p><strong>Notes:</strong><br/>" &
+                          WebUtility.HtmlEncode(txtNotes.Text.Trim()).Replace(vbCrLf, "<br/>").Replace(vbLf, "<br/>") &
+                          "</p>")
+        End If
+
+        sb.AppendLine("<p>If you have any questions, please contact us at your convenience.</p>")
+        sb.AppendLine("</body>")
+        sb.AppendLine("</html>")
+        Return sb.ToString()
+
+    End Function
 
     Private Sub btnFechar_Click(sender As Object, e As EventArgs) Handles btnFechar.Click
         Me.Close()

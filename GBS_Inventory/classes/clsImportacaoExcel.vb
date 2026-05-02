@@ -127,6 +127,14 @@ Public Class clsImportacaoExcel
         Dim vSerial   As String = lerCelula(pRow, "Serial")
         Dim vMfr      As String = lerCelula(pRow, "Manufacturer")
         Dim vModel    As String = lerCelula(pRow, "Model")
+        Dim vBattery  As String = lerPrimeiraCelula(pRow,
+                                                     "Battery Condition",
+                                                     "Battery",
+                                                     "Battery Status",
+                                                     "Battery Health",
+                                                     "Bateria",
+                                                     "Condicao Bateria",
+                                                     "Condição Bateria")
 
         ' Linha vazia / cabeçalho
         If String.IsNullOrWhiteSpace(vUID) AndAlso String.IsNullOrWhiteSpace(vSerial) Then
@@ -150,7 +158,8 @@ Public Class clsImportacaoExcel
         equipamento.HardDriveType   = lerCelula(pRow, "Hard Drive Type").Trim()
         equipamento.Resolution      = lerCelula(pRow, "Resolution").Trim()
         equipamento.Graphics        = lerCelula(pRow, "Graphics").Trim()
-        equipamento.ConditionStatus = normalizarCondicao(lerCelula(pRow, "Battery Condition"))
+        equipamento.ConditionStatus = normalizarCondicao(vBattery)
+        equipamento.BatteryCheck    = vBattery.Trim()
         equipamento.Notes           = lerCelula(pRow, "Notes").Trim()
         equipamento.SourceBatch     = pAba    ' o nome da aba vira o "lote"
         equipamento.DeviceType      = "LAPTOP"
@@ -190,6 +199,17 @@ Public Class clsImportacaoExcel
 
     End Function
 
+    Private Function lerPrimeiraCelula(pRow As DataRow, ParamArray pColunas() As String) As String
+
+        For Each coluna As String In pColunas
+            Dim valor As String = lerCelula(pRow, coluna).Trim()
+            If Not String.IsNullOrWhiteSpace(valor) Then Return valor
+        Next
+
+        Return ""
+
+    End Function
+
     Private Function parseDecimal(pValor As String) As Decimal?
 
         If String.IsNullOrWhiteSpace(pValor) Then Return Nothing
@@ -217,9 +237,9 @@ Public Class clsImportacaoExcel
 
         Select Case pValor.Trim().ToUpper()
             Case "EXCELLENT", "E"              : Return "EXCELLENT"
-            Case "GOOD", "G", "OK"             : Return "GOOD"
+            Case "GOOD", "G", "OK", "NORMAL"  : Return "GOOD"
             Case "FAIR", "F", "AVG", "AVERAGE" : Return "FAIR"
-            Case "POOR", "P", "BAD"            : Return "POOR"
+            Case "POOR", "P", "BAD", "REPLACE", "REPLACED", "FAIL", "FAILED" : Return "POOR"
             Case "NO BATTERY", "NO_BATTERY", "NB", "NONE" : Return "GOOD"
             Case "Y", "YES"                    : Return "GOOD"
             Case "N", "NO", "N/A", "NA", ""    : Return "GOOD"

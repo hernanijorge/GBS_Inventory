@@ -2,6 +2,10 @@ Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Data
 Imports System.IO
+Imports System.Text
+Imports System.Net
+Imports OfficeOpenXml
+Imports OfficeOpenXml.Style
 Imports Oracle.ManagedDataAccess.Client
 
 ''' <summary>
@@ -22,6 +26,7 @@ Public Class frmPrincipal
     Private dtResumoModel As DataTable
     Private dtResumoCpuFamily As DataTable
     Private dtEstoqueCompleto As DataTable
+    Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
 
 #End Region
@@ -505,14 +510,14 @@ Public Class frmPrincipal
                 System.IO.Directory.CreateDirectory(outputPath)
             End If
 
-            Dim caminho As String = ReportService.GerarRelatorio(itens, outputPath, logoPath)
+            Dim baseNome As String = "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
 
-            System.Diagnostics.Process.Start(caminho)
+            Dim caminhoDoc  As String = ReportService.GerarRelatorio(itens, outputPath, logoPath, baseNome)
+            Dim caminhoPdf  As String = ReportService.GerarPdf(itens, outputPath, logoPath, baseNome)
+            Dim caminhoXlsx As String = ReportService.GerarExcel(itens, outputPath, logoPath, baseNome)
 
-            MessageBox.Show("Report generated successfully!" & vbCrLf & vbCrLf &
-                            "File: " & caminho & vbCrLf &
-                            "Items: " & itens.Count.ToString(),
-                            "Generate Report", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
+            frmEmail.ShowDialog(Me)
 
         Catch ex As Exception
             MessageBox.Show("Error generating report: " & ex.Message, "Generate Report",
@@ -593,116 +598,12 @@ Public Class frmPrincipal
         aplicarFiltrosEstoque()
     End Sub
 
-    Private Sub btnRemoveSelected_Click(sender As Object, e As EventArgs) Handles btnRemoveSelected.Click
-
-        If Not dgvEstoque.Columns.Contains("_SEL") Then Return
-
-        dgvEstoque.EndEdit()
-
-        Dim count As Integer = 0
-        For i As Integer = dgvEstoque.Rows.Count - 1 To 0 Step -1
-            Dim cell As DataGridViewCheckBoxCell = TryCast(dgvEstoque.Rows(i).Cells("_SEL"), DataGridViewCheckBoxCell)
-            If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
-                count += 1
-            End If
-        Next
-
-        If count = 0 Then
-            MessageBox.Show("No items selected. Check the boxes in the first column to select rows.",
-                            "Remove Selected", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim res As DialogResult = MessageBox.Show(
-            $"Remove {count} item(s) from the report view?" & vbCrLf &
-            "(Database is NOT affected — only removes from current grid view)",
-            "Confirm Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-        If res <> DialogResult.Yes Then Return
-
-        Dim dt As DataTable = TryCast(dgvEstoque.DataSource, DataTable)
-        If dt Is Nothing Then Return
-
-        For i As Integer = dgvEstoque.Rows.Count - 1 To 0 Step -1
-            Dim cell As DataGridViewCheckBoxCell = TryCast(dgvEstoque.Rows(i).Cells("_SEL"), DataGridViewCheckBoxCell)
-            If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
-                Dim drv As DataRowView = TryCast(dgvEstoque.Rows(i).DataBoundItem, DataRowView)
-                If drv IsNot Nothing Then dt.Rows.Remove(drv.Row)
-            End If
-        Next
-
-        AtualizarRodapeEstoque()
-
-    End Sub
-
     Private Sub btnGenerateReport_Click(sender As Object, e As EventArgs) Handles btnGenerateReport.Click
         GerarRelatorio()
     End Sub
 
     Private Sub btnExportExcel_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         ExportarExcel()
-    End Sub
-
-    Private Sub btnCleanObs_Click(sender As Object, e As EventArgs) Handles btnCleanObs.Click
-
-        Dim res As DialogResult = MessageBox.Show(
-            "This will NULL out OBSERVACAO entries matching:" & vbCrLf &
-            "  • 'Original Battery%'" & vbCrLf &
-            "  • 'Alt HDD%'  |  'Alt SSD%'  |  'Alt RAM%'" & vbCrLf & vbCrLf &
-            "The DATABASE will be permanently updated. Continue?",
-            "Clean Observations", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
-        If res <> DialogResult.Yes Then Return
-
-        Try
-            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
-
-            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
-                "UPDATE TBL_EQUIPAMENTO SET OBSERVACAO = NULL" &
-                " WHERE OBSERVACAO LIKE 'Original Battery%'")
-            OracleHelper.ExecuteNonQuery(cs, CommandType.Text, "COMMIT")
-
-            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
-                "UPDATE TBL_EQUIPAMENTO SET OBSERVACAO = NULL" &
-                " WHERE OBSERVACAO LIKE 'Alt HDD%'" &
-                "    OR OBSERVACAO LIKE 'Alt SSD%'" &
-                "    OR OBSERVACAO LIKE 'Alt RAM%'")
-            OracleHelper.ExecuteNonQuery(cs, CommandType.Text, "COMMIT")
-
-            ' Show top-30 remaining distinct observations for analysis
-            Dim dsDistinct As DataSet = OracleHelper.ExecuteDataset(cs, CommandType.Text,
-                "SELECT DISTINCT OBSERVACAO, COUNT(*) AS QTD" &
-                "  FROM TBL_EQUIPAMENTO" &
-                " WHERE OBSERVACAO IS NOT NULL" &
-                " GROUP BY OBSERVACAO" &
-                " ORDER BY QTD DESC" &
-                " FETCH FIRST 30 ROWS ONLY")
-
-            Dim sb As New System.Text.StringBuilder()
-            sb.AppendLine("Observations cleaned successfully!")
-            sb.AppendLine()
-
-            If dsDistinct IsNot Nothing AndAlso dsDistinct.Tables.Count > 0 AndAlso
-               dsDistinct.Tables(0).Rows.Count > 0 Then
-                sb.AppendLine($"Remaining distinct observations ({dsDistinct.Tables(0).Rows.Count} shown, top 30):")
-                sb.AppendLine(New String("-"c, 50))
-                For Each rowD As DataRow In dsDistinct.Tables(0).Rows
-                    Dim obs As String = If(IsDBNull(rowD("OBSERVACAO")), "", rowD("OBSERVACAO").ToString())
-                    Dim qtd As String = If(IsDBNull(rowD("QTD")), "?", rowD("QTD").ToString())
-                    sb.AppendLine($"  [{qtd}x]  {obs}")
-                Next
-            Else
-                sb.AppendLine("No observations remaining in the database.")
-            End If
-
-            MessageBox.Show(sb.ToString(), "Clean Observations — Remaining",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information)
-            carregarEstoque()
-            carregarDashboard()
-
-        Catch ex As Exception
-            MessageBox.Show("Error cleaning observations: " & ex.Message, "Clean Observations",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-
     End Sub
 
     Private Sub btnAddEquipamento_Click(sender As Object, e As EventArgs) Handles btnAddEquipamento.Click
@@ -1054,6 +955,7 @@ Public Class frmPrincipal
         lblImpStatus.ForeColor = TemaEscuro.Accent
         progImp.Value = 0
         progImp.Visible = True
+        OcultarAnaliseImportacao()
 
         Application.DoEvents()
 
@@ -1087,8 +989,10 @@ Public Class frmPrincipal
                 lblImpErros.ForeColor = TemaEscuro.Vermelho
             End If
 
+            AtualizarSourceBatchImportado()
             carregarDashboard()
             carregarEstoque()
+            CarregarAnaliseImportacao()
 
             MessageBox.Show($"Import completed!" & vbCrLf & vbCrLf &
                             $"Inserted: {oImportController.TotalInseridos}" & vbCrLf &
@@ -1111,6 +1015,703 @@ Public Class frmPrincipal
         End Try
 
     End Sub
+
+    Private Sub OcultarAnaliseImportacao()
+        dtImportQuality = Nothing
+        If lblImpAnaliseTitle IsNot Nothing Then lblImpAnaliseTitle.Visible = False
+        If chkImpShowIssuesOnly IsNot Nothing Then
+            chkImpShowIssuesOnly.Checked = False
+            chkImpShowIssuesOnly.Visible = False
+        End If
+        If btnImpGerarRelatorio IsNot Nothing Then btnImpGerarRelatorio.Visible = False
+        If btnImpEnviarRelatorio IsNot Nothing Then btnImpEnviarRelatorio.Visible = False
+        If dgvImpAnalise IsNot Nothing Then
+            dgvImpAnalise.DataSource = Nothing
+            dgvImpAnalise.Visible = False
+        End If
+        If lblImpAnaliseFooter IsNot Nothing Then
+            lblImpAnaliseFooter.Text = ""
+            lblImpAnaliseFooter.Visible = False
+        End If
+    End Sub
+
+    Private Sub AtualizarSourceBatchImportado()
+        If oImportController Is Nothing OrElse oImportController.UIDsImportados.Count = 0 Then Return
+
+        Dim batchName As String = ObterImportBatchName()
+        If String.IsNullOrWhiteSpace(batchName) Then Return
+
+        Try
+            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim pBatch As New OracleParameter("P_BATCH", OracleDbType.Varchar2, ParameterDirection.Input)
+            pBatch.Value = batchName
+
+            OracleHelper.ExecuteNonQuery(cs, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO" &
+                "   SET SOURCE_BATCH = :P_BATCH, DATA_ATUALIZACAO = SYSDATE" &
+                " WHERE " & BuildImportInClause(oImportController.UIDsImportados),
+                pBatch)
+        Catch
+            ' Source batch is helpful for reports, but import should not fail if this update is blocked.
+        End Try
+    End Sub
+
+    Private Sub CarregarAnaliseImportacao()
+        If oImportController Is Nothing OrElse oImportController.UIDsImportados.Count = 0 Then Return
+
+        Try
+            Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim filtroUids As String = BuildImportInClause(oImportController.UIDsImportados)
+
+            Dim sqlFull As String =
+                "SELECT ID_EQUIPAMENTO, INTERNAL_UID, SERIAL_NUMBER, MARCA, MODEL, PROCESSADOR," &
+                "       RAM_GB, STORAGE_GB, CONDITION_STATUS, STATUS, SOURCE_BATCH," &
+                "       OBSERVACAO, DATA_CADASTRO, DATA_ATUALIZACAO" &
+                "  FROM TBL_EQUIPAMENTO WHERE " & filtroUids &
+                " ORDER BY INTERNAL_UID"
+
+            Dim sqlFallback As String =
+                "SELECT ID_EQUIPAMENTO, INTERNAL_UID, SERIAL_NUMBER, MARCA, MODEL, PROCESSADOR," &
+                "       RAM_GB, STORAGE_GB, CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS," &
+                "       STATUS, CAST(NULL AS VARCHAR2(100)) AS SOURCE_BATCH," &
+                "       OBSERVACAO, DATA_CADASTRO, DATA_ATUALIZACAO" &
+                "  FROM TBL_EQUIPAMENTO WHERE " & filtroUids &
+                " ORDER BY INTERNAL_UID"
+
+            Dim dtSrc As DataTable = Nothing
+            Dim lastEx As Exception = Nothing
+            For Each sql As String In New String() {sqlFull, sqlFallback}
+                Try
+                    Dim ds As DataSet = OracleHelper.ExecuteDataset(cs, CommandType.Text, sql)
+                    If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                        dtSrc = ds.Tables(0)
+                        Exit For
+                    End If
+                Catch ex As Exception
+                    lastEx = ex
+                    If Not ex.Message.Contains("ORA-00904") Then Throw
+                End Try
+            Next
+            If dtSrc Is Nothing Then
+                If lastEx IsNot Nothing Then Throw lastEx
+                Return
+            End If
+
+            dtImportQuality = New DataTable()
+            dtImportQuality.Columns.Add("ID_EQUIPAMENTO", GetType(Integer))
+            dtImportQuality.Columns.Add("INTERNAL_UID", GetType(String))
+            dtImportQuality.Columns.Add("FINAL_OK", GetType(Boolean))
+            dtImportQuality.Columns.Add("SERIAL_NUMBER", GetType(String))
+            dtImportQuality.Columns.Add("MARCA", GetType(String))
+            dtImportQuality.Columns.Add("MODEL", GetType(String))
+            dtImportQuality.Columns.Add("PROCESSADOR", GetType(String))
+            dtImportQuality.Columns.Add("RAM_GB", GetType(String))
+            dtImportQuality.Columns.Add("RAM_UPGRADE_TO", GetType(String))
+            dtImportQuality.Columns.Add("STORAGE_GB", GetType(String))
+            dtImportQuality.Columns.Add("STORAGE_UPGRADE_TO", GetType(String))
+            dtImportQuality.Columns.Add("CONDITION_STATUS", GetType(String))
+            dtImportQuality.Columns.Add("BATTERY_SOURCE", GetType(String))
+            dtImportQuality.Columns.Add("BATTERY_CHECK", GetType(String))
+            dtImportQuality.Columns.Add("BATTERY_REPLACE", GetType(Boolean))
+            dtImportQuality.Columns.Add("STATUS", GetType(String))
+            dtImportQuality.Columns.Add("SOURCE_BATCH", GetType(String))
+            dtImportQuality.Columns.Add("OBSERVATION", GetType(String))
+            dtImportQuality.Columns.Add("DATA_CADASTRO", GetType(String))
+            dtImportQuality.Columns.Add("DATA_ATUALIZACAO", GetType(String))
+            dtImportQuality.Columns.Add("PROBLEM", GetType(Boolean))
+            dtImportQuality.Columns.Add("ISSUE", GetType(String))
+            dtImportQuality.Columns.Add("ISSUE_REASON", GetType(String))
+
+            Dim batchName As String = ObterImportBatchName()
+
+            For Each row As DataRow In dtSrc.Rows
+                Dim uid As String = ImportColStr(row, "INTERNAL_UID")
+                Dim cond As String = ImportColStr(row, "CONDITION_STATUS").ToUpperInvariant().Trim()
+                Dim status As String = ImportColStr(row, "STATUS").ToUpperInvariant().Trim()
+                Dim obs As String = ImportColStr(row, "OBSERVACAO").Trim()
+                Dim sourceBatch As String = ImportColStr(row, "SOURCE_BATCH").Trim()
+                If String.IsNullOrWhiteSpace(sourceBatch) Then sourceBatch = batchName
+                Dim batteryFromSheet As String = cond
+                If oImportController IsNot Nothing AndAlso
+                   oImportController.BatteryCheckByUid IsNot Nothing AndAlso
+                   oImportController.BatteryCheckByUid.ContainsKey(uid) Then
+                    batteryFromSheet = oImportController.BatteryCheckByUid(uid)
+                End If
+                Dim motivo As String = MontarMotivoImportacao(cond, obs, status)
+                Dim problem As Boolean = Not String.IsNullOrWhiteSpace(motivo)
+
+                dtImportQuality.Rows.Add(
+                    ImportInt(row, "ID_EQUIPAMENTO"),
+                    uid,
+                    Not problem,
+                    ImportColStr(row, "SERIAL_NUMBER"),
+                    ImportColStr(row, "MARCA"),
+                    ImportColStr(row, "MODEL"),
+                    ImportColStr(row, "PROCESSADOR"),
+                    ImportColStr(row, "RAM_GB"),
+                    "",
+                    ImportColStr(row, "STORAGE_GB"),
+                    "",
+                    cond,
+                    batteryFromSheet,
+                    "",
+                    False,
+                    status,
+                    sourceBatch,
+                    obs,
+                    ImportDateStr(row, "DATA_CADASTRO"),
+                    ImportDateStr(row, "DATA_ATUALIZACAO"),
+                    problem,
+                    If(problem, "Yes", "No"),
+                    motivo
+                )
+            Next
+
+            AplicarFiltroAnaliseImportacao()
+            lblImpAnaliseTitle.Visible = True
+            chkImpShowIssuesOnly.Visible = True
+            btnImpGerarRelatorio.Visible = True
+            btnImpEnviarRelatorio.Visible = True
+            dgvImpAnalise.Visible = True
+            lblImpAnaliseFooter.Visible = True
+
+        Catch ex As Exception
+            MessageBox.Show("Error loading import quality review: " & ex.Message,
+                            "Import Review", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        End Try
+    End Sub
+
+    Private Sub AplicarFiltroAnaliseImportacao()
+        If dtImportQuality Is Nothing Then Return
+
+        Dim view As New DataView(dtImportQuality)
+        If chkImpShowIssuesOnly IsNot Nothing AndAlso chkImpShowIssuesOnly.Checked Then
+            view.RowFilter = "FINAL_OK = False"
+        End If
+
+        dgvImpAnalise.DataSource = view
+        ConfigurarGridAnaliseImportacao()
+        AtualizarFooterAnaliseImportacao()
+    End Sub
+
+    Private Sub ConfigurarGridAnaliseImportacao()
+        If dgvImpAnalise Is Nothing OrElse dgvImpAnalise.Columns.Count = 0 Then Return
+
+        dgvImpAnalise.ReadOnly = False
+        dgvImpAnalise.EditMode = DataGridViewEditMode.EditOnEnter
+        dgvImpAnalise.AllowUserToAddRows = False
+        dgvImpAnalise.AllowUserToDeleteRows = False
+        dgvImpAnalise.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvImpAnalise.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgvImpAnalise.ScrollBars = ScrollBars.Both
+
+        For Each col As DataGridViewColumn In dgvImpAnalise.Columns
+            col.ReadOnly = True
+        Next
+
+        If dgvImpAnalise.Columns.Contains("FINAL_OK") Then
+            With dgvImpAnalise.Columns("FINAL_OK")
+                .HeaderText = "Final OK?"
+                .ReadOnly = False
+                .DisplayIndex = 0
+                .Width = 80
+            End With
+        End If
+        If dgvImpAnalise.Columns.Contains("PROBLEM") Then
+            dgvImpAnalise.Columns("PROBLEM").Visible = False
+        End If
+        If dgvImpAnalise.Columns.Contains("ISSUE") Then
+            dgvImpAnalise.Columns("ISSUE").Visible = False
+        End If
+
+        DefinirColunaImport("ID_EQUIPAMENTO", "ID_EQUIPAMENTO", 95, True, 1)
+        DefinirColunaImport("INTERNAL_UID", "INTERNAL_UID", 105, True, 2)
+        DefinirColunaImport("SERIAL_NUMBER", "SERIAL_NUMBER", 120, True, 3)
+        DefinirColunaImport("MARCA", "MARCA", 95, True, 4)
+        DefinirColunaImport("MODEL", "MODEL", 155, True, 5)
+        DefinirColunaImport("PROCESSADOR", "PROCESSADOR", 120, True, 6)
+        DefinirColunaImport("RAM_GB", "RAM_GB", 70, True, 7)
+        DefinirColunaImport("RAM_UPGRADE_TO", "RAM Check", 110, False, 8)
+        DefinirColunaImport("STORAGE_GB", "STORAGE_GB", 90, True, 9)
+        DefinirColunaImport("STORAGE_UPGRADE_TO", "Storage Check", 130, False, 10)
+
+        If dgvImpAnalise.Columns.Contains("CONDITION_STATUS") Then
+            dgvImpAnalise.Columns("CONDITION_STATUS").Visible = False
+        End If
+        DefinirColunaImport("BATTERY_SOURCE", "Battery From Sheet", 145, True, 11)
+        DefinirColunaImport("BATTERY_CHECK", "Battery Check", 130, False, 12)
+        DefinirColunaImport("BATTERY_REPLACE", "Battery Needed?", 120, False, 13)
+        DefinirColunaImport("STATUS", "STATUS", 95, True, 14)
+        DefinirColunaImport("SOURCE_BATCH", "SOURCE_BATCH", 170, True, 15)
+
+        If dgvImpAnalise.Columns.Contains("ISSUE_REASON") Then
+            With dgvImpAnalise.Columns("ISSUE_REASON")
+                .HeaderText = "ISSUE REASON"
+                .ReadOnly = False
+                .Width = 220
+                .DisplayIndex = 16
+            End With
+        End If
+        If dgvImpAnalise.Columns.Contains("OBSERVATION") Then
+            With dgvImpAnalise.Columns("OBSERVATION")
+                .ReadOnly = False
+                .Width = 320
+                .DisplayIndex = 17
+            End With
+        End If
+        DefinirColunaImport("DATA_CADASTRO", "DATA_CADASTRO", 125, True, 18)
+        DefinirColunaImport("DATA_ATUALIZACAO", "DATA_ATUALIZACAO", 130, True, 19)
+    End Sub
+
+    Private Sub DefinirColunaImport(nome As String,
+                                    titulo As String,
+                                    largura As Integer,
+                                    pReadOnly As Boolean,
+                                    displayIndex As Integer,
+                                    Optional formato As String = "")
+        If Not dgvImpAnalise.Columns.Contains(nome) Then Return
+
+        With dgvImpAnalise.Columns(nome)
+            .HeaderText = titulo
+            .ReadOnly = pReadOnly
+            .Width = largura
+            If displayIndex >= 0 AndAlso displayIndex < dgvImpAnalise.Columns.Count Then
+                .DisplayIndex = displayIndex
+            End If
+            If Not String.IsNullOrWhiteSpace(formato) Then
+                .DefaultCellStyle.Format = formato
+                .DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            End If
+        End With
+    End Sub
+
+    Private Sub AtualizarFooterAnaliseImportacao()
+        If dtImportQuality Is Nothing Then Return
+
+        Dim total As Integer = dtImportQuality.Rows.Count
+        Dim issues As Integer = ContarProblemasImportacao()
+        Dim ok As Integer = total - issues
+        lblImpAnaliseFooter.Text = $"Total: {total}  |  Final OK: {ok}  |  Final BAD / Issues: {issues}"
+        lblImpAnaliseFooter.ForeColor = If(issues > 0, TemaEscuro.Vermelho, TemaEscuro.Verde)
+    End Sub
+
+    Private Sub chkImpShowIssuesOnly_CheckedChanged(sender As Object, e As EventArgs) Handles chkImpShowIssuesOnly.CheckedChanged
+        AplicarFiltroAnaliseImportacao()
+    End Sub
+
+    Private Sub dgvImpAnalise_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) Handles dgvImpAnalise.CurrentCellDirtyStateChanged
+        If dgvImpAnalise Is Nothing OrElse Not dgvImpAnalise.IsCurrentCellDirty Then Return
+        If TypeOf dgvImpAnalise.CurrentCell Is DataGridViewCheckBoxCell Then
+            dgvImpAnalise.CommitEdit(DataGridViewDataErrorContexts.Commit)
+        End If
+    End Sub
+
+    Private Sub dgvImpAnalise_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles dgvImpAnalise.CellValueChanged
+        If e.RowIndex < 0 OrElse dgvImpAnalise Is Nothing Then Return
+        If e.ColumnIndex < 0 OrElse e.ColumnIndex >= dgvImpAnalise.Columns.Count Then Return
+
+        Dim rowView As DataRowView = TryCast(dgvImpAnalise.Rows(e.RowIndex).DataBoundItem, DataRowView)
+        If rowView Is Nothing Then Return
+
+        Dim colName As String = dgvImpAnalise.Columns(e.ColumnIndex).Name
+        If colName = "FINAL_OK" Then
+            Dim finalOk As Boolean = False
+            If Not IsDBNull(rowView.Row("FINAL_OK")) Then finalOk = CBool(rowView.Row("FINAL_OK"))
+            Dim problem As Boolean = Not finalOk
+            rowView.Row("PROBLEM") = problem
+            rowView.Row("ISSUE") = If(problem, "Yes", "No")
+            If problem AndAlso String.IsNullOrWhiteSpace(ImportRowStr(rowView.Row, "ISSUE_REASON")) Then
+                rowView.Row("ISSUE_REASON") = "Manual review"
+            End If
+        End If
+
+        AtualizarFooterAnaliseImportacao()
+        dgvImpAnalise.InvalidateRow(e.RowIndex)
+    End Sub
+
+    Private Sub dgvImpAnalise_DataError(sender As Object, e As DataGridViewDataErrorEventArgs) Handles dgvImpAnalise.DataError
+        e.ThrowException = False
+        MessageBox.Show("Invalid value for this column. Please check numbers and try again.",
+                        "Import Review", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+    End Sub
+
+    Private Sub dgvImpAnalise_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvImpAnalise.CellFormatting
+        If e.RowIndex < 0 OrElse dgvImpAnalise Is Nothing Then Return
+        Dim rowView As DataRowView = TryCast(dgvImpAnalise.Rows(e.RowIndex).DataBoundItem, DataRowView)
+        If rowView Is Nothing OrElse Not rowView.Row.Table.Columns.Contains("FINAL_OK") Then Return
+
+        Try
+            If Not CBool(rowView.Row("FINAL_OK")) Then
+                e.CellStyle.BackColor = Color.FromArgb(255, 204, 204)
+                e.CellStyle.ForeColor = Color.FromArgb(140, 20, 20)
+                e.CellStyle.SelectionBackColor = Color.FromArgb(255, 160, 160)
+                e.CellStyle.SelectionForeColor = Color.FromArgb(80, 0, 0)
+            End If
+        Catch
+        End Try
+    End Sub
+
+    Private Sub btnImpGerarRelatorio_Click(sender As Object, e As EventArgs) Handles btnImpGerarRelatorio.Click
+        GerarRelatorioQualidadeImportacao(False)
+    End Sub
+
+    Private Sub btnImpEnviarRelatorio_Click(sender As Object, e As EventArgs) Handles btnImpEnviarRelatorio.Click
+        GerarRelatorioQualidadeImportacao(True)
+    End Sub
+
+    Private Sub GerarRelatorioQualidadeImportacao(enviarEmail As Boolean)
+        If dtImportQuality Is Nothing OrElse dtImportQuality.Rows.Count = 0 Then
+            MessageBox.Show("Run an import first.", "Import Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Try
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            If Not Directory.Exists(outputPath) Then Directory.CreateDirectory(outputPath)
+
+            Dim baseNome As String = "ImportQuality_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            Dim caminhoXlsx As String = GerarExcelRelatorioQualidadeImportacao(outputPath, baseNome)
+
+            If enviarEmail Then
+                Dim itens As New List(Of DataRow)()
+                For Each row As DataRow In dtImportQuality.Rows
+                    itens.Add(row)
+                Next
+
+                Dim frmEmail As New frmEnviarRelatorio("", "", caminhoXlsx, itens)
+                frmEmail.txtSubject.Text = "Import Quality Report - " & DateTime.Now.ToString("yyyy-MM-dd")
+                frmEmail.txtBody.Text = MontarResumoEmailQualidadeImportacao()
+                frmEmail.chkAttachWord.Checked = False
+                frmEmail.chkAttachPdf.Checked = False
+                frmEmail.chkAttachExcel.Checked = True
+                frmEmail.ShowDialog(Me)
+            Else
+                MessageBox.Show("Import Excel report generated successfully!" & vbCrLf & vbCrLf & caminhoXlsx,
+                                "Import Report", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating import report: " & ex.Message,
+                            "Import Report", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Function GerarExcelRelatorioQualidadeImportacao(outputPath As String,
+                                                            baseNome As String) As String
+        Dim caminhoFinal As String = Path.Combine(outputPath, baseNome & ".xlsx")
+        Dim total As Integer = dtImportQuality.Rows.Count
+        Dim issues As Integer = ContarProblemasImportacao()
+        Dim ok As Integer = total - issues
+        Dim issueRate As Decimal = If(total = 0, 0D, Math.Round((issues * 100D) / total, 1))
+
+        Dim colunas As (Key As String, Header As String, Width As Double)() = {
+            ("FINAL_RESULT", "Final Result", 13),
+            ("ID_EQUIPAMENTO", "ID", 10),
+            ("INTERNAL_UID", "Internal UID", 14),
+            ("SERIAL_NUMBER", "Serial Number", 18),
+            ("MARCA", "Manufacturer", 16),
+            ("MODEL", "Model", 22),
+            ("PROCESSADOR", "Processor", 16),
+            ("RAM_GB", "RAM GB", 10),
+            ("RAM_UPGRADE_TO", "RAM Check", 14),
+            ("STORAGE_GB", "Storage GB", 12),
+            ("STORAGE_UPGRADE_TO", "Storage Check", 16),
+            ("BATTERY_SOURCE", "Battery From Sheet", 18),
+            ("BATTERY_CHECK", "Battery Check", 16),
+            ("BATTERY_REPLACE", "Battery Needed", 15),
+            ("STATUS", "Status", 13),
+            ("SOURCE_BATCH", "Batch", 22),
+            ("ISSUE_REASON", "Issue Reason", 26),
+            ("OBSERVATION", "Observation", 38),
+            ("DATA_CADASTRO", "Created", 18),
+            ("DATA_ATUALIZACAO", "Updated", 18)
+        }
+
+        Using pkg As New ExcelPackage()
+            Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Import Quality")
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            Dim headerRow As Integer = 6
+
+            ws.Row(1).Height = 40
+            ws.Row(2).Height = 20
+            ws.Row(3).Height = 20
+            ws.Row(4).Height = 18
+            ws.Row(5).Height = 8
+
+            If Not String.IsNullOrWhiteSpace(logoPath) AndAlso File.Exists(logoPath) Then
+                Try
+                    Dim logo = ws.Drawings.AddPicture("GBS_Logo", New FileInfo(logoPath))
+                    logo.SetPosition(0, 4, 0, 4)
+                    logo.SetSize(180, 60)
+                Catch
+                    ' Keep the report usable even if the logo cannot be loaded.
+                End Try
+            End If
+
+            ws.Cells(1, 4, 1, 10).Merge = True
+            ws.Cells(1, 4).Value = "GBS Import Quality Report"
+            ws.Cells(1, 4).Style.Font.Bold = True
+            ws.Cells(1, 4).Style.Font.Size = 16
+            ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
+
+            ws.Cells(2, 4, 2, 12).Merge = True
+            ws.Cells(2, 4).Value = "Source file: " & Path.GetFileName(sArquivoSelImp) &
+                                   " | Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
+
+            ws.Cells(3, 4, 3, 12).Merge = True
+            ws.Cells(3, 4).Value = $"Total: {total} | Final OK: {ok} | Final BAD / Issues: {issues} | Issue rate: {issueRate:0.0}%"
+            ws.Cells(3, 4).Style.Font.Bold = True
+
+            For i As Integer = 0 To colunas.Length - 1
+                Dim cell = ws.Cells(headerRow, i + 1)
+                cell.Value = colunas(i).Header
+                cell.Style.Font.Bold = True
+                cell.Style.Fill.PatternType = ExcelFillStyle.Solid
+                cell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(55, 65, 81))
+                cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
+                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                ws.Column(i + 1).Width = colunas(i).Width
+            Next
+
+            For rowIdx As Integer = 0 To dtImportQuality.Rows.Count - 1
+                Dim row As DataRow = dtImportQuality.Rows(rowIdx)
+                Dim excelRow As Integer = headerRow + rowIdx + 1
+                Dim finalOk As Boolean = CBool(row("FINAL_OK"))
+
+                For colIdx As Integer = 0 To colunas.Length - 1
+                    Dim key As String = colunas(colIdx).Key
+                    Dim value As Object = ""
+
+                    If key = "FINAL_RESULT" Then
+                        value = If(finalOk, "GOOD", "BAD")
+                    ElseIf key = "BATTERY_REPLACE" Then
+                        value = If(CBool(row("BATTERY_REPLACE")), "Yes", "No")
+                    ElseIf row.Table.Columns.Contains(key) AndAlso Not IsDBNull(row(key)) Then
+                        value = row(key).ToString()
+                    End If
+
+                    ws.Cells(excelRow, colIdx + 1).Value = value
+                Next
+
+                If Not finalOk Then
+                    Dim rng = ws.Cells(excelRow, 1, excelRow, colunas.Length)
+                    rng.Style.Fill.PatternType = ExcelFillStyle.Solid
+                    rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(254, 226, 226))
+                    rng.Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(127, 29, 29))
+                ElseIf rowIdx Mod 2 = 1 Then
+                    Dim rng = ws.Cells(excelRow, 1, excelRow, colunas.Length)
+                    rng.Style.Fill.PatternType = ExcelFillStyle.Solid
+                    rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(249, 250, 251))
+                End If
+            Next
+
+            Dim lastRow As Integer = headerRow + Math.Max(dtImportQuality.Rows.Count, 1)
+            ws.Cells(headerRow, 1, lastRow, colunas.Length).AutoFilter = True
+            ws.Cells(headerRow, 1, lastRow, colunas.Length).Style.VerticalAlignment = ExcelVerticalAlignment.Top
+            ws.Cells(headerRow, 1, lastRow, colunas.Length).Style.Border.Bottom.Style = ExcelBorderStyle.Thin
+            ws.Cells(headerRow, 1, lastRow, colunas.Length).Style.Border.Bottom.Color.SetColor(System.Drawing.Color.FromArgb(229, 231, 235))
+            ws.Column(18).Style.WrapText = True
+            ws.View.FreezePanes(headerRow + 1, 1)
+
+            pkg.SaveAs(New FileInfo(caminhoFinal))
+        End Using
+
+        Return caminhoFinal
+    End Function
+
+    Private Function MontarHtmlRelatorioQualidadeImportacao() As String
+        Dim total As Integer = dtImportQuality.Rows.Count
+        Dim issues As Integer = ContarProblemasImportacao()
+        Dim ok As Integer = total - issues
+        Dim issueRate As Decimal = If(total = 0, 0D, Math.Round((issues * 100D) / total, 1))
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("<html><head><meta charset='utf-8' />")
+        sb.AppendLine("<style>")
+        sb.AppendLine("body{font-family:Segoe UI,Arial,sans-serif;font-size:10pt;color:#1f2937;margin:36px;}")
+        sb.AppendLine("h2{margin:0 0 4px 0;color:#111827;}")
+        sb.AppendLine(".sub{color:#6b7280;margin-bottom:18px;}")
+        sb.AppendLine(".cards{display:flex;gap:10px;margin:16px 0 18px 0;}")
+        sb.AppendLine(".card{border:1px solid #d1d5db;padding:10px 14px;min-width:130px;}")
+        sb.AppendLine(".label{color:#6b7280;font-size:9pt;}.value{font-size:18pt;font-weight:700;}")
+        sb.AppendLine("table{width:100%;border-collapse:collapse;table-layout:fixed;}")
+        sb.AppendLine("th{background:#374151;color:#fff;text-align:left;padding:7px 6px;font-size:8pt;}")
+        sb.AppendLine("td{border:1px solid #e5e7eb;padding:5px 6px;font-size:8pt;word-wrap:break-word;vertical-align:top;}")
+        sb.AppendLine(".bad td{background:#fee2e2;color:#7f1d1d;}")
+        sb.AppendLine("</style></head><body>")
+        AppendImportLogoHtml(sb)
+        sb.AppendLine("<h2>GBS Import Quality Report</h2>")
+        sb.AppendLine("<div class='sub'>Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                      " | Source file: " & WebUtility.HtmlEncode(Path.GetFileName(sArquivoSelImp)) & "</div>")
+        sb.AppendLine("<div class='cards'>")
+        sb.AppendLine("<div class='card'><div class='label'>Total imported</div><div class='value'>" & total & "</div></div>")
+        sb.AppendLine("<div class='card'><div class='label'>Final OK</div><div class='value'>" & ok & "</div></div>")
+        sb.AppendLine("<div class='card'><div class='label'>Final BAD / Issues</div><div class='value'>" & issues & "</div></div>")
+        sb.AppendLine("<div class='card'><div class='label'>Issue rate</div><div class='value'>" & issueRate.ToString("0.0") & "%</div></div>")
+        sb.AppendLine("</div>")
+        sb.AppendLine("<table>")
+        sb.AppendLine("<tr><th>Final Result</th><th>Internal UID</th><th>Serial Number</th><th>Manufacturer</th><th>Model</th><th>Processor</th><th>RAM</th><th>RAM Check</th><th>Storage</th><th>Storage Check</th><th>Battery Check</th><th>Battery Needed</th><th>Status</th><th>Batch</th><th>Issue Reason</th><th>Observation</th></tr>")
+
+        For Each row As DataRow In dtImportQuality.Rows
+            Dim finalOk As Boolean = CBool(row("FINAL_OK"))
+            Dim problem As Boolean = Not finalOk
+            sb.Append(If(problem, "<tr class='bad'>", "<tr>"))
+            AppendImportTd(sb, If(finalOk, "GOOD", "BAD"))
+            AppendImportTd(sb, ImportRowStr(row, "INTERNAL_UID"))
+            AppendImportTd(sb, ImportRowStr(row, "SERIAL_NUMBER"))
+            AppendImportTd(sb, ImportRowStr(row, "MARCA"))
+            AppendImportTd(sb, ImportRowStr(row, "MODEL"))
+            AppendImportTd(sb, ImportRowStr(row, "PROCESSADOR"))
+            AppendImportTd(sb, ImportRowStr(row, "RAM_GB"))
+            AppendImportTd(sb, ImportRowStr(row, "RAM_UPGRADE_TO"))
+            AppendImportTd(sb, ImportRowStr(row, "STORAGE_GB"))
+            AppendImportTd(sb, ImportRowStr(row, "STORAGE_UPGRADE_TO"))
+            AppendImportTd(sb, ImportRowStr(row, "BATTERY_CHECK"))
+            AppendImportTd(sb, If(CBool(row("BATTERY_REPLACE")), "Yes", "No"))
+            AppendImportTd(sb, ImportRowStr(row, "STATUS"))
+            AppendImportTd(sb, ImportRowStr(row, "SOURCE_BATCH"))
+            AppendImportTd(sb, ImportRowStr(row, "ISSUE_REASON"))
+            AppendImportTd(sb, ImportRowStr(row, "OBSERVATION"))
+            sb.AppendLine("</tr>")
+        Next
+
+        sb.AppendLine("</table>")
+        sb.AppendLine("</body></html>")
+        Return sb.ToString()
+    End Function
+
+    Private Function MontarResumoEmailQualidadeImportacao() As String
+        Dim total As Integer = dtImportQuality.Rows.Count
+        Dim issues As Integer = ContarProblemasImportacao()
+        Dim ok As Integer = total - issues
+        Dim issueRate As Decimal = If(total = 0, 0D, Math.Round((issues * 100D) / total, 1))
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("Please find attached the import quality report for the latest customer spreadsheet.")
+        sb.AppendLine()
+        sb.AppendLine("Summary:")
+        sb.AppendLine("  - Source file: " & Path.GetFileName(sArquivoSelImp))
+        sb.AppendLine("  - Total imported: " & total.ToString())
+        sb.AppendLine("  - Final OK: " & ok.ToString())
+        sb.AppendLine("  - Final BAD / Issues: " & issues.ToString())
+        sb.AppendLine("  - Issue rate: " & issueRate.ToString("0.0") & "%")
+        Return sb.ToString()
+    End Function
+
+    Private Function ContarProblemasImportacao() As Integer
+        Dim total As Integer = 0
+        If dtImportQuality Is Nothing Then Return 0
+        For Each row As DataRow In dtImportQuality.Rows
+            If Not CBool(row("FINAL_OK")) Then total += 1
+        Next
+        Return total
+    End Function
+
+    Private Function MontarMotivoImportacao(conditionStatus As String, observacao As String, status As String) As String
+        Dim motivos As New List(Of String)()
+        If conditionStatus = "FAIR" OrElse conditionStatus = "POOR" Then
+            motivos.Add("Battery condition: " & conditionStatus)
+        End If
+        If Not String.IsNullOrWhiteSpace(observacao) Then
+            motivos.Add("Observation")
+        End If
+        If status = "IN_REPAIR" Then
+            motivos.Add("Status: IN_REPAIR")
+        End If
+        Return String.Join("; ", motivos)
+    End Function
+
+    Private Sub AppendImportLogoHtml(sb As StringBuilder)
+        Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+        If String.IsNullOrWhiteSpace(logoPath) OrElse Not File.Exists(logoPath) Then Return
+
+        Try
+            Dim b64 As String = Convert.ToBase64String(File.ReadAllBytes(logoPath))
+            Dim mime As String = If(Path.GetExtension(logoPath).ToLowerInvariant() = ".png", "image/png", "image/jpeg")
+            sb.AppendLine("<div style='margin-bottom:14px;'><img src='data:" & mime & ";base64," &
+                          b64 & "' style='max-height:60px;max-width:180px;' /></div>")
+        Catch
+        End Try
+    End Sub
+
+    Private Sub AppendImportTd(sb As StringBuilder, valor As String)
+        sb.Append("<td>").Append(WebUtility.HtmlEncode(valor)).Append("</td>")
+    End Sub
+
+    Private Function ImportColStr(row As DataRow, colName As String) As String
+        If Not row.Table.Columns.Contains(colName) Then Return ""
+        If IsDBNull(row(colName)) Then Return ""
+        Return row(colName).ToString()
+    End Function
+
+    Private Function ImportInt(row As DataRow, colName As String) As Integer
+        If Not row.Table.Columns.Contains(colName) Then Return 0
+        If IsDBNull(row(colName)) Then Return 0
+
+        Dim id As Integer
+        If Integer.TryParse(row(colName).ToString(), id) Then Return id
+        Return 0
+    End Function
+
+    Private Function ImportDateStr(row As DataRow, colName As String) As String
+        If Not row.Table.Columns.Contains(colName) Then Return ""
+        If IsDBNull(row(colName)) Then Return ""
+
+        Dim dt As DateTime
+        If DateTime.TryParse(row(colName).ToString(), dt) Then
+            Return dt.ToString("MM/dd/yyyy HH:mm")
+        End If
+
+        Return row(colName).ToString()
+    End Function
+
+    Private Function ImportRowStr(row As DataRow, colName As String) As String
+        If Not row.Table.Columns.Contains(colName) Then Return ""
+        If IsDBNull(row(colName)) Then Return ""
+        Return row(colName).ToString()
+    End Function
+
+    Private Function ObterImportBatchName() As String
+        Dim nome As String = ""
+
+        If Not String.IsNullOrWhiteSpace(sArquivoSelImp) Then
+            nome = Path.GetFileNameWithoutExtension(sArquivoSelImp)
+        End If
+
+        If String.IsNullOrWhiteSpace(nome) Then
+            nome = "IMPORT_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+        End If
+
+        If nome.Length > 50 Then nome = nome.Substring(0, 50)
+        Return nome
+    End Function
+
+    Private Function BuildImportInClause(uids As List(Of String)) As String
+        If uids Is Nothing OrElse uids.Count = 0 Then Return "1=0"
+
+        Dim sb As New StringBuilder()
+        Dim i As Integer = 0
+        While i < uids.Count
+            If sb.Length > 0 Then sb.Append(" OR ")
+            sb.Append("INTERNAL_UID IN (")
+
+            Dim first As Boolean = True
+            Dim limit As Integer = Math.Min(i + 999, uids.Count)
+            While i < limit
+                If Not first Then sb.Append(",")
+                sb.Append("'").Append(uids(i).Replace("'", "''")).Append("'")
+                first = False
+                i += 1
+            End While
+
+            sb.Append(")")
+        End While
+
+        Return sb.ToString()
+    End Function
 
 #End Region
 

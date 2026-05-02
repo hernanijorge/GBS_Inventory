@@ -33,6 +33,7 @@ Namespace Models
 
         Public Property DeviceType          As String = "LAPTOP"
         Public Property ConditionStatus     As String = "GOOD"
+        Public Property BatteryCheck        As String
         Public Property Status              As String = "IN_STOCK"
         Public Property StatusDescricao     As String
         Public Property Notes               As String

@@ -20,6 +20,7 @@ Public Class ImportacaoController
     Public Property Erros             As New List(Of String)
     Public Property Skipped           As New List(Of String)
     Public Property UIDsImportados    As New List(Of String)
+    Public Property BatteryCheckByUid As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
 #End Region
 
@@ -51,6 +52,7 @@ Public Class ImportacaoController
         Me.Erros.Clear()
         Me.Skipped.Clear()
         Me.UIDsImportados.Clear()
+        Me.BatteryCheckByUid.Clear()
 
         Dim listaEquipamentos As List(Of Equipamento)
 
@@ -96,9 +98,11 @@ Public Class ImportacaoController
                         Case "INSERTED"
                             Me.TotalInseridos += 1
                             Me.UIDsImportados.Add(equip.InternalUID)
+                            Me.BatteryCheckByUid(equip.InternalUID) = equip.BatteryCheck
                         Case "UPDATED"
                             Me.TotalAtualizados += 1
                             Me.UIDsImportados.Add(equip.InternalUID)
+                            Me.BatteryCheckByUid(equip.InternalUID) = equip.BatteryCheck
                         Case Else
                             Me.TotalErros += 1
                             Me.Erros.Add($"UID {equip.InternalUID}: {sResultado}")

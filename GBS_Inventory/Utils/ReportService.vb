@@ -3,9 +3,11 @@ Imports System.IO
 Imports System.Text
 Imports OfficeOpenXml
 Imports OfficeOpenXml.Style
+Imports iTextSharp.text
+Imports iTextSharp.text.pdf
 
 ''' <summary>
-''' Gera relatório de inventário em Word (.doc HTML) com logo, cabeçalho e tabela formatada.
+''' Gera relatório de inventário em Word (.doc HTML), PDF e Excel com logo, cabeçalho e tabela formatada.
 ''' </summary>
 Public Class ReportService
 
@@ -13,12 +15,15 @@ Public Class ReportService
 
     Public Shared Function GerarRelatorio(pItens As List(Of DataRow),
                                            pOutputPath As String,
-                                           pLogoPath As String) As String
+                                           pLogoPath As String,
+                                           Optional baseNome As String = "") As String
 
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
 
-        Dim nomeArq As String = "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss") & ".doc"
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nomeArq As String = nome & ".doc"
         Dim caminhoFinal As String = Path.Combine(pasta, nomeArq)
 
         Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
@@ -33,12 +38,15 @@ Public Class ReportService
 
     Public Shared Function GerarExcel(pItens As List(Of DataRow),
                                        pOutputPath As String,
-                                       Optional pLogoPath As String = "") As String
+                                       Optional pLogoPath As String = "",
+                                       Optional baseNome As String = "") As String
 
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
 
-        Dim nomeArq As String = "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss") & ".xlsx"
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nomeArq As String = nome & ".xlsx"
         Dim caminhoFinal As String = Path.Combine(pasta, nomeArq)
 
         ' Colunas: chave interna, header, largura em caracteres
@@ -72,26 +80,35 @@ Public Class ReportService
 
         Using pkg As New ExcelPackage()
             Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Inventory Report")
-            Dim linhaCabecalho As Integer = 1
+            Dim linhaCabecalho As Integer = 5
             Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+
+            ws.Row(1).Height = 40
+            ws.Row(2).Height = 20
+            ws.Row(3).Height = 20
+            ws.Row(4).Height = 20
+
+            ws.Cells(1, 4, 1, 8).Merge = True
+            ws.Cells(1, 4).Value = "GBS Inventory Report"
+            ws.Cells(1, 4).Style.Font.Bold = True
+            ws.Cells(1, 4).Style.Font.Size = 16
+            ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
+
+            ws.Cells(2, 4, 2, 8).Merge = True
+            ws.Cells(2, 4).Value = "Generated: " &
+                                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                                    " | Total items: " & pItens.Count.ToString()
+            ws.Cells(2, 4).Style.Font.Size = 10
+            ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
 
             If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
                 Try
+                    ' Logo anchored to A1 — 180×60 px, does not overlap column D onward
                     Dim logo = ws.Drawings.AddPicture("GBS_Logo", New FileInfo(logoEfetivo))
-                    logo.SetPosition(0, 0, 0, 0)
-                    logo.SetSize(170, 60)
-
-                    ws.Row(1).Height = 24
-                    ws.Row(2).Height = 24
-                    ws.Cells(1, 4).Value = "GBS Inventory Report"
-                    ws.Cells(1, 4).Style.Font.Bold = True
-                    ws.Cells(1, 4).Style.Font.Size = 16
-                    ws.Cells(2, 4).Value = "Generated: " &
-                                            DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
-                                            " | Total items: " & pItens.Count.ToString()
-                    linhaCabecalho = 5
+                    logo.SetPosition(0, 4, 0, 4)
+                    logo.SetSize(180, 60)
                 Catch
-                    linhaCabecalho = 1
+                    ' Mantem o relatorio funcionando mesmo se a imagem nao carregar.
                 End Try
             End If
 
@@ -141,6 +158,124 @@ Public Class ReportService
             ws.View.FreezePanes(linhaCabecalho + 1, 1)
 
             pkg.SaveAs(New FileInfo(caminhoFinal))
+        End Using
+
+        Return caminhoFinal
+
+    End Function
+
+    ' ── PDF export ───────────────────────────────────────────────────────────
+
+    Public Shared Function GerarPdf(pItens As List(Of DataRow),
+                                     pOutputPath As String,
+                                     pLogoPath As String,
+                                     Optional baseNome As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nomeArq As String = nome & ".pdf"
+        Dim caminhoFinal As String = Path.Combine(pasta, nomeArq)
+
+        Dim colunas As (Key As String, Header As String, Largura As Single)() = {
+            ("INTERNAL_UID",     "Internal UID",     56),
+            ("MARCA",            "Manufacturer",      68),
+            ("MODEL",            "Model",             58),
+            ("SERIAL_NUMBER",    "Serial Number",     72),
+            ("PROCESSADOR",      "Processor",         80),
+            ("RAM_GB",           "RAM",               32),
+            ("STORAGE_GB",       "Storage",           42),
+            ("CONDITION_STATUS", "Battery/Condition", 68),
+            ("STATUS",           "Status",            52),
+            ("OBSERVACAO",       "Notes",            120)
+        }
+
+        Dim colsReais As New Dictionary(Of String, String)
+        For Each c In colunas
+            colsReais(c.Key) = c.Key
+        Next
+        If pItens.Count > 0 Then
+            Dim tbl As DataTable = pItens(0).Table
+            If Not tbl.Columns.Contains("MARCA")            AndAlso tbl.Columns.Contains("MANUFACTURER")    Then colsReais("MARCA")            = "MANUFACTURER"
+            If Not tbl.Columns.Contains("MODEL")            AndAlso tbl.Columns.Contains("MODELO")          Then colsReais("MODEL")            = "MODELO"
+            If Not tbl.Columns.Contains("PROCESSADOR")      AndAlso tbl.Columns.Contains("CPU_MODEL")       Then colsReais("PROCESSADOR")      = "CPU_MODEL"
+            If Not tbl.Columns.Contains("OBSERVACAO")       AndAlso tbl.Columns.Contains("NOTES")           Then colsReais("OBSERVACAO")       = "NOTES"
+            If Not tbl.Columns.Contains("CONDITION_STATUS") AndAlso tbl.Columns.Contains("BATTERY_CONDITION") Then colsReais("CONDITION_STATUS") = "BATTERY_CONDITION"
+        End If
+
+        Dim doc As New Document(PageSize.A4.Rotate(), 20, 20, 30, 20)
+        Using fs As New FileStream(caminhoFinal, FileMode.Create, FileAccess.Write)
+            PdfWriter.GetInstance(doc, fs)
+            doc.Open()
+
+            ' Logo
+            Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+            If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                Try
+                    Dim img As iTextSharp.text.Image = iTextSharp.text.Image.GetInstance(logoEfetivo)
+                    img.ScaleToFit(140, 50)
+                    img.Alignment = Element.ALIGN_LEFT
+                    doc.Add(img)
+                Catch
+                End Try
+            End If
+
+            ' Title + meta
+            Dim fontTitulo As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 13, New BaseColor(31, 41, 55))
+            Dim fontMeta   As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA, 8,  New BaseColor(107, 114, 128))
+            Dim pTitulo As New Paragraph("GBS Inventory Report", fontTitulo)
+            pTitulo.SpacingBefore = 4
+            doc.Add(pTitulo)
+            Dim pMeta As New Paragraph("Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                                        "  |  Total items: " & pItens.Count.ToString(), fontMeta)
+            pMeta.SpacingAfter = 8
+            doc.Add(pMeta)
+
+            ' Table
+            Dim totalCols As Integer = colunas.Length
+            Dim tabela As New PdfPTable(totalCols)
+            tabela.WidthPercentage = 100
+            Dim widths(totalCols - 1) As Single
+            For i As Integer = 0 To totalCols - 1
+                widths(i) = colunas(i).Largura
+            Next
+            tabela.SetWidths(widths)
+
+            Dim fontHdr  As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 7.5F, BaseColor.WHITE)
+            Dim fontData As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA, 7, New BaseColor(31, 41, 55))
+            Dim hdrBg As New BaseColor(55, 65, 81)
+            Dim altBg As New BaseColor(249, 250, 251)
+
+            For Each c In colunas
+                Dim cell As New PdfPCell(New Phrase(c.Header, fontHdr))
+                cell.BackgroundColor     = hdrBg
+                cell.HorizontalAlignment = Element.ALIGN_CENTER
+                cell.Padding             = 5
+                tabela.AddCell(cell)
+            Next
+
+            Dim rowIdx As Integer = 0
+            For Each row As DataRow In pItens
+                Dim dtRow As DataTable = row.Table
+                Dim bg As BaseColor = If(rowIdx Mod 2 = 1, altBg, BaseColor.WHITE)
+                For Each c In colunas
+                    Dim colReal As String = colsReais(c.Key)
+                    Dim val As String = ""
+                    If dtRow.Columns.Contains(colReal) AndAlso Not IsDBNull(row(colReal)) Then
+                        val = row(colReal).ToString()
+                    End If
+                    Dim cell As New PdfPCell(New Phrase(val, fontData))
+                    cell.BackgroundColor = bg
+                    cell.Padding         = 4
+                    tabela.AddCell(cell)
+                Next
+                rowIdx += 1
+            Next
+
+            doc.Add(tabela)
+            doc.Close()
         End Using
 
         Return caminhoFinal

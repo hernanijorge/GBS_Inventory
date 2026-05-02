@@ -76,10 +76,8 @@ Partial Class frmPrincipal
     Friend WithEvents clbProcessor       As CheckedListBox
     Friend WithEvents btnApplyFilter     As Button
     Friend WithEvents btnClearFilter     As Button
-    Friend WithEvents btnRemoveSelected  As Button
     Friend WithEvents btnGenerateReport  As Button
     Friend WithEvents btnExportExcel     As Button
-    Friend WithEvents btnCleanObs        As Button
     Friend WithEvents lblFiltrosAtivos   As Label
 
     ' Controles da aba Importação
@@ -94,6 +92,12 @@ Partial Class frmPrincipal
     Friend WithEvents lblImpLinhas As Label
     Friend WithEvents lblImpErros As Label
     Friend WithEvents txtImpErros As TextBox
+    Friend WithEvents lblImpAnaliseTitle As Label
+    Friend WithEvents chkImpShowIssuesOnly As CheckBox
+    Friend WithEvents btnImpGerarRelatorio As Button
+    Friend WithEvents btnImpEnviarRelatorio As Button
+    Friend WithEvents dgvImpAnalise As DataGridView
+    Friend WithEvents lblImpAnaliseFooter As Label
 
     Private Sub InitializeComponent()
 
@@ -102,7 +106,7 @@ Partial Class frmPrincipal
         ' ═════════════════════════════════════════════════════════════
         ' FORM PRINCIPAL
         ' ═════════════════════════════════════════════════════════════
-        Me.Text = "GBS Inventory Manager — Global Business Solution, Boston"
+        Me.Text = "GBS Inventory Manager — Global Business Solution, Lexington"
         Me.Size = New Size(1280, 780)
         Me.StartPosition = FormStartPosition.CenterScreen
         Me.MinimumSize = New Size(1100, 650)
@@ -137,7 +141,7 @@ Partial Class frmPrincipal
         Me.lblTitulo.BackColor = Color.Transparent
 
         Me.lblSubTitulo = New Label()
-        Me.lblSubTitulo.Text = "Global Business Solution · Boston, MA · v1.0"
+        Me.lblSubTitulo.Text = "Global Business Solution · Lexington, MA · v1.0"
         Me.lblSubTitulo.Font = New Font("Segoe UI", 8)
         Me.lblSubTitulo.ForeColor = TemaEscuro.TextoMutado
         Me.lblSubTitulo.Location = New Point(292, 36)
@@ -467,14 +471,9 @@ Partial Class frmPrincipal
         Me.btnClearFilter.Location  = New Point(142, 164)
         Me.btnClearFilter.Size      = New Size(80, 34)
 
-        Me.btnRemoveSelected          = New Button()
-        Me.btnRemoveSelected.Text     = "Remove Selected"
-        Me.btnRemoveSelected.Location = New Point(228, 164)
-        Me.btnRemoveSelected.Size     = New Size(130, 34)
-
         Me.btnGenerateReport           = New Button()
         Me.btnGenerateReport.Text      = "Generate Report"
-        Me.btnGenerateReport.Location  = New Point(364, 164)
+        Me.btnGenerateReport.Location  = New Point(228, 164)
         Me.btnGenerateReport.Size      = New Size(130, 34)
         Me.btnGenerateReport.BackColor = TemaEscuro.Accent
         Me.btnGenerateReport.ForeColor = TemaEscuro.Fundo
@@ -482,30 +481,22 @@ Partial Class frmPrincipal
 
         Me.btnExportExcel           = New Button()
         Me.btnExportExcel.Text      = "Export Excel"
-        Me.btnExportExcel.Location  = New Point(500, 164)
+        Me.btnExportExcel.Location  = New Point(364, 164)
         Me.btnExportExcel.Size      = New Size(110, 34)
         Me.btnExportExcel.BackColor = Color.FromArgb(21, 128, 61)
         Me.btnExportExcel.ForeColor = Color.White
         Me.btnExportExcel.FlatStyle = FlatStyle.Flat
 
-        Me.btnCleanObs           = New Button()
-        Me.btnCleanObs.Text      = "Clean Obs."
-        Me.btnCleanObs.Location  = New Point(618, 164)
-        Me.btnCleanObs.Size      = New Size(110, 34)
-        Me.btnCleanObs.BackColor = Color.FromArgb(160, 50, 30)
-        Me.btnCleanObs.ForeColor = Color.White
-        Me.btnCleanObs.FlatStyle = FlatStyle.Flat
-
         Me.lblFiltrosAtivos           = New Label()
         Me.lblFiltrosAtivos.Text      = "No filters active"
-        Me.lblFiltrosAtivos.Location  = New Point(742, 172)
+        Me.lblFiltrosAtivos.Location  = New Point(488, 172)
         Me.lblFiltrosAtivos.AutoSize  = True
         Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
         Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
 
         Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt,
-                                          btnApplyFilter, btnClearFilter, btnRemoveSelected,
-                                          btnGenerateReport, btnExportExcel, btnCleanObs, lblFiltrosAtivos})
+                                          btnApplyFilter, btnClearFilter,
+                                          btnGenerateReport, btnExportExcel, lblFiltrosAtivos})
 
         ' ── Grid de estoque ───────────────────────────────────────────
         Me.dgvEstoque = New DataGridView()
@@ -714,10 +705,55 @@ Partial Class frmPrincipal
         Me.txtImpErros.Font = New Font("Consolas", 8.5F)
         Me.txtImpErros.Visible = False
 
+        Me.lblImpAnaliseTitle = New Label()
+        Me.lblImpAnaliseTitle.Text = "Import Quality Review"
+        Me.lblImpAnaliseTitle.Location = New Point(20, 330)
+        Me.lblImpAnaliseTitle.AutoSize = True
+        Me.lblImpAnaliseTitle.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+        Me.lblImpAnaliseTitle.ForeColor = TemaEscuro.Accent
+        Me.lblImpAnaliseTitle.Visible = False
+
+        Me.chkImpShowIssuesOnly = New CheckBox()
+        Me.chkImpShowIssuesOnly.Text = "Show issues only"
+        Me.chkImpShowIssuesOnly.Location = New Point(210, 330)
+        Me.chkImpShowIssuesOnly.AutoSize = True
+        Me.chkImpShowIssuesOnly.ForeColor = TemaEscuro.Texto
+        Me.chkImpShowIssuesOnly.BackColor = Color.Transparent
+        Me.chkImpShowIssuesOnly.Visible = False
+
+        Me.btnImpGerarRelatorio = New Button()
+        Me.btnImpGerarRelatorio.Text = "Generate Import Report"
+        Me.btnImpGerarRelatorio.Location = New Point(360, 324)
+        Me.btnImpGerarRelatorio.Size = New Size(190, 30)
+        Me.btnImpGerarRelatorio.Visible = False
+
+        Me.btnImpEnviarRelatorio = New Button()
+        Me.btnImpEnviarRelatorio.Text = "Send Report"
+        Me.btnImpEnviarRelatorio.Location = New Point(560, 324)
+        Me.btnImpEnviarRelatorio.Size = New Size(140, 30)
+        Me.btnImpEnviarRelatorio.Visible = False
+
+        Me.dgvImpAnalise = New DataGridView()
+        Me.dgvImpAnalise.Location = New Point(20, 360)
+        Me.dgvImpAnalise.Size = New Size(1160, 300)
+        Me.dgvImpAnalise.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Bottom
+        Me.dgvImpAnalise.Visible = False
+
+        Me.lblImpAnaliseFooter = New Label()
+        Me.lblImpAnaliseFooter.Text = ""
+        Me.lblImpAnaliseFooter.Location = New Point(20, 668)
+        Me.lblImpAnaliseFooter.Size = New Size(1160, 22)
+        Me.lblImpAnaliseFooter.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        Me.lblImpAnaliseFooter.ForeColor = TemaEscuro.TextoMutado
+        Me.lblImpAnaliseFooter.Visible = False
+
         Me.tabImportacao.Controls.AddRange({lblImpTit, lblImpSub, lblImpArq, lblImpArquivo,
                                              btnImpSelecionar, btnImpIniciar, progImp,
                                              lblImpStatus, lblImpInseridos, lblImpAtualizados,
-                                             lblImpAbas, lblImpLinhas, lblImpErros, txtImpErros})
+                                             lblImpAbas, lblImpLinhas, lblImpErros, txtImpErros,
+                                             lblImpAnaliseTitle, chkImpShowIssuesOnly,
+                                             btnImpGerarRelatorio, btnImpEnviarRelatorio,
+                                             dgvImpAnalise, lblImpAnaliseFooter})
 
         ' --- ABA INVOICE ---
         Dim pnlInvoice As New Panel() With {

@@ -6,7 +6,7 @@ Imports System.Runtime.InteropServices
 ' Informações gerais sobre o assembly GBS Inventory
 ' ═══════════════════════════════════════════════════════════════════════
 <Assembly: AssemblyTitle("GBS Inventory Manager")>
-<Assembly: AssemblyDescription("Sistema de controle de estoque de equipamentos - Global Business Solution, Boston")>
+<Assembly: AssemblyDescription("Sistema de controle de estoque de equipamentos - Global Business Solution, Lexington")>
 <Assembly: AssemblyCompany("Global Business Solution")>
 <Assembly: AssemblyProduct("GBS Inventory")>
 <Assembly: AssemblyCopyright("Copyright © GBS 2026")>
