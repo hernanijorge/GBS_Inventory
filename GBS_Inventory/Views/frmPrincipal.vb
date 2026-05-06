@@ -28,6 +28,7 @@ Public Class frmPrincipal
     Private dtEstoqueCompleto As DataTable
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
+    Private _listaRelatorio    As New ListaRelatorio()
 
 #End Region
 
@@ -80,10 +81,10 @@ Public Class frmPrincipal
 
                 Dim row As DataRow = ds.Tables(0).Rows(0)
                 lblTotalUnidades.Text = "Total: " & ObterNumeroColuna(row, {"TOTAL_UNIDADES"}).ToString()
-                lblEmEstoque.Text = "Em Estoque: " & ObterNumeroColuna(row, {"EM_ESTOQUE"}).ToString()
-                lblCondicaoBoa.Text = "Condição Boa: " & ObterNumeroColuna(row, {"CONDICAO_BOA"}).ToString()
+                lblEmEstoque.Text = "In Stock: " & ObterNumeroColuna(row, {"EM_ESTOQUE"}).ToString()
+                lblCondicaoBoa.Text = "Good Condition: " & ObterNumeroColuna(row, {"CONDICAO_BOA"}).ToString()
                 lblUpgrades30d.Text = "Upgrades 30d: " & ObterNumeroColuna(row, {"UPGRADES_30D"}).ToString()
-                lblRemessasAtivas.Text = "Remessas: " & ObterNumeroColuna(row, {"REMESSAS_ATIVAS"}).ToString()
+                lblRemessasAtivas.Text = "Shipments: " & ObterNumeroColuna(row, {"REMESSAS_ATIVAS"}).ToString()
 
             End If
 
@@ -394,13 +395,21 @@ Public Class frmPrincipal
 
         Dim totalDB As Integer = If(dtEstoqueCompleto IsNot Nothing, dtEstoqueCompleto.Rows.Count, 0)
 
+        Dim modoTexto As String
+        If _listaRelatorio IsNot Nothing AndAlso _listaRelatorio.EstaAtiva Then
+            modoTexto = "  |  Mode: Custom list (" & _listaRelatorio.Count.ToString() & " items)"
+        Else
+            modoTexto = "  |  Mode: Current filter (" & showing.ToString() & " items)"
+        End If
+
         lblEstoqueFooter.Text =
             "Showing: "   & showing.ToString()  & "  |  " &
             "IN_STOCK: "  & inStock.ToString()  & "  |  " &
             "SOLD: "      & sold.ToString()     & "  |  " &
             "IN_REPAIR: " & inRepair.ToString() & "  |  " &
             "Selected: "  & selected.ToString() & "  |  " &
-            "Total in DB: " & totalDB.ToString()
+            "Total in DB: " & totalDB.ToString() &
+            modoTexto
 
     End Sub
 
@@ -454,6 +463,34 @@ Public Class frmPrincipal
             dgvEstoque.Columns("STATUS_DESCRICAO").Visible = False
         End If
 
+        Dim headers As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {"ID_EQUIPAMENTO", "ID"},
+            {"INTERNAL_UID", "Internal UID"},
+            {"SERIAL_NUMBER", "Serial Number"},
+            {"MARCA", "Manufacturer"},
+            {"MANUFACTURER", "Manufacturer"},
+            {"MODEL", "Model"},
+            {"MODELO", "Model"},
+            {"PROCESSADOR", "Processor"},
+            {"CPU_MODEL", "Processor"},
+            {"CPU_FAMILY", "CPU Family"},
+            {"RAM_GB", "RAM (GB)"},
+            {"STORAGE_GB", "Storage (GB)"},
+            {"CONDITION_STATUS", "Battery Condition"},
+            {"STATUS", "Status"},
+            {"OBSERVACAO", "Notes"},
+            {"NOTES", "Notes"},
+            {"DATA_CADASTRO", "Created"},
+            {"DATA_ATUALIZACAO", "Updated"},
+            {"SOURCE_BATCH", "Source Batch"}
+        }
+
+        For Each col As DataGridViewColumn In dgvEstoque.Columns
+            If headers.ContainsKey(col.Name) Then
+                col.HeaderText = headers(col.Name)
+            End If
+        Next
+
         ' Configure CONDITION_STATUS column
         If dgvEstoque.Columns.Contains("CONDITION_STATUS") Then
             With dgvEstoque.Columns("CONDITION_STATUS")
@@ -472,6 +509,12 @@ Public Class frmPrincipal
 
     Private Function ColetarItensRelatorio() As List(Of DataRow)
 
+        ' Prioridade 1: lista personalizada em memória
+        If _listaRelatorio.EstaAtiva Then
+            Return _listaRelatorio.Itens
+        End If
+
+        ' Prioridade 2: linhas marcadas no grid
         Dim marcadas As New List(Of DataRow)
         If dgvEstoque.Columns.Contains("_SEL") Then
             For Each gridRow As DataGridViewRow In dgvEstoque.Rows
@@ -485,6 +528,7 @@ Public Class frmPrincipal
 
         If marcadas.Count > 0 Then Return marcadas
 
+        ' Prioridade 3: todos os itens visíveis no grid
         Dim todos As New List(Of DataRow)
         For Each gridRow As DataGridViewRow In dgvEstoque.Rows
             Dim drv As DataRowView = TryCast(gridRow.DataBoundItem, DataRowView)
@@ -493,6 +537,95 @@ Public Class frmPrincipal
         Return todos
 
     End Function
+
+#Region "Lista de Relatório"
+
+    Private Sub AdicionarSelecionadosNaLista()
+
+        Dim adicionados As Integer = 0
+        Dim duplicados  As Integer = 0
+
+        If dgvEstoque.Columns.Contains("_SEL") Then
+            For Each gridRow As DataGridViewRow In dgvEstoque.Rows
+                Dim cell As DataGridViewCheckBoxCell = TryCast(gridRow.Cells("_SEL"), DataGridViewCheckBoxCell)
+                If cell IsNot Nothing AndAlso cell.Value IsNot Nothing AndAlso CBool(cell.Value) Then
+                    Dim drv As DataRowView = TryCast(gridRow.DataBoundItem, DataRowView)
+                    If drv IsNot Nothing Then
+                        If _listaRelatorio.Adicionar(drv.Row) Then
+                            adicionados += 1
+                        Else
+                            duplicados += 1
+                        End If
+                    End If
+                End If
+            Next
+        End If
+
+        ' Se nenhuma marcada, adiciona a linha focada
+        If adicionados = 0 AndAlso duplicados = 0 AndAlso
+           dgvEstoque.CurrentRow IsNot Nothing Then
+            Dim drv As DataRowView = TryCast(dgvEstoque.CurrentRow.DataBoundItem, DataRowView)
+            If drv IsNot Nothing Then
+                If _listaRelatorio.Adicionar(drv.Row) Then
+                    adicionados = 1
+                Else
+                    duplicados = 1
+                End If
+            End If
+        End If
+
+        AtualizarModoRelatorio()
+
+        Dim msg As String = adicionados.ToString() & " item(s) added to the list"
+        If duplicados > 0 Then msg &= " (" & duplicados.ToString() & " duplicate(s) ignored)"
+        lblStatus.Text = msg
+
+    End Sub
+
+    Private Sub LimparListaRelatorio()
+
+        If Not _listaRelatorio.EstaAtiva Then
+            lblStatus.Text = "Report list is already empty."
+            Return
+        End If
+
+        Dim res As DialogResult = MessageBox.Show(
+            "Clear the report list with " & _listaRelatorio.Count.ToString() & " item(s)?",
+            "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+
+        If res = DialogResult.Yes Then
+            _listaRelatorio.Limpar()
+            AtualizarModoRelatorio()
+            lblStatus.Text = "Report list cleared."
+        End If
+
+    End Sub
+
+    Private Sub AtualizarModoRelatorio()
+        If btnClearList IsNot Nothing Then
+            btnClearList.Enabled = _listaRelatorio.EstaAtiva
+        End If
+        AtualizarRodapeEstoque()
+    End Sub
+
+    Protected Overrides Function ProcessCmdKey(ByRef msg As Message, keyData As Keys) As Boolean
+        If tabPrincipal.SelectedTab Is tabEstoque Then
+            Select Case keyData
+                Case Keys.Control Or Keys.L
+                    AdicionarSelecionadosNaLista()
+                    Return True
+                Case Keys.Control Or Keys.Shift Or Keys.L
+                    LimparListaRelatorio()
+                    Return True
+                Case Keys.F9
+                    GerarRelatorio()
+                    Return True
+            End Select
+        End If
+        Return MyBase.ProcessCmdKey(msg, keyData)
+    End Function
+
+#End Region
 
     Private Sub GerarRelatorio()
 
@@ -604,6 +737,14 @@ Public Class frmPrincipal
 
     Private Sub btnExportExcel_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         ExportarExcel()
+    End Sub
+
+    Private Sub btnAddToList_Click(sender As Object, e As EventArgs) Handles btnAddToList.Click
+        AdicionarSelecionadosNaLista()
+    End Sub
+
+    Private Sub btnClearList_Click(sender As Object, e As EventArgs) Handles btnClearList.Click
+        LimparListaRelatorio()
     End Sub
 
     Private Sub btnAddEquipamento_Click(sender As Object, e As EventArgs) Handles btnAddEquipamento.Click
@@ -1224,15 +1365,15 @@ Public Class frmPrincipal
             dgvImpAnalise.Columns("ISSUE").Visible = False
         End If
 
-        DefinirColunaImport("ID_EQUIPAMENTO", "ID_EQUIPAMENTO", 95, True, 1)
-        DefinirColunaImport("INTERNAL_UID", "INTERNAL_UID", 105, True, 2)
-        DefinirColunaImport("SERIAL_NUMBER", "SERIAL_NUMBER", 120, True, 3)
-        DefinirColunaImport("MARCA", "MARCA", 95, True, 4)
+        DefinirColunaImport("ID_EQUIPAMENTO", "ID", 95, True, 1)
+        DefinirColunaImport("INTERNAL_UID", "Internal UID", 105, True, 2)
+        DefinirColunaImport("SERIAL_NUMBER", "Serial Number", 120, True, 3)
+        DefinirColunaImport("MARCA", "Manufacturer", 95, True, 4)
         DefinirColunaImport("MODEL", "MODEL", 155, True, 5)
-        DefinirColunaImport("PROCESSADOR", "PROCESSADOR", 120, True, 6)
-        DefinirColunaImport("RAM_GB", "RAM_GB", 70, True, 7)
+        DefinirColunaImport("PROCESSADOR", "Processor", 120, True, 6)
+        DefinirColunaImport("RAM_GB", "RAM (GB)", 70, True, 7)
         DefinirColunaImport("RAM_UPGRADE_TO", "RAM Check", 110, False, 8)
-        DefinirColunaImport("STORAGE_GB", "STORAGE_GB", 90, True, 9)
+        DefinirColunaImport("STORAGE_GB", "Storage (GB)", 90, True, 9)
         DefinirColunaImport("STORAGE_UPGRADE_TO", "Storage Check", 130, False, 10)
 
         If dgvImpAnalise.Columns.Contains("CONDITION_STATUS") Then
@@ -1241,8 +1382,8 @@ Public Class frmPrincipal
         DefinirColunaImport("BATTERY_SOURCE", "Battery From Sheet", 145, True, 11)
         DefinirColunaImport("BATTERY_CHECK", "Battery Check", 130, False, 12)
         DefinirColunaImport("BATTERY_REPLACE", "Battery Needed?", 120, False, 13)
-        DefinirColunaImport("STATUS", "STATUS", 95, True, 14)
-        DefinirColunaImport("SOURCE_BATCH", "SOURCE_BATCH", 170, True, 15)
+        DefinirColunaImport("STATUS", "Status", 95, True, 14)
+        DefinirColunaImport("SOURCE_BATCH", "Source Batch", 170, True, 15)
 
         If dgvImpAnalise.Columns.Contains("ISSUE_REASON") Then
             With dgvImpAnalise.Columns("ISSUE_REASON")
@@ -1259,8 +1400,8 @@ Public Class frmPrincipal
                 .DisplayIndex = 17
             End With
         End If
-        DefinirColunaImport("DATA_CADASTRO", "DATA_CADASTRO", 125, True, 18)
-        DefinirColunaImport("DATA_ATUALIZACAO", "DATA_ATUALIZACAO", 130, True, 19)
+        DefinirColunaImport("DATA_CADASTRO", "Created", 125, True, 18)
+        DefinirColunaImport("DATA_ATUALIZACAO", "Updated", 130, True, 19)
     End Sub
 
     Private Sub DefinirColunaImport(nome As String,

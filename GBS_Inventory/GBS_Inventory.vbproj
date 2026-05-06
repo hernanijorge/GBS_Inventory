@@ -97,6 +97,7 @@
     <Compile Include="Models\Remessa.vb" />
     <Compile Include="Models\Cliente.vb" />
     <Compile Include="Models\Invoice.vb" />
+    <Compile Include="Models\ListaRelatorio.vb" />
     <!-- Classes (Gravação + Leitura + Importação) -->
     <Compile Include="classes\clsGravacaoEquipamento.vb" />
     <Compile Include="classes\clsGravacaoUpgrade.vb" />

@@ -79,6 +79,8 @@ Partial Class frmPrincipal
     Friend WithEvents btnGenerateReport  As Button
     Friend WithEvents btnExportExcel     As Button
     Friend WithEvents lblFiltrosAtivos   As Label
+    Friend WithEvents btnAddToList       As Button
+    Friend WithEvents btnClearList       As Button
 
     ' Controles da aba Importação
     Friend WithEvents lblImpArquivo As Label
@@ -189,11 +191,11 @@ Partial Class frmPrincipal
         ' Adiciona o painel à aba ANTES de criar os cards (criarCardDashboard adiciona no pnlDashboard)
         Me.tabDashboard.Controls.Add(pnlDashboard)
 
-        Me.lblTotalUnidades = criarCardDashboard("Total de Unidades", "—", 20, 20)
-        Me.lblEmEstoque = criarCardDashboard("Em Estoque", "—", 260, 20)
-        Me.lblCondicaoBoa = criarCardDashboard("Condição Boa", "—", 500, 20)
+        Me.lblTotalUnidades = criarCardDashboard("Total Units", "—", 20, 20)
+        Me.lblEmEstoque = criarCardDashboard("In Stock", "—", 260, 20)
+        Me.lblCondicaoBoa = criarCardDashboard("Good Condition", "—", 500, 20)
         Me.lblUpgrades30d = criarCardDashboard("Upgrades 30d", "—", 740, 20)
-        Me.lblRemessasAtivas = criarCardDashboard("Remessas Ativas", "—", 980, 20)
+        Me.lblRemessasAtivas = criarCardDashboard("Active Shipments", "—", 980, 20)
 
         Me.lblDashboardResumo = New Label() With {
             .Text = "Inventory by Manufacturer / Model / CPU Family",
@@ -487,16 +489,36 @@ Partial Class frmPrincipal
         Me.btnExportExcel.ForeColor = Color.White
         Me.btnExportExcel.FlatStyle = FlatStyle.Flat
 
+        Me.btnAddToList           = New Button()
+        Me.btnAddToList.Text      = "+ Add to List"
+        Me.btnAddToList.Location  = New Point(480, 164)
+        Me.btnAddToList.Size      = New Size(130, 34)
+        Me.btnAddToList.BackColor = TemaEscuro.Accent
+        Me.btnAddToList.ForeColor = TemaEscuro.Fundo
+        Me.btnAddToList.FlatStyle = FlatStyle.Flat
+        Me.btnAddToList.Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold)
+
+        Me.btnClearList           = New Button()
+        Me.btnClearList.Text      = "Clear List"
+        Me.btnClearList.Location  = New Point(616, 164)
+        Me.btnClearList.Size      = New Size(96, 34)
+        Me.btnClearList.BackColor = Color.FromArgb(124, 45, 18)
+        Me.btnClearList.ForeColor = Color.White
+        Me.btnClearList.FlatStyle = FlatStyle.Flat
+        Me.btnClearList.Enabled   = False
+
         Me.lblFiltrosAtivos           = New Label()
         Me.lblFiltrosAtivos.Text      = "No filters active"
-        Me.lblFiltrosAtivos.Location  = New Point(488, 172)
+        Me.lblFiltrosAtivos.Location  = New Point(720, 172)
         Me.lblFiltrosAtivos.AutoSize  = True
         Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
         Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
 
         Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt,
                                           btnApplyFilter, btnClearFilter,
-                                          btnGenerateReport, btnExportExcel, lblFiltrosAtivos})
+                                          btnGenerateReport, btnExportExcel,
+                                          btnAddToList, btnClearList,
+                                          lblFiltrosAtivos})
 
         ' ── Grid de estoque ───────────────────────────────────────────
         Me.dgvEstoque = New DataGridView()

@@ -72,7 +72,7 @@ Public Class frmImportacao
                     Me.Invoke(Sub()
                         progress.Maximum = total
                         progress.Value   = Math.Min(atual, total)
-                        lblStatus.Text   = $"Processando {atual}/{total} — UID {uid}"
+                        lblStatus.Text   = $"Processing {atual}/{total} — UID {uid}"
                         Application.DoEvents()
                     End Sub)
                 End Sub

@@ -185,7 +185,7 @@ Public Class frmInvoice
             atualizarTotais()
 
         Catch ex As Exception
-            MessageBox.Show("Erro ao carregar itens da remessa: " & ex.Message, "Erro",
+            MessageBox.Show("Error loading shipment items: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
 

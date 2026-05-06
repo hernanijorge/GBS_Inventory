@@ -64,7 +64,7 @@ Partial Public Class frmRemessa
 
         Catch ex As Exception
 
-            MessageBox.Show("Erro ao carregar remessas: " & ex.Message, "Erro",
+            MessageBox.Show("Error loading shipments: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try
