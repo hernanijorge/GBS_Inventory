@@ -26,6 +26,8 @@ Public Class InvoiceEmailService
         Dim smtpUser As String = ConfigurationManager.AppSettings("SmtpUser")
         Dim smtpPass As String = ConfigurationManager.AppSettings("SmtpPassword")
         Dim emailFrom As String = ConfigurationManager.AppSettings("SmtpFrom")
+        Dim emailFromName As String = ConfigurationManager.AppSettings("SmtpFromName")
+        Dim emailReplyTo As String = ConfigurationManager.AppSettings("SmtpReplyTo")
 
         If String.IsNullOrWhiteSpace(smtpHost) OrElse String.IsNullOrWhiteSpace(emailFrom) Then
             Throw New Exception("SMTP nao configurado. Preencha SmtpHost e SmtpFrom no App.config.")
@@ -36,7 +38,10 @@ Public Class InvoiceEmailService
         End If
 
         Using msg As New MailMessage()
-            msg.From = New MailAddress(emailFrom)
+            msg.From = New MailAddress(emailFrom, emailFromName)
+            If Not String.IsNullOrWhiteSpace(emailReplyTo) AndAlso emailReplyTo.Contains("@") Then
+                msg.ReplyToList.Add(New MailAddress(emailReplyTo))
+            End If
             msg.To.Add(pEmailDestino)
             If Not String.IsNullOrWhiteSpace(pCC) AndAlso pCC.Contains("@") Then msg.CC.Add(pCC)
             msg.Subject = pAssunto

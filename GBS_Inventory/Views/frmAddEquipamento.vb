@@ -90,10 +90,11 @@ Public Class frmAddEquipamento
         Integer.TryParse(txtRam.Text.Trim(), ramGb)
         Integer.TryParse(txtStorage.Text.Trim(), stoGb)
 
-        Dim serial As String = txtSerial.Text.Trim()
-        Dim proc   As String = txtProcessor.Text.Trim()
-        Dim batch  As String = txtBatch.Text.Trim()
-        Dim notes  As String = txtNotes.Text.Trim()
+        Dim serial   As String = txtSerial.Text.Trim()
+        Dim proc     As String = txtProcessor.Text.Trim()
+        Dim batch    As String = txtBatch.Text.Trim()
+        Dim notes    As String = txtNotes.Text.Trim()
+        Dim battery  As String = If(cboBattery.SelectedIndex >= 0, cboBattery.SelectedItem.ToString(), "")
 
         btnSave.Enabled = False
         Cursor = Cursors.WaitCursor
@@ -107,37 +108,35 @@ Public Class frmAddEquipamento
                     Try
                         ' ── PROC_INSERT ───────────────────────────────
                         Using cmd As New OracleCommand("PACK_EQUIPAMENTO.PROC_INSERT", con)
-                            cmd.Transaction   = trans
-                            cmd.CommandType   = CommandType.StoredProcedure
+                            cmd.Transaction  = trans
+                            cmd.CommandType  = CommandType.StoredProcedure
+                            cmd.BindByName   = True
                             cmd.Parameters.Add("P_INTERNAL_UID",       OracleDbType.Varchar2).Value = uid
                             cmd.Parameters.Add("P_SERIAL_NUMBER",      OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(serial), DBNull.Value, CObj(serial))
                             cmd.Parameters.Add("P_MODELO",             OracleDbType.Varchar2).Value = model
                             cmd.Parameters.Add("P_MARCA",              OracleDbType.Varchar2).Value = marca
                             cmd.Parameters.Add("P_PROCESSADOR",        OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(proc), DBNull.Value, CObj(proc))
-                            cmd.Parameters.Add("P_RAM_GB",             OracleDbType.Int32).Value    = ramGb
-                            cmd.Parameters.Add("P_STORAGE_GB",         OracleDbType.Int32).Value    = stoGb
+                            cmd.Parameters.Add("P_RAM_GB",             OracleDbType.Decimal).Value  = ramGb
+                            cmd.Parameters.Add("P_STORAGE_GB",         OracleDbType.Decimal).Value  = stoGb
+                            cmd.Parameters.Add("P_CONDITION_STATUS",   OracleDbType.Varchar2).Value = cond
                             cmd.Parameters.Add("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2).Value = stat
                             cmd.Parameters.Add("P_OBSERVACAO",         OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(notes), DBNull.Value, CObj(notes))
+                            cmd.Parameters.Add("P_BATTERY_CHECK",      OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(battery), DBNull.Value, CObj(battery))
                             cmd.ExecuteNonQuery()
                         End Using
 
-                        ' ── UPDATE CONDITION_STATUS + SOURCE_BATCH ─────
-                        ' These columns may not exist in all environments — ORA-00904 is silenced.
-                        Try
+                        ' ── UPDATE SOURCE_BATCH ────────────────────────
+                        If Not String.IsNullOrEmpty(batch) Then
                             Using cmd2 As New OracleCommand(
-                                "UPDATE TBL_EQUIPAMENTO" &
-                                "   SET CONDITION_STATUS = :P_COND," &
-                                "       SOURCE_BATCH     = :P_BATCH" &
+                                "UPDATE TBL_EQUIPAMENTO SET SOURCE_BATCH = :P_BATCH" &
                                 " WHERE INTERNAL_UID = :P_UID", con)
                                 cmd2.Transaction = trans
-                                cmd2.Parameters.Add("P_COND",  OracleDbType.Varchar2).Value = cond
-                                cmd2.Parameters.Add("P_BATCH", OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(batch), DBNull.Value, CObj(batch))
+                                cmd2.BindByName  = True
+                                cmd2.Parameters.Add("P_BATCH", OracleDbType.Varchar2).Value = batch
                                 cmd2.Parameters.Add("P_UID",   OracleDbType.Varchar2).Value = uid
                                 cmd2.ExecuteNonQuery()
                             End Using
-                        Catch exUpd As Exception
-                            If Not exUpd.Message.ToUpperInvariant().Contains("ORA-00904") Then Throw
-                        End Try
+                        End If
 
                         trans.Commit()
 
