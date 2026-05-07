@@ -80,6 +80,10 @@ Public Class UpgradeController
         Return oLeitura.selecionarUpgradesRecentes(pDias)
     End Function
 
+    Public Function buscarComCliente(pDias As Integer) As DataSet
+        Return oLeitura.selecionarUpgradesComCliente(pDias)
+    End Function
+
 #End Region
 
 End Class

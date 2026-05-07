@@ -42,7 +42,6 @@ Partial Class frmHistoricoEquipamento
         ' ── Upgrades tab controls ──────────────────────────────────────────
         Me.pnlUpgrades      = New System.Windows.Forms.Panel()
         Me.dgvUpgrades      = New System.Windows.Forms.DataGridView()
-        Me.pnlUpgradeBar    = New System.Windows.Forms.Panel()
         Me.lblUpgradeTotal  = New System.Windows.Forms.Label()
         Me.btnUpgradeReport = New System.Windows.Forms.Button()
 
@@ -59,7 +58,6 @@ Partial Class frmHistoricoEquipamento
         Me.tabShipment.SuspendLayout()
         Me.pnlArrival.SuspendLayout()
         Me.pnlUpgrades.SuspendLayout()
-        Me.pnlUpgradeBar.SuspendLayout()
         Me.pnlShipment.SuspendLayout()
         CType(Me.dgvUpgrades, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.dgvShipment, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -100,17 +98,23 @@ Partial Class frmHistoricoEquipamento
         Me.pnlFooter.Height = 48
         Me.pnlFooter.Padding = New System.Windows.Forms.Padding(8, 8, 8, 8)
 
-        Me.btnHistoryReport.Text      = "Generate History Report"
-        Me.btnHistoryReport.Size      = New System.Drawing.Size(180, 30)
+        Me.btnHistoryReport.Text      = "History Report"
+        Me.btnHistoryReport.Size      = New System.Drawing.Size(140, 30)
         Me.btnHistoryReport.Location  = New System.Drawing.Point(8, 9)
         Me.btnHistoryReport.FlatStyle = System.Windows.Forms.FlatStyle.Flat
 
+        Me.btnUpgradeReport.Text      = "Upgrade Report"
+        Me.btnUpgradeReport.Size      = New System.Drawing.Size(140, 30)
+        Me.btnUpgradeReport.Location  = New System.Drawing.Point(156, 9)
+        Me.btnUpgradeReport.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+
         Me.btnClose.Text      = "Close"
         Me.btnClose.Size      = New System.Drawing.Size(90, 30)
-        Me.btnClose.Location  = New System.Drawing.Point(196, 9)
+        Me.btnClose.Location  = New System.Drawing.Point(304, 9)
         Me.btnClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat
 
         Me.pnlFooter.Controls.Add(Me.btnHistoryReport)
+        Me.pnlFooter.Controls.Add(Me.btnUpgradeReport)
         Me.pnlFooter.Controls.Add(Me.btnClose)
 
         ' ── tabControl ────────────────────────────────────────────────────
@@ -183,26 +187,15 @@ Partial Class frmHistoricoEquipamento
         Me.dgvUpgrades.AllowUserToDeleteRows = False
         Me.dgvUpgrades.RowHeadersVisible     = False
 
-        Me.pnlUpgradeBar.Dock    = System.Windows.Forms.DockStyle.Bottom
-        Me.pnlUpgradeBar.Height  = 38
-        Me.pnlUpgradeBar.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
-
-        Me.lblUpgradeTotal.Dock      = System.Windows.Forms.DockStyle.Fill
+        Me.lblUpgradeTotal.Dock      = System.Windows.Forms.DockStyle.Bottom
+        Me.lblUpgradeTotal.Height    = 24
         Me.lblUpgradeTotal.Font      = New System.Drawing.Font("Segoe UI", 9.0F, System.Drawing.FontStyle.Bold)
         Me.lblUpgradeTotal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         Me.lblUpgradeTotal.Text      = "Total upgrade cost: $ 0.00"
         Me.lblUpgradeTotal.Padding   = New System.Windows.Forms.Padding(4, 0, 0, 0)
 
-        Me.btnUpgradeReport.Text      = "Upgrade Report (Customer)"
-        Me.btnUpgradeReport.Size      = New System.Drawing.Size(190, 28)
-        Me.btnUpgradeReport.Dock      = System.Windows.Forms.DockStyle.Right
-        Me.btnUpgradeReport.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-
-        Me.pnlUpgradeBar.Controls.Add(Me.lblUpgradeTotal)
-        Me.pnlUpgradeBar.Controls.Add(Me.btnUpgradeReport)
-
         Me.pnlUpgrades.Controls.Add(Me.dgvUpgrades)
-        Me.pnlUpgrades.Controls.Add(Me.pnlUpgradeBar)
+        Me.pnlUpgrades.Controls.Add(Me.lblUpgradeTotal)
         Me.tabUpgrades.Controls.Add(Me.pnlUpgrades)
 
         ' ── ABA Shipment ──────────────────────────────────────────────────
@@ -243,7 +236,6 @@ Partial Class frmHistoricoEquipamento
         Me.tabShipment.ResumeLayout(False)
         Me.pnlArrival.ResumeLayout(False)
         Me.pnlUpgrades.ResumeLayout(False)
-        Me.pnlUpgradeBar.ResumeLayout(False)
         Me.pnlShipment.ResumeLayout(False)
         CType(Me.dgvUpgrades, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.dgvShipment, System.ComponentModel.ISupportInitialize).EndInit()
@@ -298,7 +290,6 @@ Partial Class frmHistoricoEquipamento
 
     Friend WithEvents pnlUpgrades      As System.Windows.Forms.Panel
     Friend WithEvents dgvUpgrades      As System.Windows.Forms.DataGridView
-    Friend WithEvents pnlUpgradeBar    As System.Windows.Forms.Panel
     Friend WithEvents lblUpgradeTotal  As System.Windows.Forms.Label
     Friend WithEvents btnUpgradeReport As System.Windows.Forms.Button
 

@@ -54,12 +54,16 @@ Partial Class frmPrincipal
     Friend WithEvents btnAtualizarRemessas As Button
 
     ' Controles da aba Upgrades
-    Friend WithEvents lblUpgradesTit       As Label
-    Friend WithEvents lblUpgradesTotal     As Label
-    Friend WithEvents btnAtualizarUpgrades As Button
-    Friend WithEvents txtUpgradeBusca      As TextBox
-    Friend WithEvents btnUpgradeBuscar     As Button
-    Friend WithEvents btnUpgradeScanner    As Button
+    Friend WithEvents lblUpgradesTit        As Label
+    Friend WithEvents lblUpgradesTotal      As Label
+    Friend WithEvents btnAtualizarUpgrades  As Button
+    Friend WithEvents txtUpgradeBusca       As TextBox
+    Friend WithEvents btnUpgradeBuscar      As Button
+    Friend WithEvents btnUpgradeScanner     As Button
+    Friend WithEvents btnUpgradeRelatorio   As Button
+    Friend WithEvents btnUpgradeAddToList   As Button
+    Friend WithEvents btnUpgradeClearList   As Button
+    Friend WithEvents lblUpgradesListaInfo  As Label
 
     ' Botão de adição manual de equipamento
     Friend WithEvents btnAddEquipamento As Button
@@ -625,6 +629,36 @@ Partial Class frmPrincipal
         Me.btnGerenciarUpgrade.Location = New Point(520, 8)
         Me.btnGerenciarUpgrade.Size = New Size(140, 28)
 
+        Me.btnUpgradeRelatorio = New Button()
+        Me.btnUpgradeRelatorio.Text = "Report"
+        Me.btnUpgradeRelatorio.Location = New Point(668, 8)
+        Me.btnUpgradeRelatorio.Size = New Size(90, 28)
+
+        Me.btnUpgradeAddToList           = New Button()
+        Me.btnUpgradeAddToList.Text      = "+ Add to List"
+        Me.btnUpgradeAddToList.Location  = New Point(766, 8)
+        Me.btnUpgradeAddToList.Size      = New Size(120, 28)
+        Me.btnUpgradeAddToList.BackColor = TemaEscuro.Accent
+        Me.btnUpgradeAddToList.ForeColor = TemaEscuro.Fundo
+        Me.btnUpgradeAddToList.FlatStyle = FlatStyle.Flat
+        Me.btnUpgradeAddToList.Font      = New Font("Segoe UI", 8.5F, FontStyle.Bold)
+
+        Me.btnUpgradeClearList           = New Button()
+        Me.btnUpgradeClearList.Text      = "Clear List"
+        Me.btnUpgradeClearList.Location  = New Point(894, 8)
+        Me.btnUpgradeClearList.Size      = New Size(96, 28)
+        Me.btnUpgradeClearList.BackColor = Color.FromArgb(124, 45, 18)
+        Me.btnUpgradeClearList.ForeColor = Color.White
+        Me.btnUpgradeClearList.FlatStyle = FlatStyle.Flat
+        Me.btnUpgradeClearList.Enabled   = False
+
+        Me.lblUpgradesListaInfo          = New Label()
+        Me.lblUpgradesListaInfo.Text     = ""
+        Me.lblUpgradesListaInfo.Location = New Point(766, 42)
+        Me.lblUpgradesListaInfo.AutoSize = True
+        Me.lblUpgradesListaInfo.Font     = New Font("Segoe UI", 8.5F, FontStyle.Italic)
+        Me.lblUpgradesListaInfo.ForeColor = TemaEscuro.Accent
+
         ' Segunda linha — busca rápida por UID/Serial
         Dim lblUpgBusca As New Label() With {
             .Text      = "UID / Serial:",
@@ -649,7 +683,8 @@ Partial Class frmPrincipal
         Me.btnUpgradeScanner.Size     = New Size(120, 28)
 
         pnlUpgTop.Controls.AddRange({lblUpgradesTit, lblUpgradesTotal, btnAtualizarUpgrades, btnGerenciarUpgrade,
-                                      lblUpgBusca, txtUpgradeBusca, btnUpgradeBuscar, btnUpgradeScanner})
+                                      btnUpgradeRelatorio, btnUpgradeAddToList, btnUpgradeClearList,
+                                      lblUpgradesListaInfo, lblUpgBusca, txtUpgradeBusca, btnUpgradeBuscar, btnUpgradeScanner})
 
         Me.dgvUpgrades      = New DataGridView()
         Me.dgvUpgrades.Dock = DockStyle.Fill

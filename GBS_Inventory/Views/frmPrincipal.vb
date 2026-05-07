@@ -28,7 +28,8 @@ Public Class frmPrincipal
     Private dtEstoqueCompleto As DataTable
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
-    Private _listaRelatorio    As New ListaRelatorio()
+    Private _listaRelatorio        As New ListaRelatorio()
+    Private _listaUpgradeRelatorio As New ListaRelatorio("ID_UPGRADE")
 
 #End Region
 
@@ -175,13 +176,13 @@ Public Class frmPrincipal
         Next
 
         PopularCheckedListBox(clbProcessor, colProc,
-                              pFiltroMarca  := If(marcas.Count > 0, marcas, Nothing),
-                              pFiltroModelo := If(modelos.Count > 0, modelos, Nothing))
+                              pFiltroMarca:=If(marcas.Count > 0, marcas, Nothing),
+                              pFiltroModelo:=If(modelos.Count > 0, modelos, Nothing))
 
     End Sub
 
     Private Sub PopularCheckedListBox(pClb As CheckedListBox, pColuna As String,
-                                      Optional pFiltroMarca  As List(Of String) = Nothing,
+                                      Optional pFiltroMarca As List(Of String) = Nothing,
                                       Optional pFiltroModelo As List(Of String) = Nothing)
 
         Dim checked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -193,7 +194,7 @@ Public Class frmPrincipal
 
         If String.IsNullOrEmpty(pColuna) OrElse dtEstoqueCompleto Is Nothing Then Return
 
-        Dim colMarca   As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModeloF As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
         Dim valores As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
@@ -284,9 +285,9 @@ Public Class frmPrincipal
             processors.Add(item.ToString())
         Next
 
-        Dim colMarca  As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
+        Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
-        Dim colProc   As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
+        Dim colProc As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
 
         Dim dtFiltrada As DataTable = dtEstoqueCompleto.Clone()
 
@@ -365,10 +366,10 @@ Public Class frmPrincipal
         If lblEstoqueFooter Is Nothing Then Return
 
         Dim dtAtual As DataTable = TryCast(dgvEstoque.DataSource, DataTable)
-        Dim showing As Integer   = If(dtAtual IsNot Nothing, dtAtual.Rows.Count, 0)
+        Dim showing As Integer = If(dtAtual IsNot Nothing, dtAtual.Rows.Count, 0)
 
-        Dim inStock  As Integer = 0
-        Dim sold     As Integer = 0
+        Dim inStock As Integer = 0
+        Dim sold As Integer = 0
         Dim inRepair As Integer = 0
         Dim selected As Integer = 0
 
@@ -377,8 +378,8 @@ Public Class frmPrincipal
                 Dim st As String = If(IsDBNull(row("STATUS")), "",
                                       row("STATUS").ToString().ToUpperInvariant().Trim())
                 Select Case st
-                    Case "IN_STOCK"  : inStock  += 1
-                    Case "SOLD"      : sold     += 1
+                    Case "IN_STOCK" : inStock += 1
+                    Case "SOLD" : sold += 1
                     Case "IN_REPAIR" : inRepair += 1
                 End Select
             Next
@@ -403,11 +404,11 @@ Public Class frmPrincipal
         End If
 
         lblEstoqueFooter.Text =
-            "Showing: "   & showing.ToString()  & "  |  " &
-            "IN_STOCK: "  & inStock.ToString()  & "  |  " &
-            "SOLD: "      & sold.ToString()     & "  |  " &
+            "Showing: " & showing.ToString() & "  |  " &
+            "IN_STOCK: " & inStock.ToString() & "  |  " &
+            "SOLD: " & sold.ToString() & "  |  " &
             "IN_REPAIR: " & inRepair.ToString() & "  |  " &
-            "Selected: "  & selected.ToString() & "  |  " &
+            "Selected: " & selected.ToString() & "  |  " &
             "Total in DB: " & totalDB.ToString() &
             modoTexto
 
@@ -448,11 +449,11 @@ Public Class frmPrincipal
         If dgvEstoque.Columns.Contains("_SEL") Then Return
 
         Dim chk As New DataGridViewCheckBoxColumn()
-        chk.Name        = "_SEL"
-        chk.HeaderText  = ""
-        chk.Width       = 30
-        chk.ReadOnly    = False
-        chk.FillWeight  = 1
+        chk.Name = "_SEL"
+        chk.HeaderText = ""
+        chk.Width = 30
+        chk.ReadOnly = False
+        chk.FillWeight = 1
         dgvEstoque.Columns.Insert(0, chk)
 
     End Sub
@@ -494,11 +495,11 @@ Public Class frmPrincipal
         ' Configure CONDITION_STATUS column
         If dgvEstoque.Columns.Contains("CONDITION_STATUS") Then
             With dgvEstoque.Columns("CONDITION_STATUS")
-                .HeaderText          = "Battery Condition"
-                .DataPropertyName    = "CONDITION_STATUS"
-                .Visible             = True
-                .MinimumWidth        = 120
-                .FillWeight          = 70
+                .HeaderText = "Battery Condition"
+                .DataPropertyName = "CONDITION_STATUS"
+                .Visible = True
+                .MinimumWidth = 120
+                .FillWeight = 70
             End With
             If dgvEstoque.Columns.Contains("STORAGE_GB") Then
                 Dim idx As Integer = dgvEstoque.Columns("STORAGE_GB").DisplayIndex
@@ -543,7 +544,7 @@ Public Class frmPrincipal
     Private Sub AdicionarSelecionadosNaLista()
 
         Dim adicionados As Integer = 0
-        Dim duplicados  As Integer = 0
+        Dim duplicados As Integer = 0
 
         If dgvEstoque.Columns.Contains("_SEL") Then
             For Each gridRow As DataGridViewRow In dgvEstoque.Rows
@@ -645,8 +646,8 @@ Public Class frmPrincipal
 
             Dim baseNome As String = "Report_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
 
-            Dim caminhoDoc  As String = ReportService.GerarRelatorio(itens, outputPath, logoPath, baseNome)
-            Dim caminhoPdf  As String = ReportService.GerarPdf(itens, outputPath, logoPath, baseNome)
+            Dim caminhoDoc As String = ReportService.GerarRelatorio(itens, outputPath, logoPath, baseNome)
+            Dim caminhoPdf As String = ReportService.GerarPdf(itens, outputPath, logoPath, baseNome)
             Dim caminhoXlsx As String = ReportService.GerarExcel(itens, outputPath, logoPath, baseNome)
 
             Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
@@ -936,6 +937,129 @@ Public Class frmPrincipal
         AbrirUpgradeDoEstoqueSelecionado()
     End Sub
 
+    Private Sub btnUpgradeAddToList_Click(sender As Object, e As EventArgs) Handles btnUpgradeAddToList.Click
+        AdicionarUpgradeNaLista()
+    End Sub
+
+    Private Sub btnUpgradeClearList_Click(sender As Object, e As EventArgs) Handles btnUpgradeClearList.Click
+        LimparListaUpgrade()
+    End Sub
+
+    Private Sub AdicionarUpgradeNaLista()
+
+        If dgvUpgrades Is Nothing OrElse dgvUpgrades.CurrentRow Is Nothing Then Return
+
+        Dim drv As DataRowView = TryCast(dgvUpgrades.CurrentRow.DataBoundItem, DataRowView)
+        If drv Is Nothing Then Return
+
+        If _listaUpgradeRelatorio.Adicionar(drv.Row) Then
+            AtualizarModoRelatorioUpgrade()
+            lblStatus.Text = "1 upgrade added to list (" & _listaUpgradeRelatorio.Count.ToString() & " total)"
+        Else
+            lblStatus.Text = "This upgrade is already in the list."
+        End If
+
+    End Sub
+
+    Private Sub LimparListaUpgrade()
+
+        If Not _listaUpgradeRelatorio.EstaAtiva Then
+            lblStatus.Text = "Upgrade list is already empty."
+            Return
+        End If
+
+        Dim res As DialogResult = MessageBox.Show(
+            "Clear the upgrade list with " & _listaUpgradeRelatorio.Count.ToString() & " item(s)?",
+            "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+
+        If res = DialogResult.Yes Then
+            _listaUpgradeRelatorio.Limpar()
+            AtualizarModoRelatorioUpgrade()
+            lblStatus.Text = "Upgrade list cleared."
+        End If
+
+    End Sub
+
+    Private Sub AtualizarModoRelatorioUpgrade()
+        If btnUpgradeClearList IsNot Nothing Then
+            btnUpgradeClearList.Enabled = _listaUpgradeRelatorio.EstaAtiva
+        End If
+        If lblUpgradesListaInfo IsNot Nothing Then
+            lblUpgradesListaInfo.Text = If(_listaUpgradeRelatorio.EstaAtiva,
+                "List mode: " & _listaUpgradeRelatorio.Count.ToString() & " upgrade(s) selected",
+                "")
+        End If
+    End Sub
+
+    Private Sub btnUpgradeRelatorio_Click(sender As Object, e As EventArgs) Handles btnUpgradeRelatorio.Click
+        GerarRelatorioUpgradesCliente()
+    End Sub
+
+    Private Sub GerarRelatorioUpgradesCliente()
+
+        Try
+            Dim ds As DataSet = oUpgradeController.buscarComCliente(90)
+
+            If ds Is Nothing OrElse ds.Tables.Count = 0 OrElse ds.Tables(0).Rows.Count = 0 Then
+                MessageBox.Show("No upgrades found.", "Upgrade Report",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim rows As New List(Of DataRow)(ds.Tables(0).Rows.Cast(Of DataRow)())
+
+            If _listaUpgradeRelatorio.EstaAtiva Then
+                Dim idsNaLista As New HashSet(Of String)(
+                    _listaUpgradeRelatorio.Itens _
+                    .Where(Function(r) r.Table.Columns.Contains("ID_UPGRADE") AndAlso Not IsDBNull(r("ID_UPGRADE"))) _
+                    .Select(Function(r) r("ID_UPGRADE").ToString()))
+                rows = rows.Where(Function(r)
+                    Return r.Table.Columns.Contains("ID_UPGRADE") AndAlso
+                           Not IsDBNull(r("ID_UPGRADE")) AndAlso
+                           idsNaLista.Contains(r("ID_UPGRADE").ToString())
+                End Function).ToList()
+                If rows.Count = 0 Then
+                    MessageBox.Show("None of the selected upgrades were found in the last 90 days.", "Upgrade Report",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    Return
+                End If
+            End If
+
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            If Not IO.Directory.Exists(outputPath) Then IO.Directory.CreateDirectory(outputPath)
+
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            Dim baseNome As String = "UpgradeReport_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            Dim caminhoXlsx As String = ReportService.GerarExcelUpgradesPorCliente(rows, outputPath, logoPath, baseNome)
+
+            ' Abre o Excel para revisão
+            System.Diagnostics.Process.Start(caminhoXlsx)
+
+            ' Pergunta se quer enviar por email
+            Dim resp As DialogResult = MessageBox.Show(
+                "Excel generated successfully." & vbCrLf & vbCrLf &
+                "Do you want to send it by email?",
+                "Upgrade Report", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+            If resp = DialogResult.Yes Then
+                Dim frmEmail As New frmEnviarRelatorio("", "", caminhoXlsx, rows)
+                frmEmail.txtSubject.Text = "Hardware Upgrade Report — " & DateTime.Now.ToString("yyyy-MM-dd")
+                frmEmail.txtBody.Text =
+                    "Please find attached the hardware upgrade report." & vbCrLf & vbCrLf &
+                    "Best regards," & vbCrLf & "GBS — Global Business Solution"
+                frmEmail.chkAttachWord.Checked = False
+                frmEmail.chkAttachPdf.Checked  = False
+                frmEmail.ShowDialog(Me)
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating upgrade report: " & ex.Message, "Upgrade Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+    End Sub
+
     Private Sub txtUpgradeBusca_KeyDown(sender As Object, e As KeyEventArgs) Handles txtUpgradeBusca.KeyDown
         If e.KeyCode = Keys.Enter Then
             e.SuppressKeyPress = True
@@ -1003,8 +1127,8 @@ Public Class frmPrincipal
         If dgvEstoque Is Nothing OrElse dgvEstoque.CurrentRow Is Nothing Then Return
 
         Dim row As DataGridViewRow = dgvEstoque.CurrentRow
-        Dim id  As Integer = 0
-        Dim uid As String  = ""
+        Dim id As Integer = 0
+        Dim uid As String = ""
 
         If row.DataGridView.Columns.Contains("ID_EQUIPAMENTO") AndAlso row.Cells("ID_EQUIPAMENTO").Value IsNot Nothing Then
             Integer.TryParse(row.Cells("ID_EQUIPAMENTO").Value.ToString(), id)
@@ -1868,8 +1992,8 @@ Public Class frmPrincipal
         lblRemessasAtivas.Text = dtResumoCpuFamily.Rows.Count.ToString()
 
         dgvDashManufacturer.DataSource = dtResumoManufacturer
-        dgvDashModel.DataSource        = dtResumoModel
-        dgvDashCPU.DataSource          = dtResumoCpuFamily
+        dgvDashModel.DataSource = dtResumoModel
+        dgvDashCPU.DataSource = dtResumoCpuFamily
 
     End Sub
 

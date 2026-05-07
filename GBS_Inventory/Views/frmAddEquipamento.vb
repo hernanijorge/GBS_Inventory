@@ -94,7 +94,6 @@ Public Class frmAddEquipamento
         Dim proc     As String = txtProcessor.Text.Trim()
         Dim batch    As String = txtBatch.Text.Trim()
         Dim notes    As String = txtNotes.Text.Trim()
-        Dim battery  As String = If(cboBattery.SelectedIndex >= 0, cboBattery.SelectedItem.ToString(), "")
 
         btnSave.Enabled = False
         Cursor = Cursors.WaitCursor
@@ -121,7 +120,7 @@ Public Class frmAddEquipamento
                             cmd.Parameters.Add("P_CONDITION_STATUS",   OracleDbType.Varchar2).Value = cond
                             cmd.Parameters.Add("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2).Value = stat
                             cmd.Parameters.Add("P_OBSERVACAO",         OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(notes), DBNull.Value, CObj(notes))
-                            cmd.Parameters.Add("P_BATTERY_CHECK",      OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(battery), DBNull.Value, CObj(battery))
+                            cmd.Parameters.Add("P_BATTERY_CHECK",      OracleDbType.Varchar2).Value = DBNull.Value
                             cmd.ExecuteNonQuery()
                         End Using
 

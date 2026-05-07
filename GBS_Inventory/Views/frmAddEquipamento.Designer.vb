@@ -37,8 +37,6 @@ Partial Class frmAddEquipamento
         Me.cboStatus       = New System.Windows.Forms.ComboBox()
         Me.lblBatch        = New System.Windows.Forms.Label()
         Me.txtBatch        = New System.Windows.Forms.TextBox()
-        Me.lblBattery      = New System.Windows.Forms.Label()
-        Me.cboBattery      = New System.Windows.Forms.ComboBox()
         Me.lblNotes        = New System.Windows.Forms.Label()
         Me.txtNotes        = New System.Windows.Forms.TextBox()
 
@@ -48,7 +46,7 @@ Partial Class frmAddEquipamento
         ' ── Form ──────────────────────────────────────────────────────
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0F, 15.0F)
         Me.AutoScaleMode       = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize          = New System.Drawing.Size(500, 524)
+        Me.ClientSize          = New System.Drawing.Size(500, 490)
         Me.FormBorderStyle     = System.Windows.Forms.FormBorderStyle.FixedDialog
         Me.MaximizeBox         = False
         Me.MinimizeBox         = False
@@ -140,7 +138,7 @@ Partial Class frmAddEquipamento
         ' Condition Status *  — Y=242
         Me.lblCondition.AutoSize = True
         Me.lblCondition.Location = New System.Drawing.Point(14, 244)
-        Me.lblCondition.Text     = "Condition Status *"
+        Me.lblCondition.Text     = "Battery Condition *"
         Me.cboCondition.Location     = New System.Drawing.Point(155, 242)
         Me.cboCondition.Size         = New System.Drawing.Size(200, 24)
         Me.cboCondition.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
@@ -162,21 +160,11 @@ Partial Class frmAddEquipamento
         Me.txtBatch.Location = New System.Drawing.Point(155, 310)
         Me.txtBatch.Size     = New System.Drawing.Size(310, 24)
 
-        ' Battery Check  — Y=344
-        Me.lblBattery.AutoSize = True
-        Me.lblBattery.Location = New System.Drawing.Point(14, 346)
-        Me.lblBattery.Text     = "Battery"
-        Me.cboBattery.Location      = New System.Drawing.Point(155, 344)
-        Me.cboBattery.Size          = New System.Drawing.Size(200, 24)
-        Me.cboBattery.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.cboBattery.Items.AddRange({"", "GOOD", "FAIR", "POOR", "NEEDS_REPLACEMENT"})
-        Me.cboBattery.SelectedIndex = 0
-
-        ' Notes  — Y=378, multiline H=72
+        ' Notes  — Y=344, multiline H=72
         Me.lblNotes.AutoSize = True
-        Me.lblNotes.Location = New System.Drawing.Point(14, 380)
+        Me.lblNotes.Location = New System.Drawing.Point(14, 346)
         Me.lblNotes.Text     = "Notes"
-        Me.txtNotes.Location   = New System.Drawing.Point(155, 378)
+        Me.txtNotes.Location   = New System.Drawing.Point(155, 344)
         Me.txtNotes.Size       = New System.Drawing.Size(310, 72)
         Me.txtNotes.Multiline  = True
         Me.txtNotes.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
@@ -193,7 +181,6 @@ Partial Class frmAddEquipamento
             Me.lblCondition, Me.cboCondition,
             Me.lblStatus,    Me.cboStatus,
             Me.lblBatch,     Me.txtBatch,
-            Me.lblBattery,   Me.cboBattery,
             Me.lblNotes,     Me.txtNotes
         })
 
@@ -230,8 +217,6 @@ Partial Class frmAddEquipamento
     Friend WithEvents cboStatus       As System.Windows.Forms.ComboBox
     Friend WithEvents lblBatch        As System.Windows.Forms.Label
     Friend WithEvents txtBatch        As System.Windows.Forms.TextBox
-    Friend WithEvents lblBattery      As System.Windows.Forms.Label
-    Friend WithEvents cboBattery      As System.Windows.Forms.ComboBox
     Friend WithEvents lblNotes        As System.Windows.Forms.Label
     Friend WithEvents txtNotes        As System.Windows.Forms.TextBox
 

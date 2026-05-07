@@ -401,6 +401,136 @@ Public Class ReportService
         End Select
     End Function
 
+    ' ── Upgrades por cliente ─────────────────────────────────────────────────
+    ' Uma aba por customer. Colunas: Device | S/N | Date | Component | Before | After | Technician | Notes
+
+    Public Shared Function GerarExcelUpgradesPorCliente(
+            pRows      As List(Of DataRow),
+            pOutputPath As String,
+            Optional pLogoPath As String = "",
+            Optional baseNome  As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "UpgradeReport_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim caminhoFinal As String = Path.Combine(pasta, nome & ".xlsx")
+
+        Dim corHeader  As System.Drawing.Color = System.Drawing.Color.FromArgb(55, 65, 81)
+        Dim corZebra   As System.Drawing.Color = System.Drawing.Color.FromArgb(249, 250, 251)
+        Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+
+        Dim colunas As (Key As String, Header As String, Largura As Double)() = {
+            ("INTERNAL_UID",   "Internal UID", 16),
+            ("MODEL",          "Model",        16),
+            ("SERIAL_NUMBER",  "Serial Number", 20),
+            ("DATA_UPGRADE",   "Date",         14),
+            ("COMPONENT_TYPE", "Component",    14),
+            ("VALUE_BEFORE",   "Before",       12),
+            ("VALUE_AFTER",    "After",        12),
+            ("TECHNICIAN",     "Technician",   16),
+            ("NOTES",          "Notes",        40)
+        }
+
+        ' Agrupar por CUSTOMER
+        Dim grupos As New Dictionary(Of String, List(Of DataRow))(StringComparer.OrdinalIgnoreCase)
+        For Each dr As DataRow In pRows
+            Dim customer As String = "Unassigned"
+            If dr.Table.Columns.Contains("CUSTOMER") AndAlso Not IsDBNull(dr("CUSTOMER")) Then
+                customer = dr("CUSTOMER").ToString().Trim()
+                If String.IsNullOrWhiteSpace(customer) Then customer = "Unassigned"
+            End If
+            If Not grupos.ContainsKey(customer) Then grupos(customer) = New List(Of DataRow)
+            grupos(customer).Add(dr)
+        Next
+
+        Using pkg As New ExcelPackage()
+
+            For Each kvp As KeyValuePair(Of String, List(Of DataRow)) In grupos
+
+                ' Nome da aba: max 31 chars, sem caracteres inválidos
+                Dim sheetName As String = kvp.Key
+                For Each c As Char In {"/"c, "\"c, "?"c, "*"c, "["c, "]"c, ":"c}
+                    sheetName = sheetName.Replace(c, "-"c)
+                Next
+                If sheetName.Length > 31 Then sheetName = sheetName.Substring(0, 31)
+
+                Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add(sheetName)
+                Dim linhaInicio As Integer = 4
+
+                ' Logo
+                If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                    Try
+                        Dim logo = ws.Drawings.AddPicture("logo_" & sheetName, New FileInfo(logoEfetivo))
+                        logo.SetPosition(0, 4, 0, 4)
+                        logo.SetSize(140, 46)
+                    Catch
+                    End Try
+                End If
+
+                ' Título e sub-título
+                ws.Row(1).Height = 40
+                ws.Cells(1, 4, 1, 7).Merge = True
+                ws.Cells(1, 4).Value = "Hardware Upgrade Report"
+                ws.Cells(1, 4).Style.Font.Bold = True
+                ws.Cells(1, 4).Style.Font.Size = 14
+                ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
+
+                ws.Cells(2, 4, 2, 7).Merge = True
+                ws.Cells(2, 4).Value = "Customer: " & kvp.Key & "   |   " &
+                                       kvp.Value.Count.ToString() & " upgrade(s)   |   Generated: " &
+                                       DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+                ws.Cells(2, 4).Style.Font.Size = 9
+                ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
+
+                ' Cabeçalho de colunas
+                For i As Integer = 0 To colunas.Length - 1
+                    Dim cell As ExcelRange = ws.Cells(linhaInicio, i + 1)
+                    cell.Value = colunas(i).Header
+                    cell.Style.Font.Bold = True
+                    cell.Style.Fill.PatternType = ExcelFillStyle.Solid
+                    cell.Style.Fill.BackgroundColor.SetColor(corHeader)
+                    cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
+                    cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                Next
+
+                ' Dados
+                Dim rowIdx As Integer = 0
+                For Each dr As DataRow In kvp.Value
+                    Dim linha As Integer = linhaInicio + rowIdx + 1
+                    For colIdx As Integer = 0 To colunas.Length - 1
+                        Dim colKey As String = colunas(colIdx).Key
+                        Dim val As String = ""
+                        If dr.Table.Columns.Contains(colKey) AndAlso Not IsDBNull(dr(colKey)) Then
+                            val = dr(colKey).ToString()
+                        End If
+                        ws.Cells(linha, colIdx + 1).Value = val
+                    Next
+                    If rowIdx Mod 2 = 1 Then
+                        ws.Cells(linha, 1, linha, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
+                        ws.Cells(linha, 1, linha, colunas.Length).Style.Fill.BackgroundColor.SetColor(corZebra)
+                    End If
+                    rowIdx += 1
+                Next
+
+                ' Larguras, filtro e freeze
+                For i As Integer = 0 To colunas.Length - 1
+                    ws.Column(i + 1).Width = colunas(i).Largura
+                Next
+                ws.Column(colunas.Length).Style.WrapText = True
+                ws.Cells(linhaInicio, 1, linhaInicio + rowIdx, colunas.Length).AutoFilter = True
+                ws.View.FreezePanes(linhaInicio + 1, 1)
+
+            Next
+
+            pkg.SaveAs(New FileInfo(caminhoFinal))
+        End Using
+
+        Return caminhoFinal
+
+    End Function
+
     Private Shared Function ObterLogoPath(pLogoPath As String) As String
         If Not String.IsNullOrWhiteSpace(pLogoPath) AndAlso File.Exists(pLogoPath) Then
             Return pLogoPath

@@ -120,30 +120,31 @@ CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
     BEGIN
         OPEN V_CURSOR FOR
             SELECT
-                ID_UPGRADE,
-                ID_EQUIPAMENTO,
-                DATA_UPGRADE,
-                TIPO_UPGRADE                                                       AS COMPONENT_TYPE,
-                CASE TIPO_UPGRADE
-                    WHEN 'RAM' THEN CASE WHEN RAM_ANTERIOR_GB     > 0 THEN TO_CHAR(RAM_ANTERIOR_GB)     || ' GB' END
-                    WHEN 'SSD' THEN CASE WHEN STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(STORAGE_ANTERIOR_GB) || ' GB' END
-                    WHEN 'HDD' THEN CASE WHEN STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(STORAGE_ANTERIOR_GB) || ' GB' END
+                U.ID_UPGRADE,
+                E.INTERNAL_UID,
+                U.DATA_UPGRADE,
+                U.TIPO_UPGRADE                                                          AS COMPONENT_TYPE,
+                CASE U.TIPO_UPGRADE
+                    WHEN 'RAM' THEN CASE WHEN U.RAM_ANTERIOR_GB     > 0 THEN TO_CHAR(U.RAM_ANTERIOR_GB)     || ' GB' END
+                    WHEN 'SSD' THEN CASE WHEN U.STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB' END
+                    WHEN 'HDD' THEN CASE WHEN U.STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB' END
                     ELSE NULL
-                END                                                                AS VALUE_BEFORE,
-                CASE TIPO_UPGRADE
-                    WHEN 'RAM' THEN CASE WHEN RAM_NOVA_GB     > 0 THEN TO_CHAR(RAM_NOVA_GB)     || ' GB' END
-                    WHEN 'SSD' THEN CASE WHEN STORAGE_NOVO_GB > 0 THEN TO_CHAR(STORAGE_NOVO_GB) || ' GB' END
-                    WHEN 'HDD' THEN CASE WHEN STORAGE_NOVO_GB > 0 THEN TO_CHAR(STORAGE_NOVO_GB) || ' GB' END
+                END                                                                     AS VALUE_BEFORE,
+                CASE U.TIPO_UPGRADE
+                    WHEN 'RAM' THEN CASE WHEN U.RAM_NOVA_GB     > 0 THEN TO_CHAR(U.RAM_NOVA_GB)     || ' GB' END
+                    WHEN 'SSD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END
+                    WHEN 'HDD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END
                     ELSE NULL
-                END                                                                AS VALUE_AFTER,
-                CAST(NULL AS VARCHAR2(30))                                         AS SOURCE_ORIGEM,
-                CAST(NULL AS NUMBER(10,2))                                         AS COST_USD,
-                CAST(NULL AS VARCHAR2(80))                                         AS PART_SERIAL,
-                TECNICO                                                            AS TECHNICIAN,
-                OBSERVACAO                                                         AS NOTES
-              FROM TBL_EQUIPAMENTO_UPGRADE
-             WHERE DATA_UPGRADE >= SYSDATE - V_DIAS
-             ORDER BY DATA_UPGRADE DESC;
+                END                                                                     AS VALUE_AFTER,
+                CAST(NULL AS VARCHAR2(30))                                              AS SOURCE_ORIGEM,
+                CAST(NULL AS NUMBER(10,2))                                              AS COST_USD,
+                CAST(NULL AS VARCHAR2(80))                                              AS PART_SERIAL,
+                U.TECNICO                                                               AS TECHNICIAN,
+                U.OBSERVACAO                                                            AS NOTES
+              FROM TBL_EQUIPAMENTO_UPGRADE U
+              JOIN TBL_EQUIPAMENTO E ON E.ID_EQUIPAMENTO = U.ID_EQUIPAMENTO
+             WHERE U.DATA_UPGRADE >= SYSDATE - V_DIAS
+             ORDER BY U.DATA_UPGRADE DESC;
     END;
 
     -- -------------------------------------------------------------------------
