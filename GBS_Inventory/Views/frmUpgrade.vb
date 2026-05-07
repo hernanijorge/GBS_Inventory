@@ -62,7 +62,7 @@ Public Class frmUpgrade
 
             Dim vCusto As Decimal
             If Decimal.TryParse(txtCusto.Text.Replace(",", "."), Globalization.NumberStyles.Any,
-                                Globalization.CultureInfo.InvariantCulture, vCusto) Then
+                                Globalization.CultureInfo.InvariantCulture, vCusto) AndAlso vCusto > 0 Then
                 up.CostUsd = vCusto
             End If
 

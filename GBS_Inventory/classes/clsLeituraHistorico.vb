@@ -92,71 +92,37 @@ Public Class clsLeituraHistorico
     ''' </summary>
     Public Function selecionarUpgradesEquipamento(pIdEquipamento As Integer) As DataSet
 
-        ' Query com nomes reais confirmados via parâmetros do proc de gravação.
-        ' VALUE_BEFORE/AFTER exibem RAM e STORAGE concatenados para leitura humana.
-        ' COST_USD / PART_SERIAL / SOURCE_ORIGEM são packed em OBSERVACAO → CAST(NULL).
+        ' VALUE_BEFORE/AFTER derivados por TIPO_UPGRADE:
+        '   RAM      → RAM_ANTERIOR_GB / RAM_NOVA_GB
+        '   SSD, HDD → STORAGE_ANTERIOR_GB / STORAGE_NOVO_GB
+        '   outros   → NULL (schema antigo não grava valor textual para esses tipos)
+        ' Valores zero são tratados como ausentes (retorna NULL em vez de "0 GB").
         Dim sql As String =
             "SELECT U.ID_UPGRADE," &
             "       U.DATA_UPGRADE," &
-            "       U.TIPO_UPGRADE                          AS COMPONENT_TYPE," &
-            "       CAST(U.RAM_ANTERIOR_GB AS VARCHAR2(50)) AS VALUE_BEFORE," &
-            "       CAST(U.RAM_NOVA_GB     AS VARCHAR2(50)) AS VALUE_AFTER," &
-            "       CAST(NULL AS VARCHAR2(200))             AS SOURCE_ORIGEM," &
-            "       CAST(NULL AS NUMBER(12,2))              AS COST_USD," &
-            "       CAST(NULL AS VARCHAR2(200))             AS PART_SERIAL," &
-            "       U.TECNICO                               AS TECHNICIAN," &
-            "       U.OBSERVACAO                            AS NOTES" &
+            "       U.TIPO_UPGRADE AS COMPONENT_TYPE," &
+            "       CASE U.TIPO_UPGRADE" &
+            "           WHEN 'RAM' THEN TO_CHAR(U.RAM_ANTERIOR_GB)     || ' GB'" &
+            "           WHEN 'SSD' THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB'" &
+            "           WHEN 'HDD' THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB'" &
+            "           ELSE NULL" &
+            "       END AS VALUE_BEFORE," &
+            "       CASE U.TIPO_UPGRADE" &
+            "           WHEN 'RAM' THEN CASE WHEN U.RAM_NOVA_GB     > 0 THEN TO_CHAR(U.RAM_NOVA_GB)     || ' GB' END" &
+            "           WHEN 'SSD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END" &
+            "           WHEN 'HDD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END" &
+            "           ELSE NULL" &
+            "       END AS VALUE_AFTER," &
+            "       CAST(NULL AS VARCHAR2(200)) AS SOURCE_ORIGEM," &
+            "       CAST(NULL AS NUMBER(12,2))  AS COST_USD," &
+            "       CAST(NULL AS VARCHAR2(200)) AS PART_SERIAL," &
+            "       U.TECNICO                   AS TECHNICIAN," &
+            "       U.OBSERVACAO                AS NOTES" &
             "  FROM TBL_EQUIPAMENTO_UPGRADE U" &
             " WHERE U.ID_EQUIPAMENTO = :P_ID" &
             " ORDER BY U.DATA_UPGRADE DESC"
 
-        ' Fallback: tenta com STORAGE em vez de RAM (para upgrades de SSD/HDD)
-        Dim sqlStorage As String =
-            "SELECT U.ID_UPGRADE," &
-            "       U.DATA_UPGRADE," &
-            "       U.TIPO_UPGRADE                              AS COMPONENT_TYPE," &
-            "       CAST(U.STORAGE_ANTERIOR_GB AS VARCHAR2(50)) AS VALUE_BEFORE," &
-            "       CAST(U.STORAGE_NOVO_GB     AS VARCHAR2(50)) AS VALUE_AFTER," &
-            "       CAST(NULL AS VARCHAR2(200))                 AS SOURCE_ORIGEM," &
-            "       CAST(NULL AS NUMBER(12,2))                  AS COST_USD," &
-            "       CAST(NULL AS VARCHAR2(200))                 AS PART_SERIAL," &
-            "       U.TECNICO                                   AS TECHNICIAN," &
-            "       U.OBSERVACAO                                AS NOTES" &
-            "  FROM TBL_EQUIPAMENTO_UPGRADE U" &
-            " WHERE U.ID_EQUIPAMENTO = :P_ID" &
-            " ORDER BY U.DATA_UPGRADE DESC"
-
-        ' Fallback mínimo: só colunas 100% confirmadas, resto CAST(NULL)
-        Dim sqlBase As String =
-            "SELECT U.ID_UPGRADE," &
-            "       U.DATA_UPGRADE," &
-            "       U.TIPO_UPGRADE               AS COMPONENT_TYPE," &
-            "       CAST(NULL AS VARCHAR2(200))  AS VALUE_BEFORE," &
-            "       CAST(NULL AS VARCHAR2(200))  AS VALUE_AFTER," &
-            "       CAST(NULL AS VARCHAR2(200))  AS SOURCE_ORIGEM," &
-            "       CAST(NULL AS NUMBER(12,2))   AS COST_USD," &
-            "       CAST(NULL AS VARCHAR2(200))  AS PART_SERIAL," &
-            "       U.TECNICO                    AS TECHNICIAN," &
-            "       U.OBSERVACAO                 AS NOTES" &
-            "  FROM TBL_EQUIPAMENTO_UPGRADE U" &
-            " WHERE U.ID_EQUIPAMENTO = :P_ID" &
-            " ORDER BY U.DATA_UPGRADE DESC"
-
-        Try
-            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sql,
-                                               New OracleParameter() {CriarParId(pIdEquipamento)})
-        Catch ex1 As Exception
-            If Not IsErroColuna(ex1) Then Throw New Exception(ex1.ToString)
-        End Try
-
-        Try
-            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sqlStorage,
-                                               New OracleParameter() {CriarParId(pIdEquipamento)})
-        Catch ex2 As Exception
-            If Not IsErroColuna(ex2) Then Throw New Exception(ex2.ToString)
-        End Try
-
-        Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sqlBase,
+        Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sql,
                                            New OracleParameter() {CriarParId(pIdEquipamento)})
 
     End Function
