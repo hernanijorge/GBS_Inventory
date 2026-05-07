@@ -248,6 +248,134 @@ Public Class frmHistoricoEquipamento
         GerarRelatorioHistorico()
     End Sub
 
+    Private Sub btnUpgradeReport_Click(sender As Object, e As EventArgs) Handles btnUpgradeReport.Click
+        GerarRelatorioUpgrade()
+    End Sub
+
+    Private Sub GerarRelatorioUpgrade()
+
+        Try
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            If Not Directory.Exists(outputPath) Then Directory.CreateDirectory(outputPath)
+
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
+
+            Dim nomeArq As String = "UpgradeReport_" & _internalUID.Replace("/", "-") & "_" & DateTime.Now.ToString("yyyyMMdd_HHmmss") & ".doc"
+            Dim caminho As String = Path.Combine(outputPath, nomeArq)
+
+            File.WriteAllText(caminho, MontarHtmlUpgrade(logoPath), System.Text.Encoding.UTF8)
+            System.Diagnostics.Process.Start(caminho)
+
+            MessageBox.Show("Upgrade report generated!" & vbCrLf & caminho,
+                            "Upgrade Report", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating upgrade report: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+    End Sub
+
+    Private Function MontarHtmlUpgrade(pLogoPath As String) As String
+
+        Dim sb As New StringBuilder()
+
+        sb.AppendLine("<html><head><meta charset='utf-8'/>")
+        sb.AppendLine("<style>")
+        sb.AppendLine("body{font-family:Segoe UI,Arial,sans-serif;font-size:10pt;color:#1f2937;margin:40px;}")
+        sb.AppendLine("h2{color:#1f2937;margin-bottom:2px;font-size:16pt;}")
+        sb.AppendLine(".sub{font-size:9pt;color:#6b7280;margin-bottom:18px;}")
+        sb.AppendLine(".device-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:12px 16px;margin-bottom:22px;font-size:9.5pt;line-height:1.8;}")
+        sb.AppendLine(".device-box b{color:#374151;}")
+        sb.AppendLine("table{table-layout:fixed;width:100%;border-collapse:collapse;margin-top:6px;}")
+        sb.AppendLine("th{background:#1f2937;color:#fff;padding:7px 8px;text-align:left;font-size:9pt;}")
+        sb.AppendLine("td{border:1px solid #e5e7eb;padding:6px 8px;font-size:9pt;vertical-align:middle;word-wrap:break-word;}")
+        sb.AppendLine("tr:nth-child(even) td{background:#f9fafb;}")
+        sb.AppendLine(".footer-note{font-size:8.5pt;color:#6b7280;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:10px;}")
+        sb.AppendLine(".total{font-size:10pt;font-weight:bold;color:#1f2937;margin-top:10px;}")
+        sb.AppendLine("</style></head><body>")
+
+        ' Logo
+        If Not String.IsNullOrWhiteSpace(pLogoPath) AndAlso File.Exists(pLogoPath) Then
+            Dim bytes As Byte() = File.ReadAllBytes(pLogoPath)
+            Dim b64   As String = Convert.ToBase64String(bytes)
+            Dim mime  As String = If(pLogoPath.ToLower().EndsWith(".png"), "image/png", "image/jpeg")
+            sb.AppendLine("<div style='margin-bottom:16px;'><img src='data:" & mime & ";base64," & b64 & "' style='max-height:60px;max-width:200px;'/></div>")
+        End If
+
+        sb.AppendLine("<h2>Hardware Upgrade Report</h2>")
+        sb.AppendLine("<div class='sub'>Issued: " & DateTime.Now.ToString("MMMM dd, yyyy") & " &nbsp;|&nbsp; Ref: " & HtmlE(_internalUID) & "</div>")
+
+        ' Bloco do equipamento
+        If _dtEquipamento IsNot Nothing AndAlso _dtEquipamento.Rows.Count > 0 Then
+            Dim r As DataRow = _dtEquipamento.Rows(0)
+            sb.AppendLine("<div class='device-box'>")
+            sb.AppendLine("<b>Device:</b> " & HtmlE(ObterTexto(r, {"MANUFACTURER", "MARCA"})) & " " & HtmlE(ObterTexto(r, {"MODEL"})) & "<br/>")
+            sb.AppendLine("<b>Serial Number:</b> " & HtmlE(ObterTexto(r, {"SERIAL_NUMBER"})) & "<br/>")
+            sb.AppendLine("<b>Processor:</b> " & HtmlE(ObterTexto(r, {"CPU_MODEL", "PROCESSADOR"})) & "<br/>")
+            sb.AppendLine("<b>Current RAM:</b> " & HtmlE(ObterTexto(r, {"RAM_GB"})) & " GB &nbsp;&nbsp; <b>Current Storage:</b> " & HtmlE(ObterTexto(r, {"STORAGE_GB"})) & " GB")
+            sb.AppendLine("</div>")
+        End If
+
+        ' Tabela de upgrades
+        sb.AppendLine("<table>")
+        sb.AppendLine("<tr>")
+        sb.AppendLine("<th style='width:90px'>Date</th>")
+        sb.AppendLine("<th style='width:110px'>Component</th>")
+        sb.AppendLine("<th style='width:80px'>Before</th>")
+        sb.AppendLine("<th style='width:80px'>After</th>")
+        sb.AppendLine("<th style='width:90px'>Technician</th>")
+        sb.AppendLine("<th>Notes</th>")
+        sb.AppendLine("</tr>")
+
+        Dim totalUpg As Decimal = 0
+        If _dtUpgrades IsNot Nothing Then
+            For Each row As DataRow In _dtUpgrades.Rows
+                sb.Append("<tr>")
+                sb.Append("<td>" & HtmlE(FormatarData(row, "DATA_UPGRADE")) & "</td>")
+                sb.Append("<td>" & HtmlE(ObterTexto(row, {"COMPONENT_TYPE"})) & "</td>")
+                sb.Append("<td>" & HtmlE(ObterTexto(row, {"VALUE_BEFORE"})) & "</td>")
+                sb.Append("<td><b>" & HtmlE(ObterTexto(row, {"VALUE_AFTER"})) & "</b></td>")
+                sb.Append("<td>" & HtmlE(ObterTexto(row, {"TECHNICIAN"})) & "</td>")
+                sb.Append("<td>" & HtmlE(LimparObservacao(ObterTexto(row, {"NOTES"}))) & "</td>")
+                totalUpg += ObterDecimal(row, "COST_USD")
+                sb.AppendLine("</tr>")
+            Next
+        End If
+
+        sb.AppendLine("</table>")
+
+        If totalUpg > 0 Then
+            sb.AppendLine("<div class='total'>Total upgrade cost: $ " & totalUpg.ToString("N2") & "</div>")
+        End If
+
+        sb.AppendLine("<div class='footer-note'>")
+        sb.AppendLine("This document certifies the hardware upgrades performed on the device described above.<br/>")
+        sb.AppendLine("GBS — Global Business Solution &nbsp;|&nbsp; " & DateTime.Now.ToString("yyyy"))
+        sb.AppendLine("</div>")
+
+        sb.AppendLine("</body></html>")
+        Return sb.ToString()
+
+    End Function
+
+    ' Remove campos internos (Source: / CostUSD:) da observação antes de exibir ao cliente
+    Private Function LimparObservacao(pNotes As String) As String
+        If String.IsNullOrWhiteSpace(pNotes) Then Return ""
+        Dim partes As String() = pNotes.Split({" | "}, StringSplitOptions.RemoveEmptyEntries)
+        Dim resultado As New StringBuilder()
+        For Each parte As String In partes
+            Dim t As String = parte.Trim()
+            If Not t.StartsWith("Source:") AndAlso Not t.StartsWith("CostUSD:") Then
+                If resultado.Length > 0 Then resultado.Append(" | ")
+                resultado.Append(t)
+            End If
+        Next
+        Return resultado.ToString()
+    End Function
+
     Private Sub GerarRelatorioHistorico()
 
         Try
