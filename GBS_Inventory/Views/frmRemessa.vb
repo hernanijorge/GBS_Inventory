@@ -82,6 +82,7 @@ Partial Public Class frmRemessa
 
         btnAtualizarStatus.Enabled = True
         btnAbrirRastreio.Enabled   = True
+        btnRelatorio.Enabled       = True
 
     End Sub
 
@@ -305,7 +306,7 @@ Partial Public Class frmRemessa
     Private Sub txtQuickScan_KeyDown(sender As Object, e As KeyEventArgs) Handles txtQuickScan.KeyDown
         If e.KeyCode = Keys.Enter Then
             e.SuppressKeyPress = True
-            Dim scanValue As String = txtQuickScan.Text.Trim()
+            Dim scanValue As String = txtQuickScan.Text.Trim().TrimStart("0"c)
             If Not String.IsNullOrEmpty(scanValue) Then
                 ExecutarQuickScan(scanValue)
             End If
@@ -398,6 +399,56 @@ Partial Public Class frmRemessa
         If IsDBNull(pRow(colName)) Then Return ""
         Return pRow(colName).ToString()
     End Function
+
+    Private Sub btnRelatorio_Click(sender As Object, e As EventArgs) Handles btnRelatorio.Click
+
+        If vIdRemessaSelecionada = 0 Then Return
+
+        Try
+
+            Dim ds As DataSet = oController.buscarItensRemessa(vIdRemessaSelecionada)
+
+            If ds Is Nothing OrElse ds.Tables.Count = 0 OrElse ds.Tables(0).Rows.Count = 0 Then
+                MessageBox.Show("No items found for the selected shipment.", "Report",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim itens As New List(Of DataRow)()
+            For Each row As DataRow In ds.Tables(0).Rows
+                itens.Add(row)
+            Next
+
+            Dim sRef As String = ""
+            If dgvRemessas.CurrentRow IsNot Nothing AndAlso
+               dgvRemessas.Columns.Contains("REMESSA_REF") Then
+                Dim v As Object = dgvRemessas.CurrentRow.Cells("REMESSA_REF").Value
+                If v IsNot Nothing AndAlso Not IsDBNull(v) Then
+                    sRef = v.ToString().Replace("-", "_")
+                End If
+            End If
+
+            Dim baseNome As String = If(String.IsNullOrWhiteSpace(sRef),
+                                        "Shipment_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"),
+                                        "Shipment_" & sRef & "_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"))
+
+            Dim outputPath As String = "C:\GBS\Reports\"
+
+            Dim caminhoDoc  As String = ReportService.GerarRelatorioRemessa(itens, outputPath, "", baseNome)
+            Dim caminhoPdf  As String = ReportService.GerarPdfRemessa(itens, outputPath, "", baseNome)
+            Dim caminhoXlsx As String = ReportService.GerarExcelRemessa(itens, outputPath, "", baseNome)
+
+            Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
+            frmEmail.ShowDialog(Me)
+
+        Catch ex As Exception
+
+            MessageBox.Show("Error generating report: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+        End Try
+
+    End Sub
 
     Private Sub btnFechar_Click(sender As Object, e As EventArgs) Handles btnFechar.Click
         Me.Close()

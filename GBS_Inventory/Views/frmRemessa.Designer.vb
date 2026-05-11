@@ -35,6 +35,7 @@ Partial Class frmRemessa
     Friend WithEvents cboNovoStatus As ComboBox
     Friend WithEvents btnAtualizarStatus As Button
     Friend WithEvents btnAbrirRastreio As Button
+    Friend WithEvents btnRelatorio As Button
     Friend WithEvents btnFechar As Button
 
     Private Sub InitializeComponent()
@@ -258,13 +259,19 @@ Partial Class frmRemessa
         Me.btnAbrirRastreio.Size = New Size(160, 30)
         Me.btnAbrirRastreio.Enabled = False
 
+        Me.btnRelatorio = New Button()
+        Me.btnRelatorio.Text = "Shipment Report"
+        Me.btnRelatorio.Location = New Point(660, 40)
+        Me.btnRelatorio.Size = New Size(150, 30)
+        Me.btnRelatorio.Enabled = False
+
         Me.btnFechar = New Button()
         Me.btnFechar.Text = "Close"
         Me.btnFechar.Location = New Point(1285, 40)
         Me.btnFechar.Size = New Size(110, 30)
         Me.btnFechar.Anchor = AnchorStyles.Right Or AnchorStyles.Top
 
-        pnlAcoes.Controls.AddRange({lblAcoes, lblNovoSt, cboNovoStatus, btnAtualizarStatus, btnAbrirRastreio, btnFechar})
+        pnlAcoes.Controls.AddRange({lblAcoes, lblNovoSt, cboNovoStatus, btnAtualizarStatus, btnAbrirRastreio, btnRelatorio, btnFechar})
 
         Me.Controls.AddRange({lblTitulo, lblTotal, dgvRemessas, lblSelecionada, pnlCriar, pnlAcoes})
 
