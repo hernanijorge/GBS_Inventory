@@ -51,16 +51,15 @@ Public Class ReportService
 
         ' Colunas: chave interna, header, largura em caracteres
         Dim colunas As (Key As String, Header As String, Largura As Double)() = {
-            ("INTERNAL_UID",  "Internal UID",  16),
-            ("MARCA",         "Manufacturer",  18),
-            ("MODEL",         "Model",         16),
-            ("SERIAL_NUMBER", "Serial Number", 20),
-            ("PROCESSADOR",   "Processor",     20),
-            ("RAM_GB",        "RAM GB",        10),
-            ("STORAGE_GB",    "Storage GB",    12),
-            ("CONDITION_STATUS", "Battery Condition", 18),
-            ("STATUS",        "Status",        14),
-            ("OBSERVACAO",    "Notes",         40)
+            ("INTERNAL_UID",     "Internal UID",      16),
+            ("MARCA",            "Manufacturer",       18),
+            ("MODEL",            "Model",              16),
+            ("SERIAL_NUMBER",    "Serial Number",      20),
+            ("PROCESSADOR",      "Processor",          20),
+            ("RAM_GB",           "RAM GB",             10),
+            ("STORAGE_GB",       "Storage GB",         12),
+            ("CONDITION_STATUS", "Battery Condition",  18),
+            ("OBSERVACAO",       "Notes",              40)
         }
 
         ' Resolve fallbacks de nome de coluna
@@ -180,16 +179,15 @@ Public Class ReportService
         Dim caminhoFinal As String = Path.Combine(pasta, nomeArq)
 
         Dim colunas As (Key As String, Header As String, Largura As Single)() = {
-            ("INTERNAL_UID",     "Internal UID",     56),
-            ("MARCA",            "Manufacturer",      68),
-            ("MODEL",            "Model",             58),
-            ("SERIAL_NUMBER",    "Serial Number",     72),
-            ("PROCESSADOR",      "Processor",         80),
-            ("RAM_GB",           "RAM",               32),
-            ("STORAGE_GB",       "Storage",           42),
-            ("CONDITION_STATUS", "Battery/Condition", 68),
-            ("STATUS",           "Status",            52),
-            ("OBSERVACAO",       "Notes",            120)
+            ("INTERNAL_UID",     "Internal UID",      56),
+            ("MARCA",            "Manufacturer",       68),
+            ("MODEL",            "Model",              58),
+            ("SERIAL_NUMBER",    "Serial Number",      72),
+            ("PROCESSADOR",      "Processor",          80),
+            ("RAM_GB",           "RAM GB",             32),
+            ("STORAGE_GB",       "Storage GB",         42),
+            ("CONDITION_STATUS", "Battery Condition",  68),
+            ("OBSERVACAO",       "Notes",             120)
         }
 
         Dim colsReais As New Dictionary(Of String, String)
@@ -322,16 +320,15 @@ Public Class ReportService
 
         ' Definição das colunas: chave interna, label, largura fixa
         Dim colunas As (Key As String, Label As String, Width As String)() = {
-            ("INTERNAL_UID",  "Internal UID",  "80px"),
-            ("MARCA",         "Manufacturer",  "90px"),
-            ("MODEL",         "Model",         "70px"),
-            ("SERIAL_NUMBER", "Serial Number", "90px"),
-            ("PROCESSADOR",   "Processor",     "90px"),
-            ("RAM_GB",        "RAM GB",        "50px"),
-            ("STORAGE_GB",    "Storage GB",    "60px"),
-            ("CONDITION_STATUS", "Battery Condition", "80px"),
-            ("STATUS",        "Status",        "70px"),
-            ("OBSERVACAO",    "Notes",        "200px")
+            ("INTERNAL_UID",     "Internal UID",      "80px"),
+            ("MARCA",            "Manufacturer",       "90px"),
+            ("MODEL",            "Model",              "70px"),
+            ("SERIAL_NUMBER",    "Serial Number",      "90px"),
+            ("PROCESSADOR",      "Processor",          "90px"),
+            ("RAM_GB",           "RAM GB",             "50px"),
+            ("STORAGE_GB",       "Storage GB",         "60px"),
+            ("CONDITION_STATUS", "Battery Condition",  "80px"),
+            ("OBSERVACAO",       "Notes",             "200px")
         }
 
         ' Resolve nomes reais com fallback para esquemas alternativos
