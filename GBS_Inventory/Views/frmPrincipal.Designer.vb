@@ -78,6 +78,7 @@ Partial Class frmPrincipal
     Friend WithEvents clbModel           As CheckedListBox
     Friend WithEvents clbStatus          As CheckedListBox
     Friend WithEvents clbProcessor       As CheckedListBox
+    Friend WithEvents clbBatch           As CheckedListBox
     Friend WithEvents btnApplyFilter     As Button
     Friend WithEvents btnClearFilter     As Button
     Friend WithEvents btnGenerateReport  As Button
@@ -462,6 +463,33 @@ Partial Class frmPrincipal
         Me.clbStatus.Items.AddRange({"IN_STOCK", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
         pnlGrpSt.Controls.AddRange({lblStTitle, clbStatus})
 
+        ' ── Card: Source Batch ──────────────────────────────────────
+        Dim pnlGrpBatch As New Panel() With {
+            .Location  = New Point(885, 6),
+            .Size      = New Size(200, 150),
+            .BackColor = TemaEscuro.Surface
+        }
+        AddHandler pnlGrpBatch.Paint, Sub(sender, e)
+                                          Using pen As New Pen(TemaEscuro.Borda, 1)
+                                              e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpBatch.Width - 1, pnlGrpBatch.Height - 1)
+                                          End Using
+                                      End Sub
+        Dim lblBatchTitle As New Label() With {
+            .Text      = "Source Batch",
+            .Location  = New Point(4, 4),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbBatch              = New CheckedListBox()
+        Me.clbBatch.Location     = New Point(4, 24)
+        Me.clbBatch.Size         = New Size(192, 120)
+        Me.clbBatch.CheckOnClick = True
+        Me.clbBatch.Font         = New Font("Segoe UI", 9)
+        Me.clbBatch.BorderStyle  = BorderStyle.None
+        pnlGrpBatch.Controls.AddRange({lblBatchTitle, clbBatch})
+
         ' ── Botões e contador de filtros ativos ─────────────────────
         Me.btnApplyFilter           = New Button()
         Me.btnApplyFilter.Text      = "Apply Filter"
@@ -518,7 +546,7 @@ Partial Class frmPrincipal
         Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
         Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
 
-        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt,
+        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt, pnlGrpBatch,
                                           btnApplyFilter, btnClearFilter,
                                           btnGenerateReport, btnExportExcel,
                                           btnAddToList, btnClearList,

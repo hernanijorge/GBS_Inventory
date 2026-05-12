@@ -137,6 +137,7 @@ Public Class frmPrincipal
 
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         PopularCheckedListBox(clbManufacturer, colMarca)
+        PopularCheckedListBox(clbBatch, "SOURCE_BATCH")
         recarregarModelosPorManufacturer()
 
     End Sub
@@ -285,6 +286,11 @@ Public Class frmPrincipal
             processors.Add(item.ToString())
         Next
 
+        Dim batches As New List(Of String)()
+        For Each item As Object In clbBatch.CheckedItems
+            batches.Add(item.ToString())
+        Next
+
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
         Dim colProc As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
@@ -345,6 +351,16 @@ Public Class frmPrincipal
                 Dim ok As Boolean = False
                 For Each p As String In processors
                     If String.Equals(p, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
+            End If
+
+            ' source batch — OR among checked, empty = all
+            If batches.Count > 0 AndAlso dtEstoqueCompleto.Columns.Contains("SOURCE_BATCH") Then
+                Dim v As String = If(IsDBNull(row("SOURCE_BATCH")), "", row("SOURCE_BATCH").ToString())
+                Dim ok As Boolean = False
+                For Each b As String In batches
+                    If String.Equals(b, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
                 Next
                 If Not ok Then Continue For
             End If
@@ -695,6 +711,10 @@ Public Class frmPrincipal
         Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
     End Sub
 
+    Private Sub clbBatch_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbBatch.ItemCheck
+        Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
+    End Sub
+
     Private Sub clbProcessor_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbProcessor.ItemCheck
         Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
     End Sub
@@ -704,7 +724,8 @@ Public Class frmPrincipal
         Dim count As Integer = clbManufacturer.CheckedItems.Count +
                                clbModel.CheckedItems.Count +
                                clbStatus.CheckedItems.Count +
-                               clbProcessor.CheckedItems.Count
+                               clbProcessor.CheckedItems.Count +
+                               clbBatch.CheckedItems.Count
         lblFiltrosAtivos.Text = If(count = 0, "No filters active",
                                    If(count = 1, "1 filter active",
                                       count.ToString() & " filters active"))
@@ -728,6 +749,9 @@ Public Class frmPrincipal
         Next
         For i As Integer = 0 To clbProcessor.Items.Count - 1
             clbProcessor.SetItemChecked(i, False)
+        Next
+        For i As Integer = 0 To clbBatch.Items.Count - 1
+            clbBatch.SetItemChecked(i, False)
         Next
         aplicarFiltrosEstoque()
     End Sub
