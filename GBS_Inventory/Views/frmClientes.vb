@@ -42,6 +42,7 @@ Public Class frmClientes
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
                 dgvClientes.DataSource = ds.Tables(0)
+                ConfigurarColunasGrid()
             Else
                 dgvClientes.DataSource = Nothing
             End If
@@ -199,6 +200,32 @@ Public Class frmClientes
         }
 
     End Function
+
+    Private Sub ConfigurarColunasGrid()
+        Dim mapa As New Dictionary(Of String, String) From {
+            {"ID_CLIENTE",    "ID"},
+            {"NOME_RAZAO",    "Name / Company"},
+            {"NOME_FANTASIA", "Trade Name"},
+            {"DOCUMENTO",     "Document"},
+            {"EMAIL",         "Email"},
+            {"TELEFONE",      "Phone"},
+            {"ENDERECO1",     "Address 1"},
+            {"ENDERECO2",     "Address 2"},
+            {"CIDADE",        "City"},
+            {"ESTADO",        "State"},
+            {"ZIP_CODE",      "ZIP Code"},
+            {"PAIS",          "Country"},
+            {"ATIVO",         "Active"},
+            {"OBSERVACOES",   "Notes"},
+            {"DATA_CADASTRO", "Created"},
+            {"DATA_ALTERACAO","Updated"}
+        }
+        For Each par In mapa
+            If dgvClientes.Columns.Contains(par.Key) Then
+                dgvClientes.Columns(par.Key).HeaderText = par.Value
+            End If
+        Next
+    End Sub
 
     Private Function ObterTexto(pRow As DataGridViewRow, pColuna As String) As String
 

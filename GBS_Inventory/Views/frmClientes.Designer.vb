@@ -100,7 +100,12 @@ Partial Class frmClientes
         Me.txtEmail = New TextBox() With {.Location = New Point(210, y + 18), .Size = New Size(220, h)}
         pnlCadastro.Controls.Add(txtEmail)
 
-        pnlCadastro.Controls.Add(CriarLabel("Phone", 440, y))
+        pnlCadastro.Controls.Add(New Label() With {
+            .Text = "Phone",
+            .Location = New Point(440, y),
+            .AutoSize = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        })
         Me.txtTelefone = New TextBox() With {.Location = New Point(440, y + 18), .Size = New Size(135, h)}
         pnlCadastro.Controls.Add(txtTelefone)
 
