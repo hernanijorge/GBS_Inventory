@@ -558,15 +558,14 @@ Public Class ReportService
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".xlsx")
 
         Dim colunas As (Key As String, Header As String, Largura As Double)() = {
-            ("INTERNAL_UID",   "Internal UID",  16),
-            ("MARCA",          "Manufacturer",  18),
-            ("MODEL",          "Model",         22),
-            ("PROCESSADOR",    "Processor",     22),
-            ("RAM_GB",         "RAM (GB)",      10),
-            ("STORAGE_GB",     "Storage (GB)",  12),
-            ("STATUS_ITEM",    "Item Status",   16),
-            ("SALE_PRICE_USD", "Price (USD)",   14),
-            ("NOTES",          "Notes",         40)
+            ("INTERNAL_UID",     "Internal UID",      16),
+            ("MARCA",            "Manufacturer",       18),
+            ("MODEL",            "Model",              16),
+            ("SERIAL_NUMBER",    "Serial Number",      20),
+            ("PROCESSADOR",      "Processor",          20),
+            ("RAM_GB",           "RAM GB",             10),
+            ("STORAGE_GB",       "Storage GB",         12),
+            ("CONDITION_STATUS", "Battery Condition",  18)
         }
 
         Using pkg As New ExcelPackage()
@@ -659,15 +658,14 @@ Public Class ReportService
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".pdf")
 
         Dim colunas As (Key As String, Header As String, Largura As Single)() = {
-            ("INTERNAL_UID",   "Internal UID",  60),
-            ("MARCA",          "Manufacturer",  68),
-            ("MODEL",          "Model",         72),
-            ("PROCESSADOR",    "Processor",     80),
-            ("RAM_GB",         "RAM (GB)",      32),
-            ("STORAGE_GB",     "Storage (GB)",  40),
-            ("STATUS_ITEM",    "Item Status",   52),
-            ("SALE_PRICE_USD", "Price (USD)",   48),
-            ("NOTES",          "Notes",        100)
+            ("INTERNAL_UID",     "Internal UID",      56),
+            ("MARCA",            "Manufacturer",       68),
+            ("MODEL",            "Model",              58),
+            ("SERIAL_NUMBER",    "Serial Number",      72),
+            ("PROCESSADOR",      "Processor",          80),
+            ("RAM_GB",           "RAM GB",             32),
+            ("STORAGE_GB",       "Storage GB",         42),
+            ("CONDITION_STATUS", "Battery Condition",  68)
         }
 
         Dim doc As New Document(PageSize.A4.Rotate(), 20, 20, 30, 20)
@@ -798,15 +796,14 @@ Public Class ReportService
                       " &nbsp;|&nbsp; Total items: " & pItens.Count.ToString() & "</div>")
 
         Dim colunas As (Key As String, Label As String, Width As String)() = {
-            ("INTERNAL_UID",   "Internal UID",  "80px"),
-            ("MARCA",          "Manufacturer",  "90px"),
-            ("MODEL",          "Model",         "100px"),
-            ("PROCESSADOR",    "Processor",     "100px"),
-            ("RAM_GB",         "RAM (GB)",      "50px"),
-            ("STORAGE_GB",     "Storage (GB)",  "55px"),
-            ("STATUS_ITEM",    "Item Status",   "70px"),
-            ("SALE_PRICE_USD", "Price (USD)",   "60px"),
-            ("NOTES",          "Notes",        "120px")
+            ("INTERNAL_UID",     "Internal UID",      "80px"),
+            ("MARCA",            "Manufacturer",       "90px"),
+            ("MODEL",            "Model",              "80px"),
+            ("SERIAL_NUMBER",    "Serial Number",      "90px"),
+            ("PROCESSADOR",      "Processor",          "90px"),
+            ("RAM_GB",           "RAM GB",             "50px"),
+            ("STORAGE_GB",       "Storage GB",         "60px"),
+            ("CONDITION_STATUS", "Battery Condition",  "80px")
         }
 
         sb.AppendLine("<table>")

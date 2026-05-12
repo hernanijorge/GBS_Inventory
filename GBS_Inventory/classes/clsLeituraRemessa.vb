@@ -86,7 +86,8 @@ Public Class clsLeituraRemessa
             Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
                 "SELECT RI.ID_REMESSA_ITEM, RI.ID_REMESSA, RI.ID_EQUIPAMENTO, RI.STATUS_ITEM, " &
                 "       RI.SALE_PRICE_USD, RI.NOTES, RI.DATA_CADASTRO, " &
-                "       E.INTERNAL_UID, E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB " &
+                "       E.INTERNAL_UID, E.MARCA, E.MODEL, E.SERIAL_NUMBER, " &
+                "       E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, E.CONDITION_STATUS " &
                 "  FROM TBL_REMESSA_ITEM RI " &
                 "  JOIN TBL_EQUIPAMENTO  E ON E.ID_EQUIPAMENTO = RI.ID_EQUIPAMENTO " &
                 " WHERE RI.ID_REMESSA = :P_ID_REMESSA " &
