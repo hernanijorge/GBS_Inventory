@@ -121,21 +121,9 @@ Public Class frmAddEquipamento
                             cmd.Parameters.Add("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2).Value = stat
                             cmd.Parameters.Add("P_OBSERVACAO",         OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(notes), DBNull.Value, CObj(notes))
                             cmd.Parameters.Add("P_BATTERY_CHECK",      OracleDbType.Varchar2).Value = DBNull.Value
+                            cmd.Parameters.Add("P_SOURCE_BATCH",       OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(batch), DBNull.Value, CObj(batch))
                             cmd.ExecuteNonQuery()
                         End Using
-
-                        ' ── UPDATE SOURCE_BATCH ────────────────────────
-                        If Not String.IsNullOrEmpty(batch) Then
-                            Using cmd2 As New OracleCommand(
-                                "UPDATE TBL_EQUIPAMENTO SET SOURCE_BATCH = :P_BATCH" &
-                                " WHERE INTERNAL_UID = :P_UID", con)
-                                cmd2.Transaction = trans
-                                cmd2.BindByName  = True
-                                cmd2.Parameters.Add("P_BATCH", OracleDbType.Varchar2).Value = batch
-                                cmd2.Parameters.Add("P_UID",   OracleDbType.Varchar2).Value = uid
-                                cmd2.ExecuteNonQuery()
-                            End Using
-                        End If
 
                         trans.Commit()
 
