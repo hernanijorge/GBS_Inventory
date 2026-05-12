@@ -30,6 +30,10 @@ Partial Class frmPrincipal
     Friend WithEvents txtCompSearch     As TextBox
     Friend WithEvents cboCompType       As ComboBox
     Friend WithEvents cboCompStatus     As ComboBox
+    Friend WithEvents btnCompRelatorio  As Button
+    Friend WithEvents btnCompAddToList  As Button
+    Friend WithEvents btnCompClearList  As Button
+    Friend WithEvents lblCompListaInfo  As Label
     Friend WithEvents pnlAcoes As Panel
     Friend WithEvents btnBuscarUID As Button
     Friend WithEvents btnScanner As Button
@@ -751,7 +755,7 @@ Partial Class frmPrincipal
 
         Dim pnlCompTop As New Panel() With {
             .Dock      = DockStyle.Top,
-            .Height    = 60,
+            .Height    = 90,
             .BackColor = TemaEscuro.Surface,
             .Padding   = New Padding(8)
         }
@@ -784,8 +788,22 @@ Partial Class frmPrincipal
         Dim lblCStat As New Label() With { .Text = "Status:", .Location = New Point(900, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboCompStatus           = New ComboBox() With { .Location = New Point(948, 12), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
 
+        Me.btnCompRelatorio          = New Button() With { .Text = "Report",      .Location = New Point(15, 52),  .Size = New Size(90, 28) }
+        Me.btnCompAddToList          = New Button() With { .Text = "+ Add to List", .Location = New Point(115, 52), .Size = New Size(110, 28),
+                                                            .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo,
+                                                            .FlatStyle = FlatStyle.Flat,
+                                                            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold) }
+        Me.btnCompClearList          = New Button() With { .Text = "Clear List",  .Location = New Point(235, 52), .Size = New Size(96, 28),
+                                                            .BackColor = Color.FromArgb(124, 45, 18), .ForeColor = Color.White,
+                                                            .FlatStyle = FlatStyle.Flat, .Enabled = False }
+        Me.lblCompListaInfo          = New Label() With { .Text = "",             .Location = New Point(345, 58),
+                                                           .AutoSize = True,
+                                                           .Font = New Font("Segoe UI", 8.5F, FontStyle.Italic),
+                                                           .ForeColor = TemaEscuro.Accent }
+
         pnlCompTop.Controls.AddRange({lblCompTit, lblCompTotal, btnCompRefresh, btnAddComponent,
-                                       lblCSearch, txtCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus})
+                                       lblCSearch, txtCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus,
+                                       btnCompRelatorio, btnCompAddToList, btnCompClearList, lblCompListaInfo})
 
         Me.dgvComponents      = New DataGridView() With { .Dock = DockStyle.Fill }
 

@@ -31,8 +31,9 @@ Public Class frmPrincipal
     Private dtComponentsCompleto As DataTable
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
-    Private _listaRelatorio        As New ListaRelatorio()
-    Private _listaUpgradeRelatorio As New ListaRelatorio("ID_UPGRADE")
+    Private _listaRelatorio           As New ListaRelatorio()
+    Private _listaUpgradeRelatorio    As New ListaRelatorio("ID_UPGRADE")
+    Private _listaComponentRelatorio  As New ListaRelatorio("ID_COMPONENT")
 
 #End Region
 
@@ -1008,8 +1009,9 @@ Public Class frmPrincipal
         For Each col As DataGridViewColumn In dgvComponents.Columns
             If headers.ContainsKey(col.Name) Then col.HeaderText = headers(col.Name)
         Next
-        If dgvComponents.Columns.Contains("ID_COMPONENT") Then dgvComponents.Columns("ID_COMPONENT").Visible = False
-        If dgvComponents.Columns.Contains("NOTES")        Then dgvComponents.Columns("NOTES").Visible = False
+        If dgvComponents.Columns.Contains("ID_COMPONENT")  Then dgvComponents.Columns("ID_COMPONENT").Visible  = False
+        If dgvComponents.Columns.Contains("INTERNAL_UID") Then dgvComponents.Columns("INTERNAL_UID").Visible = False
+        If dgvComponents.Columns.Contains("NOTES")        Then dgvComponents.Columns("NOTES").Visible        = False
         If dgvComponents.Columns.Contains("DATE_UPDATED") Then dgvComponents.Columns("DATE_UPDATED").Visible = False
     End Sub
 
@@ -1036,6 +1038,100 @@ Public Class frmPrincipal
 
     Private Sub cboCompStatus_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboCompStatus.SelectedIndexChanged
         aplicarFiltrosComponents()
+    End Sub
+
+    Private Sub btnCompRefresh_Click2(sender As Object, e As EventArgs) Handles btnCompRelatorio.Click
+        GerarRelatorioComponents()
+    End Sub
+
+    Private Sub btnCompAddToList_Click(sender As Object, e As EventArgs) Handles btnCompAddToList.Click
+        AdicionarComponenteNaLista()
+    End Sub
+
+    Private Sub btnCompClearList_Click(sender As Object, e As EventArgs) Handles btnCompClearList.Click
+        LimparListaComponent()
+    End Sub
+
+    Private Function ColetarItensComponents() As List(Of DataRow)
+        If _listaComponentRelatorio.EstaAtiva Then Return _listaComponentRelatorio.Itens
+
+        Dim todos As New List(Of DataRow)
+        For Each gridRow As DataGridViewRow In dgvComponents.Rows
+            Dim drv As DataRowView = TryCast(gridRow.DataBoundItem, DataRowView)
+            If drv IsNot Nothing Then todos.Add(drv.Row)
+        Next
+        Return todos
+    End Function
+
+    Private Sub AdicionarComponenteNaLista()
+        If dgvComponents Is Nothing OrElse dgvComponents.CurrentRow Is Nothing Then Return
+        Dim drv As DataRowView = TryCast(dgvComponents.CurrentRow.DataBoundItem, DataRowView)
+        If drv Is Nothing Then Return
+
+        If _listaComponentRelatorio.Adicionar(drv.Row) Then
+            AtualizarModoRelatorioComponent()
+            lblStatus.Text = "1 component added to list (" & _listaComponentRelatorio.Count.ToString() & " total)"
+        Else
+            lblStatus.Text = "This component is already in the list."
+        End If
+    End Sub
+
+    Private Sub LimparListaComponent()
+        If Not _listaComponentRelatorio.EstaAtiva Then
+            lblStatus.Text = "Component list is already empty."
+            Return
+        End If
+
+        Dim res As DialogResult = MessageBox.Show(
+            "Clear the component list with " & _listaComponentRelatorio.Count.ToString() & " item(s)?",
+            "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+
+        If res = DialogResult.Yes Then
+            _listaComponentRelatorio.Limpar()
+            AtualizarModoRelatorioComponent()
+            lblStatus.Text = "Component list cleared."
+        End If
+    End Sub
+
+    Private Sub AtualizarModoRelatorioComponent()
+        If btnCompClearList IsNot Nothing Then
+            btnCompClearList.Enabled = _listaComponentRelatorio.EstaAtiva
+        End If
+        If lblCompListaInfo IsNot Nothing Then
+            lblCompListaInfo.Text = If(_listaComponentRelatorio.EstaAtiva,
+                "List mode: " & _listaComponentRelatorio.Count.ToString() & " component(s) selected", "")
+        End If
+    End Sub
+
+    Private Sub GerarRelatorioComponents()
+        Dim itens As List(Of DataRow) = ColetarItensComponents()
+        If itens.Count = 0 Then
+            MessageBox.Show("No components to report.", "Components Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Try
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            If Not IO.Directory.Exists(outputPath) Then IO.Directory.CreateDirectory(outputPath)
+
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
+
+            Dim baseNome As String = "ComponentReport_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+
+            Dim caminhoDoc  As String = ReportService.GerarRelatorioComponents(itens, outputPath, logoPath, baseNome)
+            Dim caminhoPdf  As String = ReportService.GerarPdfComponents(itens, outputPath, logoPath, baseNome)
+            Dim caminhoXlsx As String = ReportService.GerarExcelComponents(itens, outputPath, logoPath, baseNome)
+
+            Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
+            frmEmail.ShowDialog(Me)
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating components report: " & ex.Message, "Components Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
 #End Region
