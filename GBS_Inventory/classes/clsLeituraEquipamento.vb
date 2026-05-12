@@ -206,7 +206,7 @@ Public Class clsLeituraEquipamento
         Dim sqlPt As String =
             "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
             "       E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
-            "       E.CONDITION_STATUS," &
+            "       E.CONDITION_STATUS, E.SOURCE_BATCH," &
             "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
             "       E.STATUS AS STATUS_DESCRICAO " &
             "  FROM TBL_EQUIPAMENTO E " &
@@ -222,7 +222,7 @@ Public Class clsLeituraEquipamento
         Dim sqlPtNoCondition As String =
             "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
             "       E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
-            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS," &
+            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS, E.SOURCE_BATCH," &
             "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
             "       E.STATUS AS STATUS_DESCRICAO " &
             "  FROM TBL_EQUIPAMENTO E " &
@@ -238,7 +238,7 @@ Public Class clsLeituraEquipamento
         Dim sqlEn As String =
             "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
             "       E.MANUFACTURER AS MARCA, E.MODEL, E.CPU_MODEL AS PROCESSADOR, E.RAM_GB, E.STORAGE_GB, " &
-            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS," &
+            "       CAST(NULL AS VARCHAR2(20)) AS CONDITION_STATUS, E.SOURCE_BATCH," &
             "       E.STATUS, CAST(NULL AS VARCHAR2(4000)) AS OBSERVACAO, E.DATA_CADASTRO, CAST(NULL AS DATE) AS DATA_ATUALIZACAO, " &
             "       E.STATUS AS STATUS_DESCRICAO " &
             "  FROM TBL_EQUIPAMENTO E " &

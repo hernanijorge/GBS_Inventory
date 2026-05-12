@@ -194,6 +194,7 @@ Public Class frmPrincipal
         pClb.Items.Clear()
 
         If String.IsNullOrEmpty(pColuna) OrElse dtEstoqueCompleto Is Nothing Then Return
+        If Not dtEstoqueCompleto.Columns.Contains(pColuna) Then Return
 
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModeloF As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
