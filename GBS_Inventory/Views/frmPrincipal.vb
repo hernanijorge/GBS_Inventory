@@ -1022,8 +1022,10 @@ Public Class frmPrincipal
     Private Sub btnAddComponent_Click(sender As Object, e As EventArgs) Handles btnAddComponent.Click
         Dim frm As New frmAddComponent()
         If frm.ShowDialog(Me) = DialogResult.OK Then
-            MessageBox.Show("Component saved — UID: " & frm.SavedUID,
-                            "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Dim msg As String = If(frm.SavedCount > 1,
+                frm.SavedCount.ToString() & " components saved successfully.",
+                "Component saved successfully.")
+            MessageBox.Show(msg, "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information)
             carregarComponents()
         End If
     End Sub

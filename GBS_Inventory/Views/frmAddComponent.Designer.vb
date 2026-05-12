@@ -6,20 +6,22 @@ Partial Class frmAddComponent
 
 #Region "Designer"
 
-    Friend WithEvents cboType       As ComboBox
-    Friend WithEvents cboCapacity   As ComboBox
-    Friend WithEvents cboGeneration As ComboBox
-    Friend WithEvents cboSpeed      As ComboBox
-    Friend WithEvents cboBrand      As ComboBox
-    Friend WithEvents txtPartNumber As TextBox
-    Friend WithEvents cboCondition  As ComboBox
-    Friend WithEvents cboStatus     As ComboBox
+    Friend WithEvents cboType        As ComboBox
+    Friend WithEvents cboCapacity    As ComboBox
+    Friend WithEvents cboGeneration  As ComboBox
+    Friend WithEvents cboSpeed       As ComboBox
+    Friend WithEvents cboBrand       As ComboBox
+    Friend WithEvents txtPartNumber  As TextBox
+    Friend WithEvents cboCondition   As ComboBox
+    Friend WithEvents cboStatus      As ComboBox
     Friend WithEvents cboSourceBatch As ComboBox
-    Friend WithEvents txtNotes      As TextBox
-    Friend WithEvents btnSave       As Button
-    Friend WithEvents btnCancel     As Button
-    Friend WithEvents pnlFooter     As Panel
-    Friend WithEvents lblSpeedLabel As Label
+    Friend WithEvents txtNotes       As TextBox
+    Friend WithEvents btnSave        As Button
+    Friend WithEvents btnCancel      As Button
+    Friend WithEvents pnlFooter      As Panel
+    Friend WithEvents lblSpeedLabel  As Label
+    Friend WithEvents nudQuantity    As NumericUpDown
+    Friend WithEvents lblQtyInfo     As Label
 
     Private Sub InitializeComponent()
 
@@ -38,15 +40,25 @@ Partial Class frmAddComponent
             .AutoSize  = True
         }
 
-        ' ── Row 1: Type | Capacity | Generation ──────────────────────
+        ' ── Row 1: Type | Capacity | Generation | Quantity ───────────
         Dim lblType As New Label() With { .Text = "Type *", .Location = New Point(20, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboType          = New ComboBox() With { .Location = New Point(20, 85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
 
         Dim lblCap As New Label() With { .Text = "Capacity (GB) *", .Location = New Point(180, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
-        Me.cboCapacity      = New ComboBox() With { .Location = New Point(180, 85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDown }
+        Me.cboCapacity      = New ComboBox() With { .Location = New Point(180, 85), .Size = New Size(130, 24), .DropDownStyle = ComboBoxStyle.DropDown }
 
-        Dim lblGen As New Label() With { .Text = "Generation", .Location = New Point(340, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
-        Me.cboGeneration    = New ComboBox() With { .Location = New Point(340, 85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
+        Dim lblGen As New Label() With { .Text = "Generation", .Location = New Point(330, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboGeneration    = New ComboBox() With { .Location = New Point(330, 85), .Size = New Size(120, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        Dim lblQty As New Label() With { .Text = "Quantity *", .Location = New Point(468, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.nudQuantity      = New NumericUpDown() With { .Location = New Point(468, 85), .Size = New Size(110, 24),
+                                                          .Minimum = 1, .Maximum = 9999, .Value = 1, .DecimalPlaces = 0 }
+
+        Me.lblQtyInfo       = New Label() With { .Text = "",
+                                                  .Location = New Point(20, 345),
+                                                  .Size = New Size(560, 18),
+                                                  .Font = New Font("Segoe UI", 8.5F, FontStyle.Italic),
+                                                  .ForeColor = TemaEscuro.Accent }
 
         ' ── Row 2: Speed | Brand | Part Number ───────────────────────
         Me.lblSpeedLabel    = New Label() With { .Text = "Speed (MHz)", .Location = New Point(20, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
@@ -73,16 +85,17 @@ Partial Class frmAddComponent
         Me.txtNotes         = New TextBox() With { .Location = New Point(20, 280), .Size = New Size(550, 50), .Multiline = True }
 
         ' ── Footer ───────────────────────────────────────────────────
-        Me.pnlFooter            = New Panel() With { .Dock = DockStyle.Bottom, .Height = 55, .BackColor = TemaEscuro.Surface }
-        Me.btnSave              = New Button() With { .Text = "Save", .Size = New Size(120, 34), .Location = New Point(320, 10), .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo, .FlatStyle = FlatStyle.Flat }
-        Me.btnCancel            = New Button() With { .Text = "Cancel", .Size = New Size(100, 34), .Location = New Point(450, 10) }
+        Me.pnlFooter  = New Panel() With { .Dock = DockStyle.Bottom, .Height = 55, .BackColor = TemaEscuro.Surface }
+        Me.btnSave    = New Button() With { .Text = "Save", .Size = New Size(120, 34), .Location = New Point(320, 10),
+                                             .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo, .FlatStyle = FlatStyle.Flat }
+        Me.btnCancel  = New Button() With { .Text = "Cancel", .Size = New Size(100, 34), .Location = New Point(450, 10) }
         Me.pnlFooter.Controls.AddRange({btnSave, btnCancel})
 
         Me.Controls.AddRange({lblTitle,
-                               lblType, cboType, lblCap, cboCapacity, lblGen, cboGeneration,
+                               lblType, cboType, lblCap, cboCapacity, lblGen, cboGeneration, lblQty, nudQuantity,
                                lblSpeedLabel, cboSpeed, lblBrand, cboBrand, lblPart, txtPartNumber,
                                lblCond, cboCondition, lblStat, cboStatus, lblBatch, cboSourceBatch,
-                               lblNotes, txtNotes, pnlFooter})
+                               lblNotes, txtNotes, lblQtyInfo, pnlFooter})
 
     End Sub
 

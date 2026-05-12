@@ -7,7 +7,8 @@ Imports GBS_Inventory.OracleHelper
 
 Public Class frmAddComponent
 
-    Public Property SavedUID As String = ""
+    Public Property SavedUID   As String  = ""
+    Public Property SavedCount As Integer = 0
 
     Private oController As ComponentController
 
@@ -131,11 +132,18 @@ Public Class frmAddComponent
             If Integer.TryParse(cboSpeed.SelectedItem.ToString(), spd) Then comp.SpeedMhz = spd
         End If
 
+        Dim qty As Integer = CInt(nudQuantity.Value)
+
         btnSave.Enabled = False
         Cursor = Cursors.WaitCursor
 
         Try
-            SavedUID     = oController.add(comp)
+            Dim lastUID As String = ""
+            For i As Integer = 1 To qty
+                lastUID = oController.add(comp)
+            Next
+            SavedUID     = lastUID
+            SavedCount   = qty
             DialogResult = DialogResult.OK
             Close()
         Catch ex As Exception
