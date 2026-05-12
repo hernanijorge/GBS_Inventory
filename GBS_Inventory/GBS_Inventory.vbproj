@@ -98,6 +98,7 @@
     <Compile Include="Models\Cliente.vb" />
     <Compile Include="Models\Invoice.vb" />
     <Compile Include="Models\ListaRelatorio.vb" />
+    <Compile Include="Models\Component.vb" />
     <!-- Classes (Gravação + Leitura + Importação) -->
     <Compile Include="classes\clsGravacaoEquipamento.vb" />
     <Compile Include="classes\clsGravacaoUpgrade.vb" />
@@ -111,11 +112,14 @@
     <Compile Include="classes\clsGravacaoInvoice.vb" />
     <Compile Include="classes\clsLeituraInvoice.vb" />
     <Compile Include="classes\clsLeituraHistorico.vb" />
+    <Compile Include="classes\clsReadComponent.vb" />
+    <Compile Include="classes\clsWriteComponent.vb" />
     <!-- Controllers (MVC) -->
     <Compile Include="Controllers\EquipamentoController.vb" />
     <Compile Include="Controllers\UpgradeController.vb" />
     <Compile Include="Controllers\RemessaController.vb" />
     <Compile Include="Controllers\ImportacaoController.vb" />
+    <Compile Include="Controllers\ComponentController.vb" />
     <Compile Include="Controllers\ClienteController.vb" />
     <Compile Include="Controllers\InvoiceController.vb" />
     <!-- Utils -->
@@ -153,6 +157,12 @@
     </Compile>
     <Compile Include="Views\frmUpgrade.Designer.vb">
       <DependentUpon>frmUpgrade.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmAddComponent.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmAddComponent.Designer.vb">
+      <DependentUpon>frmAddComponent.vb</DependentUpon>
     </Compile>
     <Compile Include="Views\frmRemessa.vb">
       <SubType>Form</SubType>

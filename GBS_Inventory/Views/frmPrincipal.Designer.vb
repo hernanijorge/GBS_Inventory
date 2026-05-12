@@ -17,9 +17,19 @@ Partial Class frmPrincipal
     Friend WithEvents tabCadastro As TabPage
     Friend WithEvents tabEstoque As TabPage
     Friend WithEvents tabRemessas As TabPage
-    Friend WithEvents tabUpgrades As TabPage
+    Friend WithEvents tabUpgrades   As TabPage
+    Friend WithEvents tabComponents As TabPage
     Friend WithEvents tabImportacao As TabPage
-    Friend WithEvents tabInvoice As TabPage
+    Friend WithEvents tabInvoice    As TabPage
+
+    ' Controls — Components tab
+    Friend WithEvents dgvComponents     As DataGridView
+    Friend WithEvents lblCompTotal      As Label
+    Friend WithEvents btnCompRefresh    As Button
+    Friend WithEvents btnAddComponent   As Button
+    Friend WithEvents txtCompSearch     As TextBox
+    Friend WithEvents cboCompType       As ComboBox
+    Friend WithEvents cboCompStatus     As ComboBox
     Friend WithEvents pnlAcoes As Panel
     Friend WithEvents btnBuscarUID As Button
     Friend WithEvents btnScanner As Button
@@ -181,11 +191,12 @@ Partial Class frmPrincipal
         Me.tabPrincipal.Dock = DockStyle.Fill
         Me.tabPrincipal.Font = New Font("Segoe UI", 10)
 
-        Me.tabDashboard = New TabPage("Dashboard")
-        Me.tabCadastro = New TabPage("Registration")
-        Me.tabEstoque = New TabPage("Inventory")
-        Me.tabRemessas = New TabPage("Shipments")
-        Me.tabUpgrades = New TabPage("Upgrades")
+        Me.tabDashboard  = New TabPage("Dashboard")
+        Me.tabCadastro   = New TabPage("Registration")
+        Me.tabEstoque    = New TabPage("Inventory")
+        Me.tabRemessas   = New TabPage("Shipments")
+        Me.tabUpgrades   = New TabPage("Upgrades")
+        Me.tabComponents = New TabPage("Components")
         Me.tabImportacao = New TabPage("Import")
         Me.tabInvoice = New TabPage("Invoice")
 
@@ -735,6 +746,52 @@ Partial Class frmPrincipal
         Me.tabUpgrades.Controls.Add(dgvUpgrades)
         Me.tabUpgrades.Controls.Add(pnlUpgTop)
 
+        ' ─── ABA COMPONENTS ───────────────────────────────────────────
+        Me.tabComponents.Padding = New Padding(0)
+
+        Dim pnlCompTop As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 60,
+            .BackColor = TemaEscuro.Surface,
+            .Padding   = New Padding(8)
+        }
+
+        Dim lblCompTit As New Label() With {
+            .Text      = "Components",
+            .Font      = New Font("Segoe UI", 11, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .Location  = New Point(15, 15),
+            .AutoSize  = True
+        }
+
+        Me.lblCompTotal           = New Label() With {
+            .Text      = "Total: 0",
+            .Font      = New Font("Segoe UI", 10),
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Location  = New Point(180, 17),
+            .AutoSize  = True
+        }
+
+        Me.btnCompRefresh          = New Button() With { .Text = "Refresh",       .Location = New Point(300, 12), .Size = New Size(90, 28) }
+        Me.btnAddComponent         = New Button() With { .Text = "+ Add",         .Location = New Point(400, 12), .Size = New Size(90, 28), .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo, .FlatStyle = FlatStyle.Flat }
+
+        Dim lblCSearch As New Label() With { .Text = "Search:", .Location = New Point(510, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.txtCompSearch           = New TextBox() With { .Location = New Point(570, 12), .Size = New Size(160, 26) }
+
+        Dim lblCType As New Label() With { .Text = "Type:", .Location = New Point(745, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboCompType             = New ComboBox() With { .Location = New Point(785, 12), .Size = New Size(100, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        Dim lblCStat As New Label() With { .Text = "Status:", .Location = New Point(900, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboCompStatus           = New ComboBox() With { .Location = New Point(948, 12), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        pnlCompTop.Controls.AddRange({lblCompTit, lblCompTotal, btnCompRefresh, btnAddComponent,
+                                       lblCSearch, txtCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus})
+
+        Me.dgvComponents      = New DataGridView() With { .Dock = DockStyle.Fill }
+
+        Me.tabComponents.Controls.Add(dgvComponents)
+        Me.tabComponents.Controls.Add(pnlCompTop)
+
         ' ─── ABA IMPORTAÇÃO ───────────────────────────────────────────
         Me.tabImportacao.Padding = New Padding(20)
 
@@ -881,7 +938,7 @@ Partial Class frmPrincipal
         ' ═════════════════════════════════════════════════════════════
         ' MONTAGEM DO TABCONTROL
         ' ═════════════════════════════════════════════════════════════
-        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabImportacao, tabInvoice})
+        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabComponents, tabImportacao, tabInvoice})
         Me.tabPrincipal.SelectedIndex = 0
         Me.pnlContainer.Controls.Add(tabPrincipal)
 

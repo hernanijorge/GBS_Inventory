@@ -21,12 +21,14 @@ Public Class frmPrincipal
     Private oImportController As ImportacaoController
     Private oRemessaController As RemessaController
     Private oUpgradeController As UpgradeController
+    Private oCompController As ComponentController
     Private sArquivoSelImp As String = ""
     Private dtResumoManufacturer As DataTable
     Private dtResumoModel As DataTable
     Private dtResumoCpuFamily As DataTable
     Private dtEstoqueCompleto As DataTable
     Private dtUpgradesCompleto As DataTable
+    Private dtComponentsCompleto As DataTable
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
     Private _listaRelatorio        As New ListaRelatorio()
@@ -44,6 +46,7 @@ Public Class frmPrincipal
         oImportController = New ImportacaoController()
         oRemessaController = New RemessaController()
         oUpgradeController = New UpgradeController()
+        oCompController    = New ComponentController()
 
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
@@ -59,6 +62,7 @@ Public Class frmPrincipal
             carregarEstoque()
             carregarRemessas()
             carregarUpgrades()
+            carregarComponents()
 
         Catch ex As Exception
 
@@ -930,6 +934,108 @@ Public Class frmPrincipal
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
 
+    End Sub
+
+#End Region
+
+#Region "Aba Components"
+
+    Private Sub carregarComponents()
+        Try
+            Dim ds As DataSet = oCompController.fetchAll()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                dtComponentsCompleto = ds.Tables(0)
+                InicializarFiltrosComponents()
+                aplicarFiltrosComponents()
+            End If
+        Catch ex As Exception
+            lblCompTotal.Text = "Load error"
+        End Try
+    End Sub
+
+    Private Sub InicializarFiltrosComponents()
+        Dim selType As String   = If(cboCompType.SelectedIndex > 0, cboCompType.SelectedItem.ToString(), "")
+        Dim selStat As String   = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+
+        cboCompType.Items.Clear()
+        cboCompType.Items.AddRange({"(All)", "RAM", "SSD", "HDD"})
+        cboCompStatus.Items.Clear()
+        cboCompStatus.Items.AddRange({"(All)", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"})
+
+        cboCompType.SelectedIndex   = Math.Max(0, cboCompType.Items.IndexOf(selType))
+        cboCompStatus.SelectedIndex = Math.Max(0, cboCompStatus.Items.IndexOf(selStat))
+    End Sub
+
+    Private Sub aplicarFiltrosComponents()
+        If dtComponentsCompleto Is Nothing Then Return
+        Dim dv As DataView = dtComponentsCompleto.DefaultView
+        Dim parts As New List(Of String)()
+
+        Dim search As String = txtCompSearch.Text.Trim()
+        Dim tipo   As String = If(cboCompType.SelectedIndex > 0, cboCompType.SelectedItem.ToString(), "")
+        Dim stat   As String = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+
+        If Not String.IsNullOrEmpty(tipo) Then parts.Add("COMPONENT_TYPE = '" & tipo.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(stat) Then parts.Add("STATUS = '" & stat.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(search) Then
+            Dim s As String = search.Replace("'", "''")
+            parts.Add(String.Format("(CONVERT(INTERNAL_UID,'System.String') LIKE '%{0}%' OR CONVERT(BRAND,'System.String') LIKE '%{0}%' OR CONVERT(PART_NUMBER,'System.String') LIKE '%{0}%')", s))
+        End If
+
+        dv.RowFilter = String.Join(" AND ", parts)
+        dgvComponents.DataSource = dv
+        ConfigurarColunasComponents()
+        lblCompTotal.Text = "Total: " & dv.Count.ToString()
+    End Sub
+
+    Private Sub ConfigurarColunasComponents()
+        Dim headers As New Dictionary(Of String, String) From {
+            {"ID_COMPONENT",     "ID"},
+            {"INTERNAL_UID",     "UID"},
+            {"COMPONENT_TYPE",   "Type"},
+            {"CAPACITY_GB",      "Capacity (GB)"},
+            {"SPEED_MHZ",        "Speed (MHz)"},
+            {"GENERATION",       "Gen"},
+            {"BRAND",            "Brand"},
+            {"PART_NUMBER",      "Part Number"},
+            {"CONDITION_STATUS", "Condition"},
+            {"STATUS",           "Status"},
+            {"SOURCE_BATCH",     "Source Batch"},
+            {"DATE_CREATED",     "Created"},
+            {"DATE_UPDATED",     "Updated"},
+            {"NOTES",            "Notes"}
+        }
+        For Each col As DataGridViewColumn In dgvComponents.Columns
+            If headers.ContainsKey(col.Name) Then col.HeaderText = headers(col.Name)
+        Next
+        If dgvComponents.Columns.Contains("ID_COMPONENT") Then dgvComponents.Columns("ID_COMPONENT").Visible = False
+        If dgvComponents.Columns.Contains("NOTES")        Then dgvComponents.Columns("NOTES").Visible = False
+        If dgvComponents.Columns.Contains("DATE_UPDATED") Then dgvComponents.Columns("DATE_UPDATED").Visible = False
+    End Sub
+
+    Private Sub btnCompRefresh_Click(sender As Object, e As EventArgs) Handles btnCompRefresh.Click
+        carregarComponents()
+    End Sub
+
+    Private Sub btnAddComponent_Click(sender As Object, e As EventArgs) Handles btnAddComponent.Click
+        Dim frm As New frmAddComponent()
+        If frm.ShowDialog(Me) = DialogResult.OK Then
+            MessageBox.Show("Component saved — UID: " & frm.SavedUID,
+                            "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            carregarComponents()
+        End If
+    End Sub
+
+    Private Sub txtCompSearch_KeyDown(sender As Object, e As KeyEventArgs) Handles txtCompSearch.KeyDown
+        If e.KeyCode = Keys.Enter Then aplicarFiltrosComponents()
+    End Sub
+
+    Private Sub cboCompType_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboCompType.SelectedIndexChanged
+        aplicarFiltrosComponents()
+    End Sub
+
+    Private Sub cboCompStatus_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboCompStatus.SelectedIndexChanged
+        aplicarFiltrosComponents()
     End Sub
 
 #End Region

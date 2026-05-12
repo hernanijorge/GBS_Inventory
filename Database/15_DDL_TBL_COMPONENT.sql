@@ -1,0 +1,28 @@
+-- ============================================================================
+-- GBS Inventory - TBL_COMPONENT + SEQ_COMPONENT
+-- Tracks RAM / SSD / HDD components as independent stock items.
+-- ============================================================================
+
+CREATE SEQUENCE SEQ_COMPONENT START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE TABLE TBL_COMPONENT (
+    ID_COMPONENT     NUMBER         NOT NULL,
+    INTERNAL_UID     VARCHAR2(20)   NOT NULL,
+    COMPONENT_TYPE   VARCHAR2(10)   NOT NULL,   -- RAM, SSD, HDD
+    CAPACITY_GB      NUMBER(6)      NOT NULL,
+    SPEED_MHZ        NUMBER(6),                  -- RAM only (2666, 3200, etc.)
+    GENERATION       VARCHAR2(10),               -- DDR4, DDR5, NVMe, SATA
+    BRAND            VARCHAR2(60),
+    PART_NUMBER      VARCHAR2(100),
+    CONDITION_STATUS VARCHAR2(20)   DEFAULT 'GOOD'     NOT NULL,
+    STATUS           VARCHAR2(20)   DEFAULT 'IN_STOCK' NOT NULL,
+    SOURCE_BATCH     VARCHAR2(100),
+    NOTES            VARCHAR2(4000),
+    DATE_CREATED     DATE           DEFAULT SYSDATE    NOT NULL,
+    DATE_UPDATED     DATE,
+    CONSTRAINT PK_COMPONENT  PRIMARY KEY (ID_COMPONENT),
+    CONSTRAINT UQ_COMP_UID   UNIQUE (INTERNAL_UID),
+    CONSTRAINT CK_COMP_TYPE  CHECK (COMPONENT_TYPE   IN ('RAM','SSD','HDD')),
+    CONSTRAINT CK_COMP_STAT  CHECK (STATUS           IN ('IN_STOCK','INSTALLED','SOLD','SCRAPPED')),
+    CONSTRAINT CK_COMP_COND  CHECK (CONDITION_STATUS IN ('GOOD','FAIR','POOR','UNTESTED'))
+);

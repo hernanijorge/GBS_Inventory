@@ -1,0 +1,156 @@
+Imports System.Windows.Forms
+Imports System.Drawing
+Imports System.Data
+Imports System.Configuration
+Imports GBS_Inventory.Models
+Imports GBS_Inventory.OracleHelper
+
+Public Class frmAddComponent
+
+    Public Property SavedUID As String = ""
+
+    Private oController As ComponentController
+
+    Private ReadOnly CapacityRAM  As String() = {"4", "8", "16", "32", "64", "128"}
+    Private ReadOnly CapacitySSD  As String() = {"128", "256", "512", "1000", "2000", "4000"}
+    Private ReadOnly CapacityHDD  As String() = {"320", "500", "1000", "2000", "4000", "8000"}
+    Private ReadOnly GenerationRAM As String() = {"DDR4", "DDR5", "DDR3"}
+    Private ReadOnly GenerationSSD As String() = {"NVMe", "SATA"}
+    Private ReadOnly GenerationHDD As String() = {"SATA"}
+    Private ReadOnly SpeedRAM     As String() = {"2133", "2400", "2666", "3200", "3600", "4800", "5200", "5600"}
+
+    Public Sub New()
+        InitializeComponent()
+        TemaEscuro.aplicarHelius(Me)
+        ConfigurarEstilos()
+        oController = New ComponentController()
+    End Sub
+
+    Private Sub frmAddComponent_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        cboType.Items.AddRange({"RAM", "SSD", "HDD"})
+        cboCondition.Items.AddRange({"GOOD", "FAIR", "POOR", "UNTESTED"})
+        cboStatus.Items.AddRange({"IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"})
+        cboType.SelectedIndex      = 0
+        cboCondition.SelectedIndex = 0
+        cboStatus.SelectedIndex    = 0
+        CarregarBrands()
+        CarregarSourceBatches()
+    End Sub
+
+    Private Sub ConfigurarEstilos()
+        btnSave.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+    End Sub
+
+    Private Sub CarregarBrands()
+        Try
+            Dim ds As DataSet = oController.fetchBrands()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim v As String = row(0).ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) Then cboBrand.Items.Add(v)
+                Next
+            End If
+        Catch
+        End Try
+    End Sub
+
+    Private Sub CarregarSourceBatches()
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim ds As DataSet = OracleHelper.ExecuteDataset(cs, System.Data.CommandType.Text,
+                "SELECT DISTINCT SOURCE_BATCH FROM TBL_EQUIPAMENTO WHERE SOURCE_BATCH IS NOT NULL ORDER BY SOURCE_BATCH")
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim v As String = row(0).ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) Then cboSourceBatch.Items.Add(v)
+                Next
+            End If
+        Catch
+        End Try
+    End Sub
+
+    Private Sub cboType_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboType.SelectedIndexChanged
+        Dim t As String = If(cboType.SelectedItem IsNot Nothing, cboType.SelectedItem.ToString(), "")
+        cboCapacity.Items.Clear()
+        cboGeneration.Items.Clear()
+        cboSpeed.Items.Clear()
+        Select Case t
+            Case "RAM"
+                cboCapacity.Items.AddRange(CapacityRAM)
+                cboGeneration.Items.AddRange(GenerationRAM)
+                cboSpeed.Items.AddRange(SpeedRAM)
+                cboSpeed.Enabled     = True
+                lblSpeedLabel.ForeColor = TemaEscuro.TextoMutado
+            Case "SSD"
+                cboCapacity.Items.AddRange(CapacitySSD)
+                cboGeneration.Items.AddRange(GenerationSSD)
+                cboSpeed.Enabled     = False
+                lblSpeedLabel.ForeColor = Color.Gray
+            Case "HDD"
+                cboCapacity.Items.AddRange(CapacityHDD)
+                cboGeneration.Items.AddRange(GenerationHDD)
+                cboSpeed.Enabled     = False
+                lblSpeedLabel.ForeColor = Color.Gray
+        End Select
+        If cboCapacity.Items.Count > 0  Then cboCapacity.SelectedIndex  = 0
+        If cboGeneration.Items.Count > 0 Then cboGeneration.SelectedIndex = 0
+    End Sub
+
+    Private Sub btnSave_Click(sender As Object, e As EventArgs) Handles btnSave.Click
+
+        Dim tipo As String = If(cboType.SelectedIndex >= 0, cboType.SelectedItem.ToString(), "")
+        Dim capTxt As String = cboCapacity.Text.Trim()
+
+        Dim erros As New List(Of String)()
+        If String.IsNullOrEmpty(tipo)   Then erros.Add("  · Type")
+        If String.IsNullOrEmpty(capTxt) Then erros.Add("  · Capacity")
+
+        Dim capGb As Integer = 0
+        If Not Integer.TryParse(capTxt, capGb) OrElse capGb <= 0 Then erros.Add("  · Capacity (invalid number)")
+
+        If erros.Count > 0 Then
+            MessageBox.Show("Required fields missing:" & vbCrLf & String.Join(vbCrLf, erros),
+                            "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim comp As New Component() With {
+            .ComponentType   = tipo,
+            .CapacityGB      = capGb,
+            .Generation      = If(cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
+            .Brand           = cboBrand.Text.Trim(),
+            .PartNumber      = txtPartNumber.Text.Trim(),
+            .ConditionStatus = If(cboCondition.SelectedIndex >= 0, cboCondition.SelectedItem.ToString(), "GOOD"),
+            .Status          = If(cboStatus.SelectedIndex >= 0, cboStatus.SelectedItem.ToString(), "IN_STOCK"),
+            .SourceBatch     = cboSourceBatch.Text.Trim(),
+            .Notes           = txtNotes.Text.Trim()
+        }
+
+        If cboSpeed.Enabled AndAlso cboSpeed.SelectedIndex >= 0 Then
+            Dim spd As Integer
+            If Integer.TryParse(cboSpeed.SelectedItem.ToString(), spd) Then comp.SpeedMhz = spd
+        End If
+
+        btnSave.Enabled = False
+        Cursor = Cursors.WaitCursor
+
+        Try
+            SavedUID     = oController.add(comp)
+            DialogResult = DialogResult.OK
+            Close()
+        Catch ex As Exception
+            MessageBox.Show("Error saving component:" & vbCrLf & ex.Message,
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            btnSave.Enabled = True
+            Cursor = Cursors.Default
+        End Try
+
+    End Sub
+
+    Private Sub btnCancel_Click(sender As Object, e As EventArgs) Handles btnCancel.Click
+        DialogResult = DialogResult.Cancel
+        Close()
+    End Sub
+
+End Class
