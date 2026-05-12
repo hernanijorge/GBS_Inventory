@@ -84,6 +84,10 @@ Public Class UpgradeController
         Return oLeitura.selecionarUpgradesComCliente(pDias)
     End Function
 
+    Public Function buscarOrigensDistintas() As DataSet
+        Return oLeitura.selecionarOrigensDistintas()
+    End Function
+
 #End Region
 
 End Class

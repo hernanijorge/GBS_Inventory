@@ -57,23 +57,46 @@ Public Class clsLeituraUpgrade
 
     Public Function selecionarUpgradesRecentes(pDias As Integer) As DataSet
 
-        Dim oPar(1) As OracleParameter
+        Dim sql As String =
+            "SELECT U.ID_UPGRADE, E.INTERNAL_UID, U.DATA_UPGRADE," &
+            "       U.TIPO_UPGRADE AS COMPONENT_TYPE," &
+            "       CASE U.TIPO_UPGRADE" &
+            "           WHEN 'RAM' THEN CASE WHEN U.RAM_ANTERIOR_GB     > 0 THEN TO_CHAR(U.RAM_ANTERIOR_GB)     || ' GB' END" &
+            "           WHEN 'SSD' THEN CASE WHEN U.STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB' END" &
+            "           WHEN 'HDD' THEN CASE WHEN U.STORAGE_ANTERIOR_GB > 0 THEN TO_CHAR(U.STORAGE_ANTERIOR_GB) || ' GB' END" &
+            "           ELSE NULL END AS VALUE_BEFORE," &
+            "       CASE U.TIPO_UPGRADE" &
+            "           WHEN 'RAM' THEN CASE WHEN U.RAM_NOVA_GB     > 0 THEN TO_CHAR(U.RAM_NOVA_GB)     || ' GB' END" &
+            "           WHEN 'SSD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END" &
+            "           WHEN 'HDD' THEN CASE WHEN U.STORAGE_NOVO_GB > 0 THEN TO_CHAR(U.STORAGE_NOVO_GB) || ' GB' END" &
+            "           ELSE NULL END AS VALUE_AFTER," &
+            "       U.TECNICO AS TECHNICIAN, U.OBSERVACAO AS NOTES," &
+            "       E.SOURCE_BATCH, E.MARCA, E.MODEL" &
+            "  FROM TBL_EQUIPAMENTO_UPGRADE U" &
+            "  JOIN TBL_EQUIPAMENTO E ON E.ID_EQUIPAMENTO = U.ID_EQUIPAMENTO" &
+            " WHERE U.DATA_UPGRADE >= SYSDATE - :V_DIAS" &
+            " ORDER BY U.DATA_UPGRADE DESC"
 
-        oPar(0) = New OracleParameter("V_DIAS",   OracleDbType.Int32,     ParameterDirection.Input)
-        oPar(1) = New OracleParameter("V_CURSOR", OracleDbType.RefCursor, ParameterDirection.Output)
+        Dim par As New OracleParameter("V_DIAS", OracleDbType.Int32, ParameterDirection.Input)
+        par.Value = pDias
 
         Try
-
-            oPar(0).Value = pDias
-
-            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.StoredProcedure, "PACK_UPGRADE.PROC_SELECT_UPGRADES_RECENTES", oPar)
-
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sql,
+                                               New OracleParameter() {par})
         Catch ex As Exception
-
             Throw New Exception(ex.ToString)
-
         End Try
 
+    End Function
+
+    Public Function selecionarOrigensDistintas() As DataSet
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
+                "SELECT DISTINCT SOURCE_BATCH FROM TBL_EQUIPAMENTO " &
+                " WHERE SOURCE_BATCH IS NOT NULL ORDER BY SOURCE_BATCH")
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
     End Function
 
     ''' <summary>

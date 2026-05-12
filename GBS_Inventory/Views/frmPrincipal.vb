@@ -26,6 +26,7 @@ Public Class frmPrincipal
     Private dtResumoModel As DataTable
     Private dtResumoCpuFamily As DataTable
     Private dtEstoqueCompleto As DataTable
+    Private dtUpgradesCompleto As DataTable
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
     Private _listaRelatorio        As New ListaRelatorio()
@@ -942,8 +943,9 @@ Public Class frmPrincipal
             Dim ds As DataSet = oUpgradeController.buscarRecentes(90)
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
-                dgvUpgrades.DataSource = ds.Tables(0)
-                lblUpgradesTotal.Text = "Total: " & ds.Tables(0).Rows.Count.ToString()
+                dtUpgradesCompleto = ds.Tables(0)
+                PopularCboUpgBatch()
+                aplicarFiltrosUpgrade()
             End If
 
         Catch ex As Exception
@@ -952,6 +954,43 @@ Public Class frmPrincipal
 
         End Try
 
+    End Sub
+
+    Private Sub PopularCboUpgBatch()
+        Dim selAtual As String = If(cboUpgBatch.SelectedIndex > 0, cboUpgBatch.SelectedItem.ToString(), "")
+        cboUpgBatch.Items.Clear()
+        cboUpgBatch.Items.Add("(All)")
+        If dtUpgradesCompleto IsNot Nothing AndAlso dtUpgradesCompleto.Columns.Contains("SOURCE_BATCH") Then
+            Dim valores As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each row As DataRow In dtUpgradesCompleto.Rows
+                If Not IsDBNull(row("SOURCE_BATCH")) Then
+                    Dim v As String = row("SOURCE_BATCH").ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) Then valores.Add(v)
+                End If
+            Next
+            For Each v As String In valores
+                cboUpgBatch.Items.Add(v)
+            Next
+        End If
+        Dim idx As Integer = cboUpgBatch.Items.IndexOf(selAtual)
+        cboUpgBatch.SelectedIndex = If(idx > 0, idx, 0)
+    End Sub
+
+    Private Sub aplicarFiltrosUpgrade()
+        If dtUpgradesCompleto Is Nothing Then Return
+        Dim dv As DataView = dtUpgradesCompleto.DefaultView
+        Dim batch As String = If(cboUpgBatch.SelectedIndex > 0, cboUpgBatch.SelectedItem.ToString(), "")
+        If Not String.IsNullOrEmpty(batch) AndAlso dtUpgradesCompleto.Columns.Contains("SOURCE_BATCH") Then
+            dv.RowFilter = "SOURCE_BATCH = '" & batch.Replace("'", "''") & "'"
+        Else
+            dv.RowFilter = ""
+        End If
+        dgvUpgrades.DataSource = dv
+        lblUpgradesTotal.Text = "Total: " & dv.Count.ToString()
+    End Sub
+
+    Private Sub cboUpgBatch_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboUpgBatch.SelectedIndexChanged
+        aplicarFiltrosUpgrade()
     End Sub
 
     Private Sub btnAtualizarUpgrades_Click(sender As Object, e As EventArgs) Handles btnAtualizarUpgrades.Click

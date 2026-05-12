@@ -32,8 +32,18 @@ Public Class frmUpgrade
         cboComponente.SelectedIndex = 0
 
         cboOrigem.Items.Clear()
-        cboOrigem.Items.AddRange({"SHIPMENT_SURPLUS", "NEW_PURCHASE", "TRANSFERRED", "WARRANTY", "OTHER"})
-        cboOrigem.SelectedIndex = 0
+        Try
+            Dim ds As DataSet = oController.buscarOrigensDistintas()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim v As String = row(0).ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) Then cboOrigem.Items.Add(v)
+                Next
+            End If
+        Catch
+            ' sem batches cadastrados — usuário digita manualmente
+        End Try
+        If cboOrigem.Items.Count > 0 Then cboOrigem.SelectedIndex = 0
 
     End Sub
 
@@ -55,7 +65,7 @@ Public Class frmUpgrade
                 .ValueBefore   = txtValorAntes.Text.Trim(),
                 .ValueAfter    = txtValorDepois.Text.Trim(),
                 .PartSerial    = txtPartSerial.Text.Trim(),
-                .SourceOrigem  = cboOrigem.SelectedItem.ToString(),
+                .SourceOrigem  = cboOrigem.Text.Trim(),
                 .Technician    = txtTecnico.Text.Trim(),
                 .Notes         = txtNotas.Text.Trim()
             }

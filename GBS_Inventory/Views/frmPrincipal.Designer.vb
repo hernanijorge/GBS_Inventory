@@ -64,6 +64,7 @@ Partial Class frmPrincipal
     Friend WithEvents btnUpgradeAddToList   As Button
     Friend WithEvents btnUpgradeClearList   As Button
     Friend WithEvents lblUpgradesListaInfo  As Label
+    Friend WithEvents cboUpgBatch           As ComboBox
 
     ' Botão de adição manual de equipamento
     Friend WithEvents btnAddEquipamento As Button
@@ -710,9 +711,23 @@ Partial Class frmPrincipal
         Me.btnUpgradeScanner.Location = New Point(435, 51)
         Me.btnUpgradeScanner.Size     = New Size(120, 28)
 
+        Dim lblUpgBatchFilter As New Label() With {
+            .Text      = "Source Batch:",
+            .Location  = New Point(575, 55),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        Me.cboUpgBatch          = New ComboBox()
+        Me.cboUpgBatch.Location = New Point(668, 52)
+        Me.cboUpgBatch.Size     = New Size(220, 24)
+        Me.cboUpgBatch.DropDownStyle = ComboBoxStyle.DropDownList
+
         pnlUpgTop.Controls.AddRange({lblUpgradesTit, lblUpgradesTotal, btnAtualizarUpgrades, btnGerenciarUpgrade,
                                       btnUpgradeRelatorio, btnUpgradeAddToList, btnUpgradeClearList,
-                                      lblUpgradesListaInfo, lblUpgBusca, txtUpgradeBusca, btnUpgradeBuscar, btnUpgradeScanner})
+                                      lblUpgradesListaInfo, lblUpgBusca, txtUpgradeBusca, btnUpgradeBuscar,
+                                      btnUpgradeScanner, lblUpgBatchFilter, cboUpgBatch})
 
         Me.dgvUpgrades      = New DataGridView()
         Me.dgvUpgrades.Dock = DockStyle.Fill

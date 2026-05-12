@@ -75,7 +75,7 @@ Partial Class frmUpgrade
         Me.cboOrigem = New ComboBox()
         Me.cboOrigem.Location = New Point(240, 105)
         Me.cboOrigem.Size = New Size(200, 24)
-        Me.cboOrigem.DropDownStyle = ComboBoxStyle.DropDownList
+        Me.cboOrigem.DropDownStyle = ComboBoxStyle.DropDown
 
         ' Custo
         Me.lblCusto = New Label()
