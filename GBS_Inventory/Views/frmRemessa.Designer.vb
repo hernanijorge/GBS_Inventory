@@ -42,20 +42,19 @@ Partial Class frmRemessa
 
         Me.SuspendLayout()
 
-        Me.Text            = "Shipments - FedEx / UPS / USPS / DHL"
-        Me.Size            = New Size(1400, 900)
-        Me.MinimumSize     = New Size(1100, 720)
-        Me.StartPosition   = FormStartPosition.CenterParent
-        Me.BackColor       = TemaEscuro.Fundo
-        Me.Font            = New Font("Segoe UI", 9)
+        Me.Text        = "Shipments - FedEx / UPS / USPS / DHL"
+        Me.Size        = New Size(1400, 900)
+        Me.MinimumSize = New Size(1200, 700)
+        Me.StartPosition = FormStartPosition.CenterParent
+        Me.BackColor   = TemaEscuro.Fundo
+        Me.Font        = New Font("Segoe UI", 9)
 
-        ' ── Top bar (title + total) ───────────────────────────────────────────
+        ' ── pnlTop — title bar ────────────────────────────────────────────────
         Dim pnlTop As New Panel() With {
             .Dock      = DockStyle.Top,
             .Height    = 48,
             .BackColor = TemaEscuro.Fundo
         }
-
         Me.lblTitulo = New Label() With {
             .Text      = "Shipment Management",
             .Font      = New Font("Segoe UI", 14, FontStyle.Bold),
@@ -71,7 +70,7 @@ Partial Class frmRemessa
         }
         pnlTop.Controls.AddRange({lblTitulo, lblTotal})
 
-        ' ── Bottom actions panel ──────────────────────────────────────────────
+        ' ── pnlAcoes — bottom action bar ─────────────────────────────────────
         Dim pnlAcoes As New Panel() With {
             .Dock      = DockStyle.Bottom,
             .Height    = 105,
@@ -90,7 +89,6 @@ Partial Class frmRemessa
             .Font      = New Font("Segoe UI", 10, FontStyle.Bold),
             .ForeColor = TemaEscuro.Accent
         }
-
         Dim lblNovoSt As New Label() With {
             .Text      = "New Status:",
             .Location  = New Point(15, 48),
@@ -122,20 +120,22 @@ Partial Class frmRemessa
         }
         Me.btnFechar = New Button() With {
             .Text     = "Close",
-            .Location = New Point(15, 43),
+            .Location = New Point(1255, 43),
             .Size     = New Size(110, 30),
-            .Anchor   = AnchorStyles.Right Or AnchorStyles.Top
+            .Anchor   = AnchorStyles.Top Or AnchorStyles.Right
         }
-        ' btnFechar will be repositioned via Anchor — set initial x wide enough
-        Me.btnFechar.Location = New Point(1250, 43)
-
         pnlAcoes.Controls.AddRange({lblAcoes, lblNovoSt, cboNovoStatus,
-                                     btnAtualizarStatus, btnAbrirRastreio, btnRelatorio, btnFechar})
+                                     btnAtualizarStatus, btnAbrirRastreio,
+                                     btnRelatorio, btnFechar})
 
-        ' ── Right panel — New Shipment form (fixed width, Dock=Right) ─────────
+        ' ── pnlCriar — New Shipment form (Dock=Right, fixed width=730) ────────
+        ' Width is fixed — controls inside use FIXED positions, NO Anchor=Right,
+        ' to avoid the Width=0-at-init-time anchor-offset bug.
+        Const PANEL_W As Integer = 730
+
         Dim pnlCriar As New Panel() With {
             .Dock      = DockStyle.Right,
-            .Width     = 725,
+            .Width     = PANEL_W,
             .BackColor = TemaEscuro.Surface
         }
         AddHandler pnlCriar.Paint, Sub(s, e)
@@ -144,163 +144,164 @@ Partial Class frmRemessa
             End Using
         End Sub
 
+        ' ── pnlCriarButtons — docked to bottom of pnlCriar ───────────────────
+        ' Width set explicitly so fixed-position buttons render correctly.
+        Dim pnlCriarButtons As New Panel() With {
+            .Dock      = DockStyle.Bottom,
+            .Height    = 50,
+            .Width     = PANEL_W,
+            .BackColor = TemaEscuro.Surface
+        }
+        Me.btnRemoverItem = New Button() With {
+            .Text     = "Remove Item",
+            .Location = New Point(430, 10),
+            .Size     = New Size(135, 30)
+        }
+        Me.btnNovaRemessa = New Button() With {
+            .Text     = "Create Shipment",
+            .Location = New Point(575, 10),
+            .Size     = New Size(140, 30),
+            .Font     = New Font("Segoe UI", 10, FontStyle.Bold)
+        }
+        pnlCriarButtons.Controls.AddRange({btnRemoverItem, btnNovaRemessa})
+
+        ' ── pnlContent — scrollable form fields ───────────────────────────────
+        ' All controls use fixed sizes (no Anchor=Right) because panel width
+        ' is fixed at PANEL_W and never changes.
+        Const CTL_W  As Integer = 700   ' usable width inside 730px panel
+        Const LEFT   As Integer = 15    ' left margin
+
+        Dim pnlContent As New Panel() With {
+            .Dock       = DockStyle.Fill,
+            .AutoScroll = True,
+            .BackColor  = TemaEscuro.Surface,
+            .Padding    = New Padding(0)
+        }
+
         Dim lblCab As New Label() With {
             .Text      = "New Shipment",
-            .Location  = New Point(15, 12),
+            .Location  = New Point(LEFT, 12),
             .AutoSize  = True,
             .ForeColor = TemaEscuro.Accent,
             .Font      = New Font("Segoe UI", 11, FontStyle.Bold)
         }
 
         ' Row 1 — Direction | Carrier | Tracking Number
-        Dim lblDir As New Label() With {.Text = "Direction",         .Location = New Point(15, 45),  .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblDir As New Label() With {.Text = "Direction",         .Location = New Point(LEFT, 45),  .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.cboDirection = New ComboBox() With {
-            .Location      = New Point(15, 63),
+            .Location      = New Point(LEFT, 63),
             .Size          = New Size(140, 24),
             .DropDownStyle = ComboBoxStyle.DropDownList
         }
-
         Dim lblCar As New Label() With {.Text = "Carrier",           .Location = New Point(170, 45), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.cboCarrier = New ComboBox() With {
             .Location      = New Point(170, 63),
             .Size          = New Size(140, 24),
             .DropDownStyle = ComboBoxStyle.DropDownList
         }
-
         Dim lblTrk As New Label() With {.Text = "Tracking Number *", .Location = New Point(325, 45), .AutoSize = True, .ForeColor = TemaEscuro.Accent}
         Me.txtTracking = New TextBox() With {
             .Location = New Point(325, 63),
-            .Size     = New Size(380, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Size     = New Size(390, 24)
         }
 
         ' Row 2 — Recipient
-        Dim lblRec As New Label() With {.Text = "Recipient *",       .Location = New Point(15, 98),  .AutoSize = True, .ForeColor = TemaEscuro.Accent}
+        Dim lblRec As New Label() With {.Text = "Recipient *",       .Location = New Point(LEFT, 98),  .AutoSize = True, .ForeColor = TemaEscuro.Accent}
         Me.txtRecipientName = New TextBox() With {
-            .Location = New Point(15, 116),
-            .Size     = New Size(695, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Location = New Point(LEFT, 116),
+            .Size     = New Size(CTL_W, 24)
         }
 
         ' Row 3 — Address
-        Dim lblAdr As New Label() With {.Text = "Recipient Address", .Location = New Point(15, 148), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblAdr As New Label() With {.Text = "Recipient Address", .Location = New Point(LEFT, 148), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtRecipientAddress = New TextBox() With {
-            .Location = New Point(15, 166),
-            .Size     = New Size(695, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Location = New Point(LEFT, 166),
+            .Size     = New Size(CTL_W, 24)
         }
 
         ' Row 4 — Service | Weight | Cost | Notes
-        Dim lblSvc As New Label() With {.Text = "Service",           .Location = New Point(15, 200),  .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
-        Me.txtServiceLevel = New TextBox() With {.Location = New Point(15, 218),  .Size = New Size(180, 24)}
+        Dim lblSvc As New Label() With {.Text = "Service",      .Location = New Point(LEFT, 200),  .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Me.txtServiceLevel = New TextBox() With {.Location = New Point(LEFT, 218),  .Size = New Size(180, 24)}
 
-        Dim lblPeso As New Label() With {.Text = "Weight (lbs)",     .Location = New Point(210, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblPeso As New Label() With {.Text = "Weight (lbs)", .Location = New Point(210, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtPeso = New TextBox() With {.Location = New Point(210, 218), .Size = New Size(110, 24), .TextAlign = HorizontalAlignment.Right}
 
-        Dim lblCusto As New Label() With {.Text = "Cost (USD)",      .Location = New Point(335, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblCusto As New Label() With {.Text = "Cost (USD)",   .Location = New Point(335, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtCustoEnvio = New TextBox() With {.Location = New Point(335, 218), .Size = New Size(110, 24), .TextAlign = HorizontalAlignment.Right}
 
-        Dim lblNt As New Label() With {.Text = "Shipment Notes",     .Location = New Point(460, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblNt As New Label() With {.Text = "Shipment Notes", .Location = New Point(460, 200), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtNotes = New TextBox() With {
             .Location = New Point(460, 218),
-            .Size     = New Size(250, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Size     = New Size(255, 24)
         }
 
         ' Row 5 — Quick Scan
-        Dim lblQS As New Label() With {.Text = "Quick Scan (UID / Serial):", .Location = New Point(15, 255), .AutoSize = True, .ForeColor = TemaEscuro.Accent}
+        Dim lblQS As New Label() With {.Text = "Quick Scan (UID / Serial):", .Location = New Point(LEFT, 255), .AutoSize = True, .ForeColor = TemaEscuro.Accent}
         Me.txtQuickScan = New TextBox() With {
-            .Location = New Point(15, 273),
-            .Size     = New Size(500, 30),
-            .Font     = New Font("Segoe UI", 11),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Location = New Point(LEFT, 273),
+            .Size     = New Size(490, 30),
+            .Font     = New Font("Segoe UI", 11)
         }
         Me.lblQuickScanStatus = New Label() With {
-            .Location  = New Point(525, 277),
-            .Size      = New Size(180, 22),
+            .Location  = New Point(515, 279),
+            .Size      = New Size(195, 22),
             .ForeColor = TemaEscuro.Verde,
-            .Text      = "",
-            .Anchor    = AnchorStyles.Top Or AnchorStyles.Right
+            .Text      = ""
         }
 
-        ' Row 6 — Search equipment
-        Dim lblBusca As New Label() With {.Text = "Search equipment (UID / Serial / Model)", .Location = New Point(15, 310), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        ' Row 6 — Search
+        Dim lblBusca As New Label() With {.Text = "Search equipment (UID / Serial / Model)", .Location = New Point(LEFT, 310), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtBuscarEquip = New TextBox() With {
-            .Location = New Point(15, 328),
-            .Size     = New Size(550, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Location = New Point(LEFT, 328),
+            .Size     = New Size(530, 24)
         }
         Me.btnBuscarEquip = New Button() With {
             .Text     = "Search",
-            .Location = New Point(578, 326),
-            .Size     = New Size(130, 28),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Right
+            .Location = New Point(555, 326),
+            .Size     = New Size(155, 28)
         }
 
-        ' Search results grid
         Me.dgvResultadoBusca = New DataGridView() With {
-            .Location      = New Point(15, 360),
-            .Size          = New Size(695, 110),
+            .Location      = New Point(LEFT, 362),
+            .Size          = New Size(CTL_W, 110),
             .ReadOnly      = True,
             .MultiSelect   = False,
-            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            .Anchor        = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
         }
 
-        ' Row 7 — Item price + note + add
-        Dim lblPI As New Label() With {.Text = "Item Price (USD)", .Location = New Point(15, 480), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        ' Row 7 — Item price + note + Add button
+        Dim lblPI As New Label() With {.Text = "Item Price (USD)", .Location = New Point(LEFT, 482), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtPrecoItem = New TextBox() With {
-            .Location  = New Point(15, 498),
+            .Location  = New Point(LEFT, 500),
             .Size      = New Size(130, 24),
             .TextAlign = HorizontalAlignment.Right
         }
-
-        Dim lblNI As New Label() With {.Text = "Item Note", .Location = New Point(160, 480), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
+        Dim lblNI As New Label() With {.Text = "Item Note", .Location = New Point(160, 482), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado}
         Me.txtNotaItem = New TextBox() With {
-            .Location = New Point(160, 498),
-            .Size     = New Size(415, 24),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+            .Location = New Point(160, 500),
+            .Size     = New Size(385, 24)
         }
-
         Me.btnAdicionarItem = New Button() With {
             .Text     = "Add Item",
-            .Location = New Point(588, 496),
-            .Size     = New Size(122, 28),
-            .Anchor   = AnchorStyles.Top Or AnchorStyles.Right
+            .Location = New Point(555, 498),
+            .Size     = New Size(155, 28)
         }
 
-        ' Items counter + selected items grid
         Me.lblContadorItens = New Label() With {
             .Text      = "Items: 0",
-            .Location  = New Point(15, 532),
+            .Location  = New Point(LEFT, 536),
             .AutoSize  = True,
             .ForeColor = TemaEscuro.Accent
         }
         Me.dgvItensSelecionados = New DataGridView() With {
-            .Location      = New Point(15, 550),
-            .Size          = New Size(695, 90),
+            .Location      = New Point(LEFT, 556),
+            .Size          = New Size(CTL_W, 90),
             .ReadOnly      = True,
             .MultiSelect   = False,
-            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            .Anchor        = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Bottom
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
         }
 
-        ' Buttons — anchored to bottom-right
-        Me.btnRemoverItem = New Button() With {
-            .Text     = "Remove Item",
-            .Location = New Point(420, 658),
-            .Size     = New Size(140, 30),
-            .Anchor   = AnchorStyles.Bottom Or AnchorStyles.Right
-        }
-        Me.btnNovaRemessa = New Button() With {
-            .Text     = "Create Shipment",
-            .Location = New Point(570, 658),
-            .Size     = New Size(140, 30),
-            .Font     = New Font("Segoe UI", 10, FontStyle.Bold),
-            .Anchor   = AnchorStyles.Bottom Or AnchorStyles.Right
-        }
-
-        pnlCriar.Controls.AddRange({
+        pnlContent.Controls.AddRange({
             lblCab,
             lblDir, cboDirection, lblCar, cboCarrier, lblTrk, txtTracking,
             lblRec, txtRecipientName,
@@ -310,15 +311,17 @@ Partial Class frmRemessa
             lblBusca, txtBuscarEquip, btnBuscarEquip,
             dgvResultadoBusca,
             lblPI, txtPrecoItem, lblNI, txtNotaItem, btnAdicionarItem,
-            lblContadorItens, dgvItensSelecionados,
-            btnRemoverItem, btnNovaRemessa})
+            lblContadorItens, dgvItensSelecionados})
 
-        ' ── Left panel — shipments grid (Dock=Fill) ───────────────────────────
+        ' Add Fill panel first, then Bottom panel — WinForms processes in reverse order
+        pnlCriar.Controls.Add(pnlContent)
+        pnlCriar.Controls.Add(pnlCriarButtons)
+
+        ' ── pnlLeft — shipments grid (Dock=Fill) ─────────────────────────────
         Dim pnlLeft As New Panel() With {
             .Dock      = DockStyle.Fill,
             .BackColor = TemaEscuro.Fundo
         }
-
         Me.lblSelecionada = New Label() With {
             .Text      = "No shipment selected",
             .Dock      = DockStyle.Bottom,
@@ -327,18 +330,13 @@ Partial Class frmRemessa
             .TextAlign = ContentAlignment.MiddleLeft,
             .Padding   = New Padding(5, 0, 0, 0)
         }
-
         Me.dgvRemessas = New DataGridView() With {
             .Dock = DockStyle.Fill
         }
-
-        ' Add to pnlLeft in correct dock order (Bottom first, then Fill)
         pnlLeft.Controls.Add(dgvRemessas)
         pnlLeft.Controls.Add(lblSelecionada)
 
-        ' ── Assemble form — order matters for Dock layout ─────────────────────
-        ' WinForms docks in reverse Controls order: last added = first docked
-        ' Order to add: Fill first, then Right, then Bottom, then Top
+        ' ── Assemble form (dock order: Fill → Right → Bottom → Top) ──────────
         Me.Controls.Add(pnlLeft)
         Me.Controls.Add(pnlCriar)
         Me.Controls.Add(pnlAcoes)
