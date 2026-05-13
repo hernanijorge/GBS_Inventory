@@ -891,6 +891,7 @@ Public Class frmPrincipal
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
                 dgvRemessas.DataSource = ds.Tables(0)
+                ConfigurarColunasRemessas()
             End If
 
         Catch ex As Exception
@@ -899,6 +900,36 @@ Public Class frmPrincipal
 
         End Try
 
+    End Sub
+
+    Private Sub ConfigurarColunasRemessas()
+        Dim headers As New Dictionary(Of String, String) From {
+            {"ID_REMESSA",      "ID"},
+            {"REMESSA_REF",     "Shipment Ref"},
+            {"CARRIER",         "Carrier"},
+            {"TRACKING_NUMBER", "Tracking Number"},
+            {"DESTINATARIO",    "Recipient"},
+            {"STATUS_REMESSA",  "Status"},
+            {"DATA_ENVIO",      "Ship Date"},
+            {"DATA_ENTREGA",    "Delivery Date"},
+            {"OBSERVACAO",      "Notes"},
+            {"DATA_CADASTRO",   "Created"},
+            {"TOTAL_ITENS",     "Items"}
+        }
+
+        For Each col As DataGridViewColumn In dgvRemessas.Columns
+            If headers.ContainsKey(col.Name) Then col.HeaderText = headers(col.Name)
+            col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells
+        Next
+
+        ' Hide internal key and notes (accessible via detail panel)
+        If dgvRemessas.Columns.Contains("ID_REMESSA")  Then dgvRemessas.Columns("ID_REMESSA").Visible  = False
+        If dgvRemessas.Columns.Contains("OBSERVACAO")  Then dgvRemessas.Columns("OBSERVACAO").Visible  = False
+
+        ' Let Recipient fill remaining space
+        If dgvRemessas.Columns.Contains("DESTINATARIO") Then
+            dgvRemessas.Columns("DESTINATARIO").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+        End If
     End Sub
 
     Private Sub btnNovaRemessa_Click(sender As Object, e As EventArgs) Handles btnNovaRemessa.Click
@@ -1034,6 +1065,10 @@ Public Class frmPrincipal
         If e.KeyCode = Keys.Enter Then aplicarFiltrosComponents()
     End Sub
 
+    Private Sub btnCompSearch_Click(sender As Object, e As EventArgs) Handles btnCompSearch.Click
+        aplicarFiltrosComponents()
+    End Sub
+
     Private Sub cboCompType_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboCompType.SelectedIndexChanged
         aplicarFiltrosComponents()
     End Sub
@@ -1042,8 +1077,12 @@ Public Class frmPrincipal
         aplicarFiltrosComponents()
     End Sub
 
-    Private Sub btnCompRefresh_Click2(sender As Object, e As EventArgs) Handles btnCompRelatorio.Click
+    Private Sub btnCompRelatorio_Click(sender As Object, e As EventArgs) Handles btnCompRelatorio.Click
         GerarRelatorioComponents()
+    End Sub
+
+    Private Sub btnCompRelatorioSummary_Click(sender As Object, e As EventArgs) Handles btnCompRelatorioSummary.Click
+        GerarRelatorioSummaryComponents()
     End Sub
 
     Private Sub btnCompAddToList_Click(sender As Object, e As EventArgs) Handles btnCompAddToList.Click
@@ -1103,6 +1142,39 @@ Public Class frmPrincipal
             lblCompListaInfo.Text = If(_listaComponentRelatorio.EstaAtiva,
                 "List mode: " & _listaComponentRelatorio.Count.ToString() & " component(s) selected", "")
         End If
+    End Sub
+
+    Private Sub GerarRelatorioSummaryComponents()
+        Try
+            Dim ds As DataSet = oCompController.fetchSummary()
+            If ds Is Nothing OrElse ds.Tables.Count = 0 OrElse ds.Tables(0).Rows.Count = 0 Then
+                MessageBox.Show("No components found.", "Consolidated Report",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim itens As List(Of DataRow) = ds.Tables(0).Rows.Cast(Of DataRow)().ToList()
+
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            If Not IO.Directory.Exists(outputPath) Then IO.Directory.CreateDirectory(outputPath)
+
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
+
+            Dim baseNome As String = "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+
+            Dim caminhoDoc  As String = ReportService.GerarRelatorioComponentsSummary(itens, outputPath, logoPath, baseNome)
+            Dim caminhoPdf  As String = ReportService.GerarPdfComponentsSummary(itens, outputPath, logoPath, baseNome)
+            Dim caminhoXlsx As String = ReportService.GerarExcelComponentsSummary(itens, outputPath, logoPath, baseNome)
+
+            Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
+            frmEmail.ShowDialog(Me)
+
+        Catch ex As Exception
+            MessageBox.Show("Error generating consolidated report: " & ex.Message, "Consolidated Report",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
     Private Sub GerarRelatorioComponents()

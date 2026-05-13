@@ -28,12 +28,14 @@ Partial Class frmPrincipal
     Friend WithEvents btnCompRefresh    As Button
     Friend WithEvents btnAddComponent   As Button
     Friend WithEvents txtCompSearch     As TextBox
+    Friend WithEvents btnCompSearch     As Button
     Friend WithEvents cboCompType       As ComboBox
     Friend WithEvents cboCompStatus     As ComboBox
-    Friend WithEvents btnCompRelatorio  As Button
-    Friend WithEvents btnCompAddToList  As Button
-    Friend WithEvents btnCompClearList  As Button
-    Friend WithEvents lblCompListaInfo  As Label
+    Friend WithEvents btnCompRelatorio        As Button
+    Friend WithEvents btnCompRelatorioSummary As Button
+    Friend WithEvents btnCompAddToList        As Button
+    Friend WithEvents btnCompClearList        As Button
+    Friend WithEvents lblCompListaInfo        As Label
     Friend WithEvents pnlAcoes As Panel
     Friend WithEvents btnBuscarUID As Button
     Friend WithEvents btnScanner As Button
@@ -780,30 +782,32 @@ Partial Class frmPrincipal
         Me.btnAddComponent         = New Button() With { .Text = "+ Add",         .Location = New Point(400, 12), .Size = New Size(90, 28), .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo, .FlatStyle = FlatStyle.Flat }
 
         Dim lblCSearch As New Label() With { .Text = "Search:", .Location = New Point(510, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
-        Me.txtCompSearch           = New TextBox() With { .Location = New Point(570, 12), .Size = New Size(160, 26) }
+        Me.txtCompSearch           = New TextBox() With { .Location = New Point(570, 12), .Size = New Size(120, 26) }
+        Me.btnCompSearch           = New Button()  With { .Text = "Search",  .Location = New Point(695, 12), .Size = New Size(60, 26) }
 
-        Dim lblCType As New Label() With { .Text = "Type:", .Location = New Point(745, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
-        Me.cboCompType             = New ComboBox() With { .Location = New Point(785, 12), .Size = New Size(100, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+        Dim lblCType As New Label() With { .Text = "Type:", .Location = New Point(760, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboCompType             = New ComboBox() With { .Location = New Point(800, 12), .Size = New Size(100, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
 
-        Dim lblCStat As New Label() With { .Text = "Status:", .Location = New Point(900, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
-        Me.cboCompStatus           = New ComboBox() With { .Location = New Point(948, 12), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+        Dim lblCStat As New Label() With { .Text = "Status:", .Location = New Point(915, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboCompStatus           = New ComboBox() With { .Location = New Point(963, 12), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
 
         Me.btnCompRelatorio          = New Button() With { .Text = "Report",      .Location = New Point(15, 52),  .Size = New Size(90, 28) }
-        Me.btnCompAddToList          = New Button() With { .Text = "+ Add to List", .Location = New Point(115, 52), .Size = New Size(110, 28),
+        Me.btnCompRelatorioSummary   = New Button() With { .Text = "Consolidated", .Location = New Point(115, 52), .Size = New Size(110, 28) }
+        Me.btnCompAddToList          = New Button() With { .Text = "+ Add to List", .Location = New Point(235, 52), .Size = New Size(110, 28),
                                                             .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo,
                                                             .FlatStyle = FlatStyle.Flat,
                                                             .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold) }
-        Me.btnCompClearList          = New Button() With { .Text = "Clear List",  .Location = New Point(235, 52), .Size = New Size(96, 28),
+        Me.btnCompClearList          = New Button() With { .Text = "Clear List",  .Location = New Point(355, 52), .Size = New Size(96, 28),
                                                             .BackColor = Color.FromArgb(124, 45, 18), .ForeColor = Color.White,
                                                             .FlatStyle = FlatStyle.Flat, .Enabled = False }
-        Me.lblCompListaInfo          = New Label() With { .Text = "",             .Location = New Point(345, 58),
+        Me.lblCompListaInfo          = New Label() With { .Text = "",             .Location = New Point(462, 58),
                                                            .AutoSize = True,
                                                            .Font = New Font("Segoe UI", 8.5F, FontStyle.Italic),
                                                            .ForeColor = TemaEscuro.Accent }
 
         pnlCompTop.Controls.AddRange({lblCompTit, lblCompTotal, btnCompRefresh, btnAddComponent,
-                                       lblCSearch, txtCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus,
-                                       btnCompRelatorio, btnCompAddToList, btnCompClearList, lblCompListaInfo})
+                                       lblCSearch, txtCompSearch, btnCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus,
+                                       btnCompRelatorio, btnCompRelatorioSummary, btnCompAddToList, btnCompClearList, lblCompListaInfo})
 
         Me.dgvComponents      = New DataGridView() With { .Dock = DockStyle.Fill }
 

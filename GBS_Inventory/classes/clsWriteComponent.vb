@@ -35,7 +35,9 @@ Public Class clsWriteComponent
         oPar(7)  = New OracleParameter("P_STATUS",         OracleDbType.Varchar2,  ParameterDirection.Input)
         oPar(8)  = New OracleParameter("P_SOURCE_BATCH",   OracleDbType.Varchar2,  ParameterDirection.Input)
         oPar(9)  = New OracleParameter("P_NOTES",          OracleDbType.Varchar2,  ParameterDirection.Input)
-        oPar(10) = New OracleParameter("P_UID_OUT",        OracleDbType.Varchar2, 20, ParameterDirection.Output)
+        oPar(10)           = New OracleParameter("P_UID_OUT", OracleDbType.Varchar2)
+        oPar(10).Direction = ParameterDirection.Output
+        oPar(10).Size      = 20
 
         oPar(0).Value = pComp.ComponentType
         oPar(1).Value = pComp.CapacityGB

@@ -88,6 +88,14 @@ Public Class UpgradeController
         Return oLeitura.selecionarOrigensDistintas()
     End Function
 
+    Public Function buscarComponentesParaInstalar(pType As String) As DataSet
+        Return oLeitura.selectComponentesParaInstalar(pType)
+    End Function
+
+    Public Function buscarComponentesInstalados(pType As String) As DataSet
+        Return oLeitura.selectComponentesInstalados(pType)
+    End Function
+
 #End Region
 
 End Class

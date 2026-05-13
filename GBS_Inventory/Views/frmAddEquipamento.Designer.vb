@@ -142,7 +142,7 @@ Partial Class frmAddEquipamento
         Me.cboCondition.Location     = New System.Drawing.Point(155, 242)
         Me.cboCondition.Size         = New System.Drawing.Size(200, 24)
         Me.cboCondition.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.cboCondition.Items.AddRange({"EXCELLENT", "GOOD", "FAIR", "POOR"})
+        Me.cboCondition.Items.AddRange({"EXCELLENT", "GOOD", "FAIR", "POOR", "NO_BATTERY"})
 
         ' Status *  — Y=276
         Me.lblStatus.AutoSize = True

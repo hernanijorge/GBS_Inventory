@@ -33,6 +33,10 @@ Public Class ComponentController
         Return oReader.selectDistinctBrands()
     End Function
 
+    Public Function fetchSummary() As DataSet
+        Return oReader.selectSummary()
+    End Function
+
 #End Region
 
 #Region "Operations"

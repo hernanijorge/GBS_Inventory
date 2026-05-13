@@ -748,6 +748,290 @@ Public Class ReportService
 
     End Function
 
+    ' ── Components Consolidated Summary Report ───────────────────────────────
+
+    Public Shared Function GerarExcelComponentsSummary(pItens As List(Of DataRow),
+                                                        pOutputPath As String,
+                                                        Optional pLogoPath As String = "",
+                                                        Optional baseNome As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim caminhoFinal As String = Path.Combine(pasta, nome & ".xlsx")
+
+        Dim colunas As (Key As String, Header As String, Largura As Double)() = {
+            ("COMPONENT_TYPE", "Type",         10),
+            ("CAPACITY_GB",    "Capacity (GB)", 14),
+            ("GENERATION",     "Generation",    14),
+            ("SPEED_MHZ",      "Speed (MHz)",   12),
+            ("TOTAL",          "Total",         10),
+            ("IN_STOCK",       "In Stock",      10),
+            ("INSTALLED",      "Installed",     10),
+            ("SOLD",           "Sold",           8),
+            ("SCRAPPED",       "Scrapped",      10)
+        }
+
+        Using pkg As New ExcelPackage()
+            Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Summary")
+            Dim linhaCabecalho As Integer = 5
+            Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+
+            ws.Row(1).Height = 40
+            ws.Row(2).Height = 20
+            ws.Row(3).Height = 20
+            ws.Row(4).Height = 20
+
+            ws.Cells(1, 4, 1, 7).Merge = True
+            ws.Cells(1, 4).Value = "GBS Components — Consolidated Summary"
+            ws.Cells(1, 4).Style.Font.Bold = True
+            ws.Cells(1, 4).Style.Font.Size = 16
+            ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
+
+            ws.Cells(2, 4, 2, 7).Merge = True
+            ws.Cells(2, 4).Value = "Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                                    " | Groups: " & pItens.Count.ToString()
+            ws.Cells(2, 4).Style.Font.Size = 10
+            ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
+
+            If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                Try
+                    Dim logo = ws.Drawings.AddPicture("GBS_Logo", New FileInfo(logoEfetivo))
+                    logo.SetPosition(0, 4, 0, 4)
+                    logo.SetSize(180, 60)
+                Catch
+                End Try
+            End If
+
+            Dim corHeader As System.Drawing.Color = System.Drawing.Color.FromArgb(55, 65, 81)
+            Dim corTotal  As System.Drawing.Color = System.Drawing.Color.FromArgb(16, 185, 129)
+            Dim corZebra  As System.Drawing.Color = System.Drawing.Color.FromArgb(249, 250, 251)
+
+            For i As Integer = 0 To colunas.Length - 1
+                Dim cell As ExcelRange = ws.Cells(linhaCabecalho, i + 1)
+                cell.Value = colunas(i).Header
+                cell.Style.Font.Bold = True
+                cell.Style.Fill.PatternType = ExcelFillStyle.Solid
+                cell.Style.Fill.BackgroundColor.SetColor(If(i >= 4, corTotal, corHeader))
+                cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
+                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+            Next
+
+            For rowIdx As Integer = 0 To pItens.Count - 1
+                Dim dr As DataRow = pItens(rowIdx)
+                Dim tbl As DataTable = dr.Table
+                For colIdx As Integer = 0 To colunas.Length - 1
+                    Dim val As String = ""
+                    If tbl.Columns.Contains(colunas(colIdx).Key) AndAlso Not IsDBNull(dr(colunas(colIdx).Key)) Then
+                        val = dr(colunas(colIdx).Key).ToString()
+                    End If
+                    Dim cell As ExcelRange = ws.Cells(linhaCabecalho + rowIdx + 1, colIdx + 1)
+                    cell.Value = val
+                    If colIdx >= 4 Then cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                Next
+                If rowIdx Mod 2 = 1 Then
+                    ws.Cells(linhaCabecalho + rowIdx + 1, 1, linhaCabecalho + rowIdx + 1, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
+                    ws.Cells(linhaCabecalho + rowIdx + 1, 1, linhaCabecalho + rowIdx + 1, colunas.Length).Style.Fill.BackgroundColor.SetColor(corZebra)
+                End If
+            Next
+
+            For i As Integer = 0 To colunas.Length - 1
+                ws.Column(i + 1).Width = colunas(i).Largura
+            Next
+
+            If pItens.Count > 0 Then
+                ws.Cells(linhaCabecalho, 1, linhaCabecalho + pItens.Count, colunas.Length).AutoFilter = True
+            End If
+            ws.View.FreezePanes(linhaCabecalho + 1, 1)
+            pkg.SaveAs(New FileInfo(caminhoFinal))
+        End Using
+
+        Return caminhoFinal
+
+    End Function
+
+    Public Shared Function GerarPdfComponentsSummary(pItens As List(Of DataRow),
+                                                      pOutputPath As String,
+                                                      Optional pLogoPath As String = "",
+                                                      Optional baseNome As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim caminhoFinal As String = Path.Combine(pasta, nome & ".pdf")
+
+        Dim colunas As (Key As String, Header As String, Largura As Single)() = {
+            ("COMPONENT_TYPE", "Type",         50),
+            ("CAPACITY_GB",    "Capacity (GB)", 60),
+            ("GENERATION",     "Generation",    60),
+            ("SPEED_MHZ",      "Speed (MHz)",   55),
+            ("TOTAL",          "Total",         36),
+            ("IN_STOCK",       "In Stock",      42),
+            ("INSTALLED",      "Installed",     44),
+            ("SOLD",           "Sold",          32),
+            ("SCRAPPED",       "Scrapped",      42)
+        }
+
+        Dim doc As New Document(PageSize.A4.Rotate(), 20, 20, 30, 20)
+        Using fs As New FileStream(caminhoFinal, FileMode.Create, FileAccess.Write)
+            PdfWriter.GetInstance(doc, fs)
+            doc.Open()
+
+            Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+            If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                Try
+                    Dim img As iTextSharp.text.Image = iTextSharp.text.Image.GetInstance(logoEfetivo)
+                    img.ScaleToFit(140, 50)
+                    img.Alignment = Element.ALIGN_LEFT
+                    doc.Add(img)
+                Catch
+                End Try
+            End If
+
+            Dim fontTitulo As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 13, New BaseColor(31, 41, 55))
+            Dim fontMeta   As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA, 8,  New BaseColor(107, 114, 128))
+            Dim pTitulo As New Paragraph("GBS Components — Consolidated Summary", fontTitulo)
+            pTitulo.SpacingBefore = 4
+            doc.Add(pTitulo)
+            Dim pMeta As New Paragraph("Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                                        "  |  Groups: " & pItens.Count.ToString(), fontMeta)
+            pMeta.SpacingAfter = 8
+            doc.Add(pMeta)
+
+            Dim totalCols As Integer = colunas.Length
+            Dim tabela As New PdfPTable(totalCols)
+            tabela.WidthPercentage = 100
+            Dim widths(totalCols - 1) As Single
+            For i As Integer = 0 To totalCols - 1
+                widths(i) = colunas(i).Largura
+            Next
+            tabela.SetWidths(widths)
+
+            Dim fontHdr  As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 7.5F, BaseColor.WHITE)
+            Dim fontData As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA, 8, New BaseColor(31, 41, 55))
+            Dim fontNum  As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 8, New BaseColor(5, 150, 105))
+            Dim hdrBg  As New BaseColor(55, 65, 81)
+            Dim hdrBg2 As New BaseColor(16, 185, 129)
+            Dim altBg  As New BaseColor(249, 250, 251)
+
+            For i As Integer = 0 To colunas.Length - 1
+                Dim cell As New PdfPCell(New Phrase(colunas(i).Header, fontHdr))
+                cell.BackgroundColor     = If(i >= 4, hdrBg2, hdrBg)
+                cell.HorizontalAlignment = Element.ALIGN_CENTER
+                cell.Padding             = 5
+                tabela.AddCell(cell)
+            Next
+
+            Dim rowIdx As Integer = 0
+            For Each row As DataRow In pItens
+                Dim dtRow As DataTable = row.Table
+                Dim bg As BaseColor = If(rowIdx Mod 2 = 1, altBg, BaseColor.WHITE)
+                For i As Integer = 0 To colunas.Length - 1
+                    Dim val As String = ""
+                    If dtRow.Columns.Contains(colunas(i).Key) AndAlso Not IsDBNull(row(colunas(i).Key)) Then
+                        val = row(colunas(i).Key).ToString()
+                    End If
+                    Dim fnt As iTextSharp.text.Font = If(i >= 4, fontNum, fontData)
+                    Dim cell As New PdfPCell(New Phrase(val, fnt))
+                    cell.BackgroundColor     = bg
+                    cell.Padding             = 4
+                    cell.HorizontalAlignment = If(i >= 4, Element.ALIGN_CENTER, Element.ALIGN_LEFT)
+                    tabela.AddCell(cell)
+                Next
+                rowIdx += 1
+            Next
+
+            doc.Add(tabela)
+            doc.Close()
+        End Using
+
+        Return caminhoFinal
+
+    End Function
+
+    Public Shared Function GerarRelatorioComponentsSummary(pItens As List(Of DataRow),
+                                                            pOutputPath As String,
+                                                            pLogoPath As String,
+                                                            Optional baseNome As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
+                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim caminhoFinal As String = Path.Combine(pasta, nome & ".doc")
+
+        Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+        Dim html As String = MontarHtmlComponentsSummary(pItens, logoEfetivo)
+        File.WriteAllText(caminhoFinal, html, Encoding.UTF8)
+
+        Return caminhoFinal
+
+    End Function
+
+    Private Shared Function MontarHtmlComponentsSummary(pItens As List(Of DataRow), pLogoPath As String) As String
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("<html><head><meta charset='utf-8' />")
+        sb.AppendLine("<style>")
+        sb.AppendLine("body{font-family:Segoe UI,Arial,sans-serif;font-size:10pt;color:#1f2937;margin:36px;}")
+        sb.AppendLine("h2{color:#1f2937;margin-bottom:4px;}")
+        sb.AppendLine(".sub{font-size:9pt;color:#6b7280;margin-bottom:22px;}")
+        sb.AppendLine("table{border-collapse:collapse;margin-top:10px;}")
+        sb.AppendLine("th{padding:7px 10px;text-align:center;font-size:8.5pt;}")
+        sb.AppendLine("th.desc{background:#374151;color:#fff;}")
+        sb.AppendLine("th.num{background:#10b981;color:#fff;}")
+        sb.AppendLine("td{border:1px solid #e5e7eb;padding:5px 10px;font-size:8.5pt;}")
+        sb.AppendLine("td.num{text-align:center;font-weight:bold;color:#059669;}")
+        sb.AppendLine("tr:nth-child(even) td{background:#f9fafb;}")
+        sb.AppendLine("</style></head><body>")
+
+        If Not String.IsNullOrWhiteSpace(pLogoPath) AndAlso File.Exists(pLogoPath) Then
+            Dim bytes As Byte() = File.ReadAllBytes(pLogoPath)
+            Dim b64 As String = Convert.ToBase64String(bytes)
+            Dim mime As String = ObterMime(pLogoPath)
+            sb.AppendLine("<div style='margin-bottom:14px;'><img src='data:" & mime & ";base64," & b64 &
+                          "' style='max-height:70px;max-width:220px;' /></div>")
+        End If
+
+        sb.AppendLine("<h2>GBS Components — Consolidated Summary</h2>")
+        sb.AppendLine("<div class='sub'>Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+                      " &nbsp;|&nbsp; Groups: " & pItens.Count.ToString() & "</div>")
+
+        sb.AppendLine("<table>")
+        sb.AppendLine("<tr>")
+        sb.AppendLine("<th class='desc'>Type</th><th class='desc'>Capacity (GB)</th>")
+        sb.AppendLine("<th class='desc'>Generation</th><th class='desc'>Speed (MHz)</th>")
+        sb.AppendLine("<th class='num'>Total</th><th class='num'>In Stock</th>")
+        sb.AppendLine("<th class='num'>Installed</th><th class='num'>Sold</th><th class='num'>Scrapped</th>")
+        sb.AppendLine("</tr>")
+
+        Dim descCols As String() = {"COMPONENT_TYPE", "CAPACITY_GB", "GENERATION", "SPEED_MHZ"}
+        Dim numCols  As String() = {"TOTAL", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"}
+
+        For Each row As DataRow In pItens
+            Dim tbl As DataTable = row.Table
+            sb.Append("<tr>")
+            For Each c As String In descCols
+                Dim val As String = If(tbl.Columns.Contains(c) AndAlso Not IsDBNull(row(c)), row(c).ToString(), "")
+                sb.Append("<td>" & HtmlEncode(val) & "</td>")
+            Next
+            For Each c As String In numCols
+                Dim val As String = If(tbl.Columns.Contains(c) AndAlso Not IsDBNull(row(c)), row(c).ToString(), "0")
+                sb.Append("<td class='num'>" & HtmlEncode(val) & "</td>")
+            Next
+            sb.AppendLine("</tr>")
+        Next
+
+        sb.AppendLine("</table></body></html>")
+        Return sb.ToString()
+
+    End Function
+
     Private Shared Function MontarHtmlComponents(pItens As List(Of DataRow), pLogoPath As String) As String
 
         Dim sb As New StringBuilder()

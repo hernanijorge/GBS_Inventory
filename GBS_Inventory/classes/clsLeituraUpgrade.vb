@@ -99,6 +99,48 @@ Public Class clsLeituraUpgrade
         End Try
     End Function
 
+    Public Function selectComponentesParaInstalar(pType As String) As DataSet
+        Dim sql As String =
+            "SELECT C.ID_COMPONENT," &
+            "       NVL(C.BRAND, '?') || ' ' || NVL(TO_CHAR(C.CAPACITY_GB),'?') || ' GB'" &
+            "    || CASE WHEN C.GENERATION  IS NOT NULL THEN ' ' || C.GENERATION  ELSE '' END" &
+            "    || CASE WHEN C.SPEED_MHZ   IS NOT NULL THEN ' ' || TO_CHAR(C.SPEED_MHZ) || 'MHz' ELSE '' END" &
+            "    || CASE WHEN C.PART_NUMBER IS NOT NULL THEN ' (' || C.PART_NUMBER || ')' ELSE '' END" &
+            "       AS DISPLAY_TEXT," &
+            "       C.CAPACITY_GB" &
+            "  FROM TBL_COMPONENT C" &
+            " WHERE C.STATUS = 'IN_STOCK' AND C.COMPONENT_TYPE = :P_TYPE" &
+            " ORDER BY C.BRAND, C.CAPACITY_GB"
+        Dim par As New OracleParameter("P_TYPE", OracleDbType.Varchar2, ParameterDirection.Input)
+        par.Value = pType
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sql, New OracleParameter() {par})
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+    End Function
+
+    Public Function selectComponentesInstalados(pType As String) As DataSet
+        Dim sql As String =
+            "SELECT C.ID_COMPONENT," &
+            "       NVL(C.BRAND, '?') || ' ' || NVL(TO_CHAR(C.CAPACITY_GB),'?') || ' GB'" &
+            "    || CASE WHEN C.GENERATION  IS NOT NULL THEN ' ' || C.GENERATION  ELSE '' END" &
+            "    || CASE WHEN C.SPEED_MHZ   IS NOT NULL THEN ' ' || TO_CHAR(C.SPEED_MHZ) || 'MHz' ELSE '' END" &
+            "    || CASE WHEN C.PART_NUMBER IS NOT NULL THEN ' (' || C.PART_NUMBER || ')' ELSE '' END" &
+            "       AS DISPLAY_TEXT," &
+            "       C.CAPACITY_GB" &
+            "  FROM TBL_COMPONENT C" &
+            " WHERE C.STATUS = 'INSTALLED' AND C.COMPONENT_TYPE = :P_TYPE" &
+            " ORDER BY C.BRAND, C.CAPACITY_GB"
+        Dim par As New OracleParameter("P_TYPE", OracleDbType.Varchar2, ParameterDirection.Input)
+        par.Value = pType
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text, sql, New OracleParameter() {par})
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+    End Function
+
     ''' <summary>
     ''' Upgrades dos últimos pDias dias com nome do cliente (DESTINATARIO da remessa).
     ''' Equipamentos sem remessa aparecem com CUSTOMER = 'Unassigned'.

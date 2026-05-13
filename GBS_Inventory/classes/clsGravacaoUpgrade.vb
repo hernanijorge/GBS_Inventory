@@ -152,7 +152,7 @@ Public Class clsGravacaoUpgrade
 
     Public Function incluirUpgrade(pUpgrade As Upgrade) As Integer
 
-        Dim oPar(7) As OracleParameter
+        Dim oPar(10) As OracleParameter
         Dim vRamAnterior As Integer = 0
         Dim vRamNova As Integer = 0
         Dim vStorageAnterior As Integer = 0
@@ -173,25 +173,31 @@ Public Class clsGravacaoUpgrade
                 ' Componentes nao mapeados ainda nao alteram RAM/STORAGE no banco.
         End Select
 
-        oPar(0) = New OracleParameter("P_ID_EQUIPAMENTO", OracleDbType.Int32, ParameterDirection.Input)
-        oPar(1) = New OracleParameter("P_TIPO_UPGRADE", OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(2) = New OracleParameter("P_RAM_ANTERIOR_GB", OracleDbType.Int32, ParameterDirection.Input)
-        oPar(3) = New OracleParameter("P_RAM_NOVA_GB", OracleDbType.Int32, ParameterDirection.Input)
-        oPar(4) = New OracleParameter("P_STORAGE_ANTERIOR_GB", OracleDbType.Int32, ParameterDirection.Input)
-        oPar(5) = New OracleParameter("P_STORAGE_NOVO_GB", OracleDbType.Int32, ParameterDirection.Input)
-        oPar(6) = New OracleParameter("P_TECNICO", OracleDbType.Varchar2, ParameterDirection.Input)
-        oPar(7) = New OracleParameter("P_OBSERVACAO", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(0)  = New OracleParameter("P_ID_EQUIPAMENTO",      OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(1)  = New OracleParameter("P_TIPO_UPGRADE",         OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(2)  = New OracleParameter("P_RAM_ANTERIOR_GB",      OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(3)  = New OracleParameter("P_RAM_NOVA_GB",          OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(4)  = New OracleParameter("P_STORAGE_ANTERIOR_GB",  OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(5)  = New OracleParameter("P_STORAGE_NOVO_GB",      OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(6)  = New OracleParameter("P_TECNICO",              OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(7)  = New OracleParameter("P_OBSERVACAO",           OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(8)  = New OracleParameter("P_ID_COMPONENT",         OracleDbType.Int32,    ParameterDirection.Input)
+        oPar(9)  = New OracleParameter("P_ACTION_TYPE",          OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(10) = New OracleParameter("P_COMP_NEW_STATUS",      OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
-            oPar(0).Value = pUpgrade.IdEquipamento
-            oPar(1).Value = vTipo
-            oPar(2).Value = vRamAnterior
-            oPar(3).Value = vRamNova
-            oPar(4).Value = vStorageAnterior
-            oPar(5).Value = vStorageNova
-            oPar(6).Value = If(String.IsNullOrWhiteSpace(pUpgrade.Technician), DBNull.Value, CObj(pUpgrade.Technician.Trim()))
-            oPar(7).Value = If(String.IsNullOrWhiteSpace(vObservacao), DBNull.Value, CObj(vObservacao))
+            oPar(0).Value  = pUpgrade.IdEquipamento
+            oPar(1).Value  = vTipo
+            oPar(2).Value  = vRamAnterior
+            oPar(3).Value  = vRamNova
+            oPar(4).Value  = vStorageAnterior
+            oPar(5).Value  = vStorageNova
+            oPar(6).Value  = If(String.IsNullOrWhiteSpace(pUpgrade.Technician),    DBNull.Value, CObj(pUpgrade.Technician.Trim()))
+            oPar(7).Value  = If(String.IsNullOrWhiteSpace(vObservacao),            DBNull.Value, CObj(vObservacao))
+            oPar(8).Value  = If(Not pUpgrade.IdComponent.HasValue,                 DBNull.Value, CObj(pUpgrade.IdComponent.Value))
+            oPar(9).Value  = If(String.IsNullOrWhiteSpace(pUpgrade.ActionType),    CObj("MANUAL"), CObj(pUpgrade.ActionType.Trim().ToUpperInvariant()))
+            oPar(10).Value = If(String.IsNullOrWhiteSpace(pUpgrade.CompNewStatus), DBNull.Value, CObj(pUpgrade.CompNewStatus.Trim().ToUpperInvariant()))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_UPGRADE.PROC_INSERT_UPGRADE", oPar)
 

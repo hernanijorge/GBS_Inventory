@@ -4,171 +4,383 @@ Imports System.Windows.Forms
 Partial Class frmUpgrade
     Inherits Form
 
-    Friend WithEvents lblTitulo As Label
-    Friend WithEvents lblUID As Label
-    Friend WithEvents lblComponente As Label
-    Friend WithEvents cboComponente As ComboBox
-    Friend WithEvents lblValorAntes As Label
-    Friend WithEvents txtValorAntes As TextBox
-    Friend WithEvents lblValorDepois As Label
-    Friend WithEvents txtValorDepois As TextBox
-    Friend WithEvents lblPartSerial As Label
-    Friend WithEvents txtPartSerial As TextBox
-    Friend WithEvents lblOrigem As Label
-    Friend WithEvents cboOrigem As ComboBox
-    Friend WithEvents lblCusto As Label
-    Friend WithEvents txtCusto As TextBox
-    Friend WithEvents lblTecnico As Label
-    Friend WithEvents txtTecnico As TextBox
-    Friend WithEvents lblNotas As Label
-    Friend WithEvents txtNotas As TextBox
-    Friend WithEvents btnSalvar As Button
-    Friend WithEvents btnCancelar As Button
+    Friend WithEvents lblTitulo          As Label
+    Friend WithEvents lblUID             As Label
+
+    ' Action type
+    Friend WithEvents lblAction          As Label
+    Friend WithEvents pnlAction          As Panel
+    Friend WithEvents rbInstall          As RadioButton
+    Friend WithEvents rbRemove           As RadioButton
+    Friend WithEvents rbExtract          As RadioButton
+    Friend WithEvents rbManual           As RadioButton
+
+    ' Component type + selectors
+    Friend WithEvents lblComponente      As Label
+    Friend WithEvents cboComponente      As ComboBox
+    Friend WithEvents lblOrigem          As Label
+    Friend WithEvents cboOrigem          As ComboBox
+    Friend WithEvents lblCompStock       As Label
+    Friend WithEvents cboComponentStock  As ComboBox
+
+    ' Extract to Stock panel
+    Friend WithEvents pnlExtract         As Panel
+    Friend WithEvents lblExtBrand        As Label
+    Friend WithEvents txtExtractBrand    As TextBox
+    Friend WithEvents lblExtCap          As Label
+    Friend WithEvents nudExtractCapacity As NumericUpDown
+    Friend WithEvents lblExtQty          As Label
+    Friend WithEvents nudExtractQty      As NumericUpDown
+    Friend WithEvents lblExtGen          As Label
+    Friend WithEvents txtExtractGeneration As TextBox
+    Friend WithEvents lblExtSpeed        As Label
+    Friend WithEvents nudExtractSpeed    As NumericUpDown
+
+    ' Disposition panel (REMOVE only)
+    Friend WithEvents pnlDisposition     As Panel
+    Friend WithEvents lblDisposition     As Label
+    Friend WithEvents rbReturnToStock    As RadioButton
+    Friend WithEvents rbScrap            As RadioButton
+
+    ' Value before / after
+    Friend WithEvents lblValorAntes      As Label
+    Friend WithEvents txtValorAntes      As TextBox
+    Friend WithEvents lblValorDepois     As Label
+    Friend WithEvents txtValorDepois     As TextBox
+
+    ' Part serial / technician / cost
+    Friend WithEvents lblPartSerial      As Label
+    Friend WithEvents txtPartSerial      As TextBox
+    Friend WithEvents lblTecnico         As Label
+    Friend WithEvents txtTecnico         As TextBox
+    Friend WithEvents lblCusto           As Label
+    Friend WithEvents txtCusto           As TextBox
+
+    ' Notes + buttons
+    Friend WithEvents lblNotas           As Label
+    Friend WithEvents txtNotas           As TextBox
+    Friend WithEvents btnSalvar          As Button
+    Friend WithEvents btnCancelar        As Button
 
     Private Sub InitializeComponent()
 
         Me.SuspendLayout()
 
-        Me.Text = "Register Upgrade"
-        Me.Size = New Size(600, 560)
-        Me.StartPosition = FormStartPosition.CenterParent
-        Me.BackColor = TemaEscuro.Fundo
-        Me.Font = New Font("Segoe UI", 9)
+        Me.Text            = "Register Upgrade"
+        Me.Size            = New Size(600, 630)
+        Me.StartPosition   = FormStartPosition.CenterParent
+        Me.BackColor       = TemaEscuro.Fundo
+        Me.Font            = New Font("Segoe UI", 9)
         Me.FormBorderStyle = FormBorderStyle.FixedDialog
-        Me.MaximizeBox = False
-        Me.MinimizeBox = False
+        Me.MaximizeBox     = False
+        Me.MinimizeBox     = False
 
-        ' Título
-        Me.lblTitulo = New Label()
-        Me.lblTitulo.Text = "New Component Upgrade"
-        Me.lblTitulo.Font = New Font("Segoe UI", 13, FontStyle.Bold)
-        Me.lblTitulo.ForeColor = TemaEscuro.Accent
-        Me.lblTitulo.Location = New Point(20, 15)
-        Me.lblTitulo.AutoSize = True
+        ' ── Header ────────────────────────────────────────────────────────────
+        Me.lblTitulo = New Label() With {
+            .Text      = "New Component Upgrade",
+            .Font      = New Font("Segoe UI", 13, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .Location  = New Point(20, 15),
+            .AutoSize  = True
+        }
+        Me.lblUID = New Label() With {
+            .Text      = "UID:",
+            .Location  = New Point(20, 50),
+            .Size      = New Size(550, 20),
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Consolas", 10, FontStyle.Bold)
+        }
 
-        Me.lblUID = New Label()
-        Me.lblUID.Text = "UID:"
-        Me.lblUID.Location = New Point(20, 50)
-        Me.lblUID.Size = New Size(550, 20)
-        Me.lblUID.ForeColor = TemaEscuro.TextoMutado
-        Me.lblUID.Font = New Font("Consolas", 10, FontStyle.Bold)
+        ' ── Action type (y=80) ────────────────────────────────────────────────
+        Me.lblAction = New Label() With {
+            .Text      = "Action Type *",
+            .Location  = New Point(20, 82),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
 
-        ' Componente
-        Me.lblComponente = New Label()
-        Me.lblComponente.Text = "Component *"
-        Me.lblComponente.Location = New Point(20, 85)
-        Me.lblComponente.AutoSize = True
-        Me.lblComponente.ForeColor = TemaEscuro.TextoMutado
+        Me.rbInstall = New RadioButton() With {
+            .Text      = "Install from Inventory",
+            .Location  = New Point(0, 5),
+            .Size      = New Size(158, 20),
+            .ForeColor = TemaEscuro.Texto,
+            .Checked   = True
+        }
+        Me.rbRemove = New RadioButton() With {
+            .Text      = "Remove Component",
+            .Location  = New Point(161, 5),
+            .Size      = New Size(140, 20),
+            .ForeColor = TemaEscuro.Texto
+        }
+        Me.rbExtract = New RadioButton() With {
+            .Text      = "Extract to Stock",
+            .Location  = New Point(304, 5),
+            .Size      = New Size(125, 20),
+            .ForeColor = Color.FromArgb(100, 200, 120)
+        }
+        Me.rbManual = New RadioButton() With {
+            .Text      = "Manual Entry",
+            .Location  = New Point(432, 5),
+            .Size      = New Size(105, 20),
+            .ForeColor = TemaEscuro.Texto
+        }
 
-        Me.cboComponente = New ComboBox()
-        Me.cboComponente.Location = New Point(20, 105)
-        Me.cboComponente.Size = New Size(200, 24)
-        Me.cboComponente.DropDownStyle = ComboBoxStyle.DropDownList
+        Me.pnlAction = New Panel() With {
+            .Location  = New Point(20, 98),
+            .Size      = New Size(540, 30),
+            .BackColor = Color.Transparent
+        }
+        Me.pnlAction.Controls.AddRange({rbInstall, rbRemove, rbExtract, rbManual})
 
-        ' Origem
-        Me.lblOrigem = New Label()
-        Me.lblOrigem.Text = "Part Source *"
-        Me.lblOrigem.Location = New Point(240, 85)
-        Me.lblOrigem.AutoSize = True
-        Me.lblOrigem.ForeColor = TemaEscuro.TextoMutado
+        ' ── Component type (y=142) ────────────────────────────────────────────
+        Me.lblComponente = New Label() With {
+            .Text      = "Component *",
+            .Location  = New Point(20, 142),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.cboComponente = New ComboBox() With {
+            .Location      = New Point(20, 162),
+            .Size          = New Size(200, 24),
+            .DropDownStyle = ComboBoxStyle.DropDownList
+        }
 
-        Me.cboOrigem = New ComboBox()
-        Me.cboOrigem.Location = New Point(240, 105)
-        Me.cboOrigem.Size = New Size(200, 24)
-        Me.cboOrigem.DropDownStyle = ComboBoxStyle.DropDown
+        ' Part Source — MANUAL mode only
+        Me.lblOrigem = New Label() With {
+            .Text      = "Part Source",
+            .Location  = New Point(240, 142),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Visible   = False
+        }
+        Me.cboOrigem = New ComboBox() With {
+            .Location      = New Point(240, 162),
+            .Size          = New Size(320, 24),
+            .DropDownStyle = ComboBoxStyle.DropDown,
+            .Visible       = False
+        }
 
-        ' Custo
-        Me.lblCusto = New Label()
-        Me.lblCusto.Text = "Cost (USD)"
-        Me.lblCusto.Location = New Point(460, 85)
-        Me.lblCusto.AutoSize = True
-        Me.lblCusto.ForeColor = TemaEscuro.TextoMutado
+        ' Stock selector — INSTALL / REMOVE mode
+        Me.lblCompStock = New Label() With {
+            .Text      = "Select from Inventory *",
+            .Location  = New Point(240, 142),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent
+        }
+        Me.cboComponentStock = New ComboBox() With {
+            .Location      = New Point(240, 162),
+            .Size          = New Size(320, 24),
+            .DropDownStyle = ComboBoxStyle.DropDownList
+        }
 
-        Me.txtCusto = New TextBox()
-        Me.txtCusto.Location = New Point(460, 105)
-        Me.txtCusto.Size = New Size(100, 24)
-        Me.txtCusto.Text = "0.00"
-        Me.txtCusto.TextAlign = HorizontalAlignment.Right
+        ' ── Extract to Stock panel (x=240, y=142, EXTRACT mode only) ─────────
+        Me.lblExtBrand = New Label() With {
+            .Text      = "Brand",
+            .Location  = New Point(0, 0),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtExtractBrand = New TextBox() With {
+            .Location  = New Point(0, 18),
+            .Size      = New Size(120, 24)
+        }
 
-        ' Valor antes
-        Me.lblValorAntes = New Label()
-        Me.lblValorAntes.Text = "Value BEFORE (e.g.: 8 GB)"
-        Me.lblValorAntes.Location = New Point(20, 145)
-        Me.lblValorAntes.AutoSize = True
-        Me.lblValorAntes.ForeColor = TemaEscuro.TextoMutado
+        Me.lblExtCap = New Label() With {
+            .Text      = "Capacity (GB) *",
+            .Location  = New Point(130, 0),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent
+        }
+        Me.nudExtractCapacity = New NumericUpDown() With {
+            .Location  = New Point(130, 18),
+            .Size      = New Size(75, 24),
+            .Minimum   = 1,
+            .Maximum   = 9999,
+            .Value     = 8
+        }
 
-        Me.txtValorAntes = New TextBox()
-        Me.txtValorAntes.Location = New Point(20, 165)
-        Me.txtValorAntes.Size = New Size(260, 24)
+        Me.lblExtQty = New Label() With {
+            .Text      = "Qty *",
+            .Location  = New Point(215, 0),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent
+        }
+        Me.nudExtractQty = New NumericUpDown() With {
+            .Location  = New Point(215, 18),
+            .Size      = New Size(60, 24),
+            .Minimum   = 1,
+            .Maximum   = 999,
+            .Value     = 1
+        }
 
-        ' Valor depois
-        Me.lblValorDepois = New Label()
-        Me.lblValorDepois.Text = "Value AFTER (e.g.: 16 GB) *"
-        Me.lblValorDepois.Location = New Point(300, 145)
-        Me.lblValorDepois.AutoSize = True
-        Me.lblValorDepois.ForeColor = TemaEscuro.Accent
+        Me.lblExtGen = New Label() With {
+            .Text      = "Generation",
+            .Location  = New Point(0, 52),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtExtractGeneration = New TextBox() With {
+            .Location  = New Point(0, 70),
+            .Size      = New Size(120, 24)
+        }
 
-        Me.txtValorDepois = New TextBox()
-        Me.txtValorDepois.Location = New Point(300, 165)
-        Me.txtValorDepois.Size = New Size(260, 24)
+        Me.lblExtSpeed = New Label() With {
+            .Text      = "Speed (MHz)",
+            .Location  = New Point(130, 52),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.nudExtractSpeed = New NumericUpDown() With {
+            .Location  = New Point(130, 70),
+            .Size      = New Size(80, 24),
+            .Minimum   = 0,
+            .Maximum   = 99999,
+            .Value     = 0
+        }
 
-        ' Part Serial
-        Me.lblPartSerial = New Label()
-        Me.lblPartSerial.Text = "Part Serial (if applicable)"
-        Me.lblPartSerial.Location = New Point(20, 205)
-        Me.lblPartSerial.AutoSize = True
-        Me.lblPartSerial.ForeColor = TemaEscuro.TextoMutado
+        Me.pnlExtract = New Panel() With {
+            .Location  = New Point(240, 142),
+            .Size      = New Size(320, 100),
+            .BackColor = Color.Transparent,
+            .Visible   = False
+        }
+        Me.pnlExtract.Controls.AddRange({
+            lblExtBrand, txtExtractBrand,
+            lblExtCap, nudExtractCapacity,
+            lblExtQty, nudExtractQty,
+            lblExtGen, txtExtractGeneration,
+            lblExtSpeed, nudExtractSpeed})
 
-        Me.txtPartSerial = New TextBox()
-        Me.txtPartSerial.Location = New Point(20, 225)
-        Me.txtPartSerial.Size = New Size(260, 24)
+        ' ── Disposition panel — REMOVE mode only (y=196) ─────────────────────
+        Me.lblDisposition = New Label() With {
+            .Text      = "Disposition:",
+            .Location  = New Point(2, 5),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.rbReturnToStock = New RadioButton() With {
+            .Text      = "Return to Stock",
+            .Location  = New Point(80, 3),
+            .Size      = New Size(130, 20),
+            .ForeColor = TemaEscuro.Texto,
+            .Checked   = True
+        }
+        Me.rbScrap = New RadioButton() With {
+            .Text      = "Scrap",
+            .Location  = New Point(220, 3),
+            .Size      = New Size(80, 20),
+            .ForeColor = Color.FromArgb(210, 90, 60)
+        }
+        Me.pnlDisposition = New Panel() With {
+            .Location  = New Point(240, 196),
+            .Size      = New Size(320, 28),
+            .BackColor = Color.Transparent,
+            .Visible   = False
+        }
+        Me.pnlDisposition.Controls.AddRange({lblDisposition, rbReturnToStock, rbScrap})
 
-        ' Técnico
-        Me.lblTecnico = New Label()
-        Me.lblTecnico.Text = "Technician"
-        Me.lblTecnico.Location = New Point(300, 205)
-        Me.lblTecnico.AutoSize = True
-        Me.lblTecnico.ForeColor = TemaEscuro.TextoMutado
+        ' ── Value Before / After (y=234) ──────────────────────────────────────
+        Me.lblValorAntes = New Label() With {
+            .Text      = "Value BEFORE (e.g.: 32 GB)",
+            .Location  = New Point(20, 234),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtValorAntes = New TextBox() With {
+            .Location  = New Point(20, 254),
+            .Size      = New Size(260, 24)
+        }
 
-        Me.txtTecnico = New TextBox()
-        Me.txtTecnico.Location = New Point(300, 225)
-        Me.txtTecnico.Size = New Size(260, 24)
+        Me.lblValorDepois = New Label() With {
+            .Text      = "Value AFTER (e.g.: 8 GB) *",
+            .Location  = New Point(300, 234),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.Accent
+        }
+        Me.txtValorDepois = New TextBox() With {
+            .Location  = New Point(300, 254),
+            .Size      = New Size(260, 24)
+        }
 
-        ' Notas
-        Me.lblNotas = New Label()
-        Me.lblNotas.Text = "Notes"
-        Me.lblNotas.Location = New Point(20, 265)
-        Me.lblNotas.AutoSize = True
-        Me.lblNotas.ForeColor = TemaEscuro.TextoMutado
+        ' ── Part Serial / Technician (y=294) ──────────────────────────────────
+        Me.lblPartSerial = New Label() With {
+            .Text      = "Part Serial (if applicable)",
+            .Location  = New Point(20, 294),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtPartSerial = New TextBox() With {
+            .Location  = New Point(20, 314),
+            .Size      = New Size(260, 24)
+        }
 
-        Me.txtNotas = New TextBox()
-        Me.txtNotas.Location = New Point(20, 285)
-        Me.txtNotas.Size = New Size(540, 130)
-        Me.txtNotas.Multiline = True
-        Me.txtNotas.ScrollBars = ScrollBars.Vertical
+        Me.lblTecnico = New Label() With {
+            .Text      = "Technician",
+            .Location  = New Point(300, 294),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtTecnico = New TextBox() With {
+            .Location  = New Point(300, 314),
+            .Size      = New Size(260, 24)
+        }
 
-        ' Botões
-        Me.btnCancelar = New Button()
-        Me.btnCancelar.Text = "Cancel"
-        Me.btnCancelar.Location = New Point(320, 440)
-        Me.btnCancelar.Size = New Size(110, 35)
+        ' ── Cost (y=354) ──────────────────────────────────────────────────────
+        Me.lblCusto = New Label() With {
+            .Text      = "Cost (USD)",
+            .Location  = New Point(20, 354),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtCusto = New TextBox() With {
+            .Location  = New Point(20, 374),
+            .Size      = New Size(120, 24),
+            .Text      = "0.00",
+            .TextAlign = HorizontalAlignment.Right
+        }
 
-        Me.btnSalvar = New Button()
-        Me.btnSalvar.Text = "Save Upgrade"
-        Me.btnSalvar.Location = New Point(440, 440)
-        Me.btnSalvar.Size = New Size(120, 35)
-        Me.btnSalvar.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+        ' ── Notes (y=410) ─────────────────────────────────────────────────────
+        Me.lblNotas = New Label() With {
+            .Text      = "Notes",
+            .Location  = New Point(20, 410),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado
+        }
+        Me.txtNotas = New TextBox() With {
+            .Location   = New Point(20, 430),
+            .Size       = New Size(540, 90),
+            .Multiline  = True,
+            .ScrollBars = ScrollBars.Vertical
+        }
 
-        Me.Controls.AddRange({lblTitulo, lblUID,
-                               lblComponente, cboComponente,
-                               lblOrigem, cboOrigem,
-                               lblCusto, txtCusto,
-                               lblValorAntes, txtValorAntes,
-                               lblValorDepois, txtValorDepois,
-                               lblPartSerial, txtPartSerial,
-                               lblTecnico, txtTecnico,
-                               lblNotas, txtNotas,
-                               btnCancelar, btnSalvar})
+        ' ── Buttons (y=540) ───────────────────────────────────────────────────
+        Me.btnCancelar = New Button() With {
+            .Text     = "Cancel",
+            .Location = New Point(320, 540),
+            .Size     = New Size(110, 35)
+        }
+        Me.btnSalvar = New Button() With {
+            .Text     = "Save Upgrade",
+            .Location = New Point(440, 540),
+            .Size     = New Size(120, 35),
+            .Font     = New Font("Segoe UI", 9, FontStyle.Bold)
+        }
+
+        Me.Controls.AddRange({
+            lblTitulo, lblUID,
+            lblAction, pnlAction,
+            lblComponente, cboComponente,
+            lblOrigem, cboOrigem,
+            lblCompStock, cboComponentStock,
+            pnlExtract,
+            pnlDisposition,
+            lblValorAntes, txtValorAntes,
+            lblValorDepois, txtValorDepois,
+            lblPartSerial, txtPartSerial,
+            lblTecnico, txtTecnico,
+            lblCusto, txtCusto,
+            lblNotas, txtNotas,
+            btnCancelar, btnSalvar})
 
         Me.ResumeLayout(False)
 

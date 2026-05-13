@@ -25,6 +25,15 @@ Namespace Models
         Public Property Notes           As String
         Public Property DataUpgrade     As Date?
 
+        ''' <summary>FK to TBL_COMPONENT — set when ACTION_TYPE is INSTALL or REMOVE</summary>
+        Public Property IdComponent     As Integer?
+
+        ''' <summary>INSTALL, REMOVE, or MANUAL (no stock tracking)</summary>
+        Public Property ActionType      As String = "MANUAL"
+
+        ''' <summary>For REMOVE action: IN_STOCK or SCRAPPED</summary>
+        Public Property CompNewStatus   As String
+
         ''' <summary>Descrição amigável do componente</summary>
         Public ReadOnly Property DescricaoComponente As String
             Get

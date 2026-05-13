@@ -25,7 +25,7 @@ Partial Class frmAddComponent
     Private Sub InitializeComponent()
 
         Me.Text            = "Add Component"
-        Me.Size            = New Size(620, 460)
+        Me.Size            = New Size(620, 520)
         Me.FormBorderStyle = FormBorderStyle.FixedDialog
         Me.MaximizeBox     = False
         Me.MinimizeBox     = False
