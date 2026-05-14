@@ -120,7 +120,7 @@ Public Class clsLeituraRemessa
                 "SELECT E.ID_EQUIPAMENTO, E.INTERNAL_UID, E.SERIAL_NUMBER, " &
                 "       E.MARCA, E.MODEL, E.PROCESSADOR, E.RAM_GB, E.STORAGE_GB, E.STATUS " &
                 "  FROM TBL_EQUIPAMENTO E " &
-                " WHERE E.STATUS = 'IN_STOCK' " &
+                " WHERE E.STATUS IN ('IN_STOCK','AVAILABLE','IN_REPAIR') " &
                 "   AND (UPPER(NVL(E.INTERNAL_UID,''))  LIKE :P_PESQ_UID " &
                 "    OR  UPPER(NVL(E.MODEL,''))          LIKE :P_PESQ_MODEL " &
                 "    OR  UPPER(NVL(E.MARCA,''))          LIKE :P_PESQ_MARCA) " &
