@@ -160,6 +160,9 @@ Public Class clsGravacaoUpgrade
         Dim vTipo As String = If(pUpgrade.ComponentType, String.Empty).Trim().ToUpperInvariant()
         Dim vObservacao As String = MontarObservacao(pUpgrade)
 
+        Dim isRam     As Boolean = (vTipo = "RAM")
+        Dim isStorage As Boolean = (vTipo = "SSD" OrElse vTipo = "HDD" OrElse vTipo = "STORAGE")
+
         Select Case vTipo
             Case "RAM"
                 vRamAnterior = ExtrairNumeroInteiro(pUpgrade.ValueBefore)
@@ -189,10 +192,10 @@ Public Class clsGravacaoUpgrade
 
             oPar(0).Value  = pUpgrade.IdEquipamento
             oPar(1).Value  = vTipo
-            oPar(2).Value  = vRamAnterior
-            oPar(3).Value  = vRamNova
-            oPar(4).Value  = vStorageAnterior
-            oPar(5).Value  = vStorageNova
+            oPar(2).Value  = If(isRam,     CObj(vRamAnterior),    DBNull.Value)
+            oPar(3).Value  = If(isRam,     CObj(vRamNova),         DBNull.Value)
+            oPar(4).Value  = If(isStorage, CObj(vStorageAnterior), DBNull.Value)
+            oPar(5).Value  = If(isStorage, CObj(vStorageNova),     DBNull.Value)
             oPar(6).Value  = If(String.IsNullOrWhiteSpace(pUpgrade.Technician),    DBNull.Value, CObj(pUpgrade.Technician.Trim()))
             oPar(7).Value  = If(String.IsNullOrWhiteSpace(vObservacao),            DBNull.Value, CObj(vObservacao))
             oPar(8).Value  = If(Not pUpgrade.IdComponent.HasValue,                 DBNull.Value, CObj(pUpgrade.IdComponent.Value))

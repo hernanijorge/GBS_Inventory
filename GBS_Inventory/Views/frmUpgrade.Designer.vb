@@ -279,26 +279,27 @@ Partial Class frmUpgrade
         }
         Me.pnlDisposition.Controls.AddRange({lblDisposition, rbReturnToStock, rbScrap})
 
-        ' ── Value Before / After (y=234) ──────────────────────────────────────
+        ' ── Value Before / After (y=250) ──────────────────────────────────────
+        ' y=250 keeps both rows below pnlExtract bottom (y=142+100=242)
         Me.lblValorAntes = New Label() With {
             .Text      = "Value BEFORE (e.g.: 32 GB)",
-            .Location  = New Point(20, 234),
+            .Location  = New Point(20, 250),
             .AutoSize  = True,
             .ForeColor = TemaEscuro.TextoMutado
         }
         Me.txtValorAntes = New TextBox() With {
-            .Location  = New Point(20, 254),
+            .Location  = New Point(20, 270),
             .Size      = New Size(260, 24)
         }
 
         Me.lblValorDepois = New Label() With {
             .Text      = "Value AFTER (e.g.: 8 GB) *",
-            .Location  = New Point(300, 234),
+            .Location  = New Point(300, 250),
             .AutoSize  = True,
             .ForeColor = TemaEscuro.Accent
         }
         Me.txtValorDepois = New TextBox() With {
-            .Location  = New Point(300, 254),
+            .Location  = New Point(300, 270),
             .Size      = New Size(260, 24)
         }
 

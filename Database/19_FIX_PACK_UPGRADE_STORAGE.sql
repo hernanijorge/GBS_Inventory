@@ -1,46 +1,14 @@
 -- ============================================================================
--- GBS Inventory - PACK_UPGRADE
--- Schema: colunas numéricas (RAM_NOVA_GB, STORAGE_NOVO_GB).
--- Os SELECTs derivam VALUE_BEFORE/VALUE_AFTER por TIPO para alinhar
--- com os nomes esperados pelo frmHistoricoEquipamento.
+-- GBS Inventory - Migration 19
+-- Corrige PROC_INSERT_UPGRADE: STORAGE_GB nao era atualizado quando
+-- o novo valor era 0 (ex: SSD extraido da maquina).
+--
+-- Causa: UPDATE usava > 0 como condicao, bloqueando valor 0.
+-- Fix:   IS NOT NULL — o VB agora envia NULL para campos nao aplicaveis
+--        e o valor real (incluindo 0) para o campo do tipo em questao.
 -- ============================================================================
 
-CREATE OR REPLACE PACKAGE PACK_UPGRADE AS
-
-    PROCEDURE PROC_INSERT_UPGRADE(
-        P_ID_EQUIPAMENTO      IN NUMBER,
-        P_TIPO_UPGRADE        IN VARCHAR2,
-        P_RAM_ANTERIOR_GB     IN NUMBER,
-        P_RAM_NOVA_GB         IN NUMBER,
-        P_STORAGE_ANTERIOR_GB IN NUMBER,
-        P_STORAGE_NOVO_GB     IN NUMBER,
-        P_TECNICO             IN VARCHAR2,
-        P_OBSERVACAO          IN VARCHAR2,
-        P_ID_COMPONENT        IN NUMBER,
-        P_ACTION_TYPE         IN VARCHAR2,
-        P_COMP_NEW_STATUS     IN VARCHAR2
-    );
-
-    PROCEDURE PROC_SELECT_UPGRADES_EQUIP(
-        V_ID_EQUIPAMENTO IN  NUMBER,
-        V_CURSOR         OUT SYS_REFCURSOR
-    );
-
-    PROCEDURE PROC_SELECT_UPGRADES_RECENTES(
-        V_DIAS   IN  NUMBER,
-        V_CURSOR OUT SYS_REFCURSOR
-    );
-
-    PROCEDURE PROC_DELETE_UPGRADE(
-        V_ID IN NUMBER
-    );
-
-END PACK_UPGRADE;
-/
-
 CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
-
-    -- -------------------------------------------------------------------------
 
     PROCEDURE PROC_INSERT_UPGRADE(
         P_ID_EQUIPAMENTO      IN NUMBER,
@@ -86,13 +54,6 @@ CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
         END IF;
     END;
 
-    -- -------------------------------------------------------------------------
-    -- Retorna upgrades de um equipamento com colunas alinhadas ao frmHistorico.
-    -- VALUE_BEFORE/VALUE_AFTER são derivados por TIPO_UPGRADE:
-    --   RAM  → RAM_ANTERIOR_GB / RAM_NOVA_GB
-    --   SSD, HDD → STORAGE_ANTERIOR_GB / STORAGE_NOVO_GB
-    --   outros   → NULL (campo ainda não mapeado no schema antigo)
-    -- -------------------------------------------------------------------------
     PROCEDURE PROC_SELECT_UPGRADES_EQUIP(
         V_ID_EQUIPAMENTO IN  NUMBER,
         V_CURSOR         OUT SYS_REFCURSOR
@@ -126,9 +87,6 @@ CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
              ORDER BY DATA_UPGRADE DESC;
     END;
 
-    -- -------------------------------------------------------------------------
-    -- Upgrades recentes (últimos V_DIAS dias), mesma lógica de derivação.
-    -- -------------------------------------------------------------------------
     PROCEDURE PROC_SELECT_UPGRADES_RECENTES(
         V_DIAS   IN  NUMBER,
         V_CURSOR OUT SYS_REFCURSOR
@@ -163,8 +121,6 @@ CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
              ORDER BY U.DATA_UPGRADE DESC;
     END;
 
-    -- -------------------------------------------------------------------------
-
     PROCEDURE PROC_DELETE_UPGRADE(
         V_ID IN NUMBER
     ) IS
@@ -176,13 +132,5 @@ CREATE OR REPLACE PACKAGE BODY PACK_UPGRADE AS
 END PACK_UPGRADE;
 /
 
--- Verificação pós-compilação
-SELECT OBJECT_TYPE, STATUS, LAST_DDL_TIME
-  FROM USER_OBJECTS
- WHERE OBJECT_NAME = 'PACK_UPGRADE'
- ORDER BY OBJECT_TYPE;
-
-SELECT LINE, POSITION, TEXT
-  FROM USER_ERRORS
- WHERE NAME = 'PACK_UPGRADE'
- ORDER BY SEQUENCE;
+SELECT OBJECT_TYPE, STATUS FROM USER_OBJECTS WHERE OBJECT_NAME = 'PACK_UPGRADE' ORDER BY OBJECT_TYPE;
+SELECT LINE, TEXT FROM USER_ERRORS WHERE NAME = 'PACK_UPGRADE' ORDER BY SEQUENCE;

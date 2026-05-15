@@ -221,7 +221,7 @@ Public Class frmUpgrade
                         .SpeedMhz        = If(speed > 0, CType(speed, Integer?), Nothing),
                         .Generation      = If(String.IsNullOrEmpty(gen), Nothing, gen),
                         .Brand           = If(String.IsNullOrEmpty(brand), Nothing, brand),
-                        .ConditionStatus = "USED",
+                        .ConditionStatus = "FAIR",
                         .Status          = "IN_STOCK",
                         .SourceBatch     = sInternalUID,
                         .Notes           = "Extracted from machine " & sInternalUID
