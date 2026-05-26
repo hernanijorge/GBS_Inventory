@@ -96,6 +96,25 @@ Public Class RemessaController
 
     End Function
 
+    Public Function cancelar(pIdRemessa As Integer) As Boolean
+
+        Try
+
+            oGravacao.beginTransacao()
+            oGravacao.cancelarRemessa(pIdRemessa)
+            oGravacao.commitTransacao()
+
+            Return True
+
+        Catch ex As Exception
+
+            oGravacao.rollbackTransacao()
+            Throw New Exception("Erro ao cancelar remessa: " & ex.Message)
+
+        End Try
+
+    End Function
+
 #End Region
 
 #Region "Consultas"

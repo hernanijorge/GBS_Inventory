@@ -44,6 +44,9 @@ Partial Class frmPrincipal
     Friend WithEvents btnClientes As Button
     Friend WithEvents btnInvoice As Button
     Friend WithEvents txtPesquisa As TextBox
+    Friend WithEvents txtInventoryQuickScan As TextBox
+    Friend WithEvents lblInventoryQuickScan As Label
+    Friend WithEvents lblInventoryScanStatus As Label
     Friend WithEvents lblPesquisa As Label
     Friend WithEvents dgvEstoque As DataGridView
     Friend WithEvents pnlDashboard As Panel
@@ -68,6 +71,7 @@ Partial Class frmPrincipal
     Friend WithEvents lblRemessasTit       As Label
     Friend WithEvents btnNovaRemessa       As Button
     Friend WithEvents btnAtualizarRemessas As Button
+    Friend WithEvents btnCancelarRemessa   As Button
 
     ' Controles da aba Upgrades
     Friend WithEvents lblUpgradesTit        As Label
@@ -319,7 +323,7 @@ Partial Class frmPrincipal
         ' ── Barra de ação (busca + botões) ────────────────────────────
         Me.pnlAcoes = New Panel()
         Me.pnlAcoes.Dock = DockStyle.Top
-        Me.pnlAcoes.Height = 50
+        Me.pnlAcoes.Height = 86
         Me.pnlAcoes.BackColor = TemaEscuro.Surface
         Me.pnlAcoes.Padding = New Padding(8)
 
@@ -361,9 +365,26 @@ Partial Class frmPrincipal
         Me.btnAddEquipamento.ForeColor = TemaEscuro.Fundo
         Me.btnAddEquipamento.FlatStyle = FlatStyle.Flat
 
+        Me.lblInventoryQuickScan = New Label()
+        Me.lblInventoryQuickScan.Text = "Quick Scan for Report (UID / Serial):"
+        Me.lblInventoryQuickScan.Location = New Point(10, 53)
+        Me.lblInventoryQuickScan.AutoSize = True
+        Me.lblInventoryQuickScan.ForeColor = TemaEscuro.Accent
+
+        Me.txtInventoryQuickScan = New TextBox()
+        Me.txtInventoryQuickScan.Location = New Point(245, 50)
+        Me.txtInventoryQuickScan.Size = New Size(320, 24)
+
+        Me.lblInventoryScanStatus = New Label()
+        Me.lblInventoryScanStatus.Text = ""
+        Me.lblInventoryScanStatus.Location = New Point(575, 54)
+        Me.lblInventoryScanStatus.Size = New Size(520, 20)
+        Me.lblInventoryScanStatus.ForeColor = TemaEscuro.TextoMutado
+
         Me.pnlAcoes.Controls.AddRange({lblPesquisa, txtPesquisa, btnBuscarUID,
                                         btnScanner, btnImportarPlanilha, btnAtualizar,
-                                        btnAddEquipamento})
+                                        btnAddEquipamento, lblInventoryQuickScan,
+                                        txtInventoryQuickScan, lblInventoryScanStatus})
 
         ' ── Painel de filtros ─────────────────────────────────────────
         Me.pnlFiltros = New Panel()
@@ -633,7 +654,12 @@ Partial Class frmPrincipal
         Me.btnAtualizarRemessas.Location   = New Point(360, 10)
         Me.btnAtualizarRemessas.Size       = New Size(90, 30)
 
-        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas})
+        Me.btnCancelarRemessa            = New Button()
+        Me.btnCancelarRemessa.Text       = "Cancel Shipment"
+        Me.btnCancelarRemessa.Location   = New Point(460, 10)
+        Me.btnCancelarRemessa.Size       = New Size(130, 30)
+
+        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas, btnCancelarRemessa})
 
         Me.dgvRemessas      = New DataGridView()
         Me.dgvRemessas.Dock = DockStyle.Fill

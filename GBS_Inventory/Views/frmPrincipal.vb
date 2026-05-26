@@ -34,6 +34,7 @@ Public Class frmPrincipal
     Private _listaRelatorio           As New ListaRelatorio()
     Private _listaUpgradeRelatorio    As New ListaRelatorio("ID_UPGRADE")
     Private _listaComponentRelatorio  As New ListaRelatorio("ID_COMPONENT")
+    Private _timerInventoryScanFeedback As Timer
 
 #End Region
 
@@ -52,6 +53,9 @@ Public Class frmPrincipal
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
         ConfigurarMenuContextoEstoque()
+
+        _timerInventoryScanFeedback = New Timer() With {.Interval = 2000}
+        AddHandler _timerInventoryScanFeedback.Tick, AddressOf TimerInventoryScanFeedback_Tick
 
     End Sub
 
@@ -853,6 +857,115 @@ Public Class frmPrincipal
 
     End Sub
 
+    Private Sub txtInventoryQuickScan_KeyDown(sender As Object, e As KeyEventArgs) Handles txtInventoryQuickScan.KeyDown
+
+        If e.KeyCode <> Keys.Enter Then Return
+
+        e.SuppressKeyPress = True
+
+        Dim scanValue As String = txtInventoryQuickScan.Text.Trim()
+        If String.IsNullOrWhiteSpace(scanValue) Then Return
+
+        AdicionarInventoryScanNaLista(scanValue)
+        txtInventoryQuickScan.Clear()
+        txtInventoryQuickScan.Focus()
+
+    End Sub
+
+    Private Sub AdicionarInventoryScanNaLista(pScanValue As String)
+
+        If dtEstoqueCompleto Is Nothing OrElse dtEstoqueCompleto.Rows.Count = 0 Then
+            MostrarFeedbackInventoryScan("Inventory is not loaded.", False)
+            Return
+        End If
+
+        Dim encontrados As New List(Of DataRow)()
+        Dim scanNormalizado As String = NormalizarScan(pScanValue)
+
+        For Each row As DataRow In dtEstoqueCompleto.Rows
+            Dim uid As String = NormalizarScan(ObterTextoColuna(row, {"INTERNAL_UID"}))
+            Dim serial As String = NormalizarScan(ObterTextoColuna(row, {"SERIAL_NUMBER", "SERIAL"}))
+
+            If uid = scanNormalizado OrElse serial = scanNormalizado Then
+                encontrados.Add(row)
+            End If
+        Next
+
+        If encontrados.Count = 0 Then
+            System.Media.SystemSounds.Exclamation.Play()
+            MostrarFeedbackInventoryScan("Not found: " & pScanValue, False)
+            Return
+        End If
+
+        If encontrados.Count > 1 Then
+            System.Media.SystemSounds.Beep.Play()
+            MostrarFeedbackInventoryScan("Multiple matches. Use search/filter first: " & pScanValue, Nothing)
+            Return
+        End If
+
+        Dim item As DataRow = encontrados(0)
+        Dim status As String = ObterTextoColuna(item, {"STATUS", "STATUS_EQUIPAMENTO", "STATUS_DESCRICAO"}).Trim().ToUpperInvariant()
+
+        If status <> "IN_STOCK" Then
+            System.Media.SystemSounds.Exclamation.Play()
+            MostrarFeedbackInventoryScan("Not available (" & status & "): " & pScanValue, False)
+            Return
+        End If
+
+        Dim uidOriginal As String = ObterTextoColuna(item, {"INTERNAL_UID"})
+
+        If _listaRelatorio.Adicionar(item) Then
+            System.Media.SystemSounds.Beep.Play()
+            AtualizarModoRelatorio()
+            MostrarFeedbackInventoryScan("Added to report list: " & uidOriginal &
+                                         "  |  Total: " & _listaRelatorio.Count.ToString(), True)
+        Else
+            System.Media.SystemSounds.Beep.Play()
+            MostrarFeedbackInventoryScan("Already in report list: " & uidOriginal, Nothing)
+        End If
+
+    End Sub
+
+    Private Function NormalizarScan(pValor As String) As String
+
+        If String.IsNullOrWhiteSpace(pValor) Then Return ""
+
+        Dim s As String = pValor.Trim().ToUpperInvariant()
+        While s.Length > 1 AndAlso s.StartsWith("0")
+            s = s.Substring(1)
+        End While
+
+        Return s
+
+    End Function
+
+    Private Sub MostrarFeedbackInventoryScan(pMensagem As String, pSucesso As Boolean?)
+
+        If lblInventoryScanStatus Is Nothing Then Return
+
+        If pSucesso.HasValue Then
+            lblInventoryScanStatus.ForeColor = If(pSucesso.Value, TemaEscuro.Verde, TemaEscuro.Vermelho)
+        Else
+            lblInventoryScanStatus.ForeColor = TemaEscuro.TextoMutado
+        End If
+
+        lblInventoryScanStatus.Text = pMensagem
+        lblStatus.Text = pMensagem
+
+        If _timerInventoryScanFeedback IsNot Nothing Then
+            _timerInventoryScanFeedback.Stop()
+            _timerInventoryScanFeedback.Start()
+        End If
+
+    End Sub
+
+    Private Sub TimerInventoryScanFeedback_Tick(sender As Object, e As EventArgs)
+
+        _timerInventoryScanFeedback.Stop()
+        If lblInventoryScanStatus IsNot Nothing Then lblInventoryScanStatus.Text = ""
+
+    End Sub
+
     Private Sub dgvEstoque_ColumnHeaderMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgvEstoque.ColumnHeaderMouseClick
         If e.ColumnIndex < 0 Then Return
         If dgvEstoque.Columns(e.ColumnIndex).Name <> "_SEL" Then Return
@@ -951,7 +1064,70 @@ Public Class frmPrincipal
         carregarRemessas()
     End Sub
 
+    Private Sub btnCancelarRemessa_Click(sender As Object, e As EventArgs) Handles btnCancelarRemessa.Click
+
+        If dgvRemessas.CurrentRow Is Nothing OrElse dgvRemessas.CurrentRow.Index < 0 Then
+            MessageBox.Show("Select a shipment to cancel.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim idRemessa As Integer = 0
+        If dgvRemessas.Columns.Contains("ID_REMESSA") AndAlso
+           dgvRemessas.CurrentRow.Cells("ID_REMESSA").Value IsNot Nothing Then
+            Integer.TryParse(dgvRemessas.CurrentRow.Cells("ID_REMESSA").Value.ToString(), idRemessa)
+        End If
+
+        If idRemessa <= 0 Then
+            MessageBox.Show("Shipment ID not found.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim statusRemessa As String = ObterTextoCelulaGrid(dgvRemessas.CurrentRow, "STATUS_REMESSA").ToUpperInvariant()
+        Dim remessaRef As String = ObterTextoCelulaGrid(dgvRemessas.CurrentRow, "REMESSA_REF")
+        Dim totalItens As String = ObterTextoCelulaGrid(dgvRemessas.CurrentRow, "TOTAL_ITENS")
+
+        If statusRemessa <> "LABEL_CREATED" Then
+            MessageBox.Show("Only shipments with status LABEL_CREATED can be cancelled here." & vbCrLf &
+                            "Current status: " & statusRemessa,
+                            "Cancel Shipment", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim resposta As DialogResult = MessageBox.Show(
+            "Cancel shipment " & remessaRef & "?" & vbCrLf & vbCrLf &
+            "Items in this shipment will return to IN_STOCK." & vbCrLf &
+            "Shipment items: " & If(String.IsNullOrWhiteSpace(totalItens), "0", totalItens),
+            "Cancel Shipment", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+        If resposta <> DialogResult.Yes Then Return
+
+        Try
+            oRemessaController.cancelar(idRemessa)
+            carregarRemessas()
+            carregarEstoque()
+            carregarDashboard()
+
+            MessageBox.Show("Shipment cancelled successfully." & vbCrLf &
+                            "Items returned to IN_STOCK.",
+                            "Cancel Shipment", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            MessageBox.Show("Error cancelling shipment: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+    End Sub
+
     Private Sub dgvRemessas_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvRemessas.CellClick
+
+        If e.RowIndex < 0 Then Return
+        dgvRemessas.Rows(e.RowIndex).Selected = True
+
+    End Sub
+
+    Private Sub dgvRemessas_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvRemessas.CellDoubleClick
 
         If e.RowIndex < 0 Then Return
 
@@ -967,6 +1143,18 @@ Public Class frmPrincipal
         End Try
 
     End Sub
+
+    Private Function ObterTextoCelulaGrid(pRow As DataGridViewRow, pColuna As String) As String
+
+        If pRow Is Nothing OrElse pRow.DataGridView Is Nothing Then Return ""
+        If Not pRow.DataGridView.Columns.Contains(pColuna) Then Return ""
+
+        Dim valor As Object = pRow.Cells(pColuna).Value
+        If valor Is Nothing OrElse IsDBNull(valor) Then Return ""
+
+        Return valor.ToString().Trim()
+
+    End Function
 
 #End Region
 

@@ -83,6 +83,7 @@ Partial Public Class frmRemessa
         btnAtualizarStatus.Enabled = True
         btnAbrirRastreio.Enabled   = True
         btnRelatorio.Enabled       = True
+        btnCancelarRemessa.Enabled = True
 
     End Sub
 
@@ -250,6 +251,58 @@ Partial Public Class frmRemessa
             MessageBox.Show("Error updating status: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
 
+        End Try
+
+    End Sub
+
+    Private Sub btnCancelarRemessa_Click(sender As Object, e As EventArgs) Handles btnCancelarRemessa.Click
+
+        If vIdRemessaSelecionada = 0 Then
+            MessageBox.Show("Select a shipment to cancel.", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        If dgvRemessas.CurrentRow Is Nothing Then Return
+
+        Dim statusRemessa As String = ObterTextoCelula(dgvRemessas.CurrentRow, "STATUS_REMESSA").Trim().ToUpperInvariant()
+        Dim remessaRef As String = ObterTextoCelula(dgvRemessas.CurrentRow, "REMESSA_REF")
+        Dim totalItens As String = ObterTextoCelula(dgvRemessas.CurrentRow, "TOTAL_ITENS")
+
+        If statusRemessa <> "LABEL_CREATED" Then
+            MessageBox.Show("Only shipments with status LABEL_CREATED can be cancelled here." & vbCrLf &
+                            "Current status: " & statusRemessa,
+                            "Cancel Shipment", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim resposta As DialogResult = MessageBox.Show(
+            "Cancel shipment " & remessaRef & "?" & vbCrLf & vbCrLf &
+            "Items in this shipment will return to IN_STOCK." & vbCrLf &
+            "Shipment items: " & If(String.IsNullOrWhiteSpace(totalItens), "0", totalItens),
+            "Cancel Shipment", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+        If resposta <> DialogResult.Yes Then Return
+
+        Try
+            oController.cancelar(vIdRemessaSelecionada)
+
+            vIdRemessaSelecionada = 0
+            lblSelecionada.Text = "No shipment selected"
+            btnAtualizarStatus.Enabled = False
+            btnAbrirRastreio.Enabled = False
+            btnRelatorio.Enabled = False
+            btnCancelarRemessa.Enabled = False
+
+            carregarRemessas()
+
+            MessageBox.Show("Shipment cancelled successfully." & vbCrLf &
+                            "Items returned to IN_STOCK.",
+                            "Cancel Shipment", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            MessageBox.Show("Error cancelling shipment: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
 
     End Sub

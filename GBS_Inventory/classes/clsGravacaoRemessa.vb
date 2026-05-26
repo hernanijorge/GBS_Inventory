@@ -238,6 +238,40 @@ Public Class clsGravacaoRemessa
             oPar(0).Value = pIdRemessa
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO SET STATUS = 'IN_STOCK', DATA_ATUALIZACAO = SYSDATE " &
+                " WHERE ID_EQUIPAMENTO IN (SELECT ID_EQUIPAMENTO FROM TBL_REMESSA_ITEM WHERE ID_REMESSA = :P_ID)", oPar)
+
+            OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+                "DELETE FROM TBL_REMESSA_ITEM WHERE ID_REMESSA = :P_ID", oPar)
+
+            OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+                "DELETE FROM TBL_REMESSA WHERE ID_REMESSA = :P_ID", oPar)
+
+        Catch ex As Exception
+
+            Throw New Exception(ex.ToString)
+
+        End Try
+
+        Return True
+
+    End Function
+
+    Public Function cancelarRemessa(pIdRemessa As Integer) As Boolean
+
+        Dim oPar(0) As OracleParameter
+
+        oPar(0) = New OracleParameter("P_ID", OracleDbType.Int32, ParameterDirection.Input)
+
+        Try
+
+            oPar(0).Value = pIdRemessa
+
+            OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+                "UPDATE TBL_EQUIPAMENTO SET STATUS = 'IN_STOCK', DATA_ATUALIZACAO = SYSDATE " &
+                " WHERE ID_EQUIPAMENTO IN (SELECT ID_EQUIPAMENTO FROM TBL_REMESSA_ITEM WHERE ID_REMESSA = :P_ID)", oPar)
+
+            OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
                 "DELETE FROM TBL_REMESSA_ITEM WHERE ID_REMESSA = :P_ID", oPar)
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,

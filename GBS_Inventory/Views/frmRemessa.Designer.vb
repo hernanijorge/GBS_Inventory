@@ -36,6 +36,7 @@ Partial Class frmRemessa
     Friend WithEvents btnAtualizarStatus As Button
     Friend WithEvents btnAbrirRastreio As Button
     Friend WithEvents btnRelatorio As Button
+    Friend WithEvents btnCancelarRemessa As Button
     Friend WithEvents btnFechar As Button
 
     Private Sub InitializeComponent()
@@ -118,6 +119,12 @@ Partial Class frmRemessa
             .Size     = New Size(150, 30),
             .Enabled  = False
         }
+        Me.btnCancelarRemessa = New Button() With {
+            .Text     = "Cancel Shipment",
+            .Location = New Point(815, 43),
+            .Size     = New Size(150, 30),
+            .Enabled  = False
+        }
         Me.btnFechar = New Button() With {
             .Text     = "Close",
             .Location = New Point(1255, 43),
@@ -126,7 +133,7 @@ Partial Class frmRemessa
         }
         pnlAcoes.Controls.AddRange({lblAcoes, lblNovoSt, cboNovoStatus,
                                      btnAtualizarStatus, btnAbrirRastreio,
-                                     btnRelatorio, btnFechar})
+                                     btnRelatorio, btnCancelarRemessa, btnFechar})
 
         ' ── pnlCriar — New Shipment form (Dock=Right, fixed width=730) ────────
         ' Width is fixed — controls inside use FIXED positions, NO Anchor=Right,
