@@ -547,6 +547,8 @@ Public Class ReportService
             ("CAPACITY_GB",      "Capacity (GB)", 14),
             ("SPEED_MHZ",        "Speed (MHz)",   12),
             ("GENERATION",       "Generation",    12),
+            ("CPU",              "CPU",           20),
+            ("STORAGE_GB",       "Storage (GB)",  14),
             ("BRAND",            "Brand",         18),
             ("PART_NUMBER",      "Part Number",   22),
             ("CONDITION_STATUS", "Condition",     14),
@@ -647,6 +649,8 @@ Public Class ReportService
             ("CAPACITY_GB",      "Cap. (GB)",     40),
             ("SPEED_MHZ",        "Speed (MHz)",   44),
             ("GENERATION",       "Gen",           36),
+            ("CPU",              "CPU",           64),
+            ("STORAGE_GB",       "Storage (GB)",  44),
             ("BRAND",            "Brand",         56),
             ("PART_NUMBER",      "Part Number",   66),
             ("CONDITION_STATUS", "Condition",     50),
@@ -767,12 +771,15 @@ Public Class ReportService
             ("CAPACITY_GB",    "Capacity (GB)", 14),
             ("GENERATION",     "Generation",    14),
             ("SPEED_MHZ",      "Speed (MHz)",   12),
+            ("CPU",            "CPU",           20),
+            ("STORAGE_GB",     "Storage (GB)",  14),
             ("TOTAL",          "Total",         10),
             ("IN_STOCK",       "In Stock",      10),
             ("INSTALLED",      "Installed",     10),
             ("SOLD",           "Sold",           8),
             ("SCRAPPED",       "Scrapped",      10)
         }
+        Dim qtdColsDescritivas As Integer = 6
 
         Using pkg As New ExcelPackage()
             Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Summary")
@@ -814,7 +821,7 @@ Public Class ReportService
                 cell.Value = colunas(i).Header
                 cell.Style.Font.Bold = True
                 cell.Style.Fill.PatternType = ExcelFillStyle.Solid
-                cell.Style.Fill.BackgroundColor.SetColor(If(i >= 4, corTotal, corHeader))
+                cell.Style.Fill.BackgroundColor.SetColor(If(i >= qtdColsDescritivas, corTotal, corHeader))
                 cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
                 cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
             Next
@@ -829,7 +836,7 @@ Public Class ReportService
                     End If
                     Dim cell As ExcelRange = ws.Cells(linhaCabecalho + rowIdx + 1, colIdx + 1)
                     cell.Value = val
-                    If colIdx >= 4 Then cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                    If colIdx >= qtdColsDescritivas Then cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
                 Next
                 If rowIdx Mod 2 = 1 Then
                     ws.Cells(linhaCabecalho + rowIdx + 1, 1, linhaCabecalho + rowIdx + 1, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
@@ -869,12 +876,15 @@ Public Class ReportService
             ("CAPACITY_GB",    "Capacity (GB)", 60),
             ("GENERATION",     "Generation",    60),
             ("SPEED_MHZ",      "Speed (MHz)",   55),
+            ("CPU",            "CPU",           70),
+            ("STORAGE_GB",     "Storage (GB)",  55),
             ("TOTAL",          "Total",         36),
             ("IN_STOCK",       "In Stock",      42),
             ("INSTALLED",      "Installed",     44),
             ("SOLD",           "Sold",          32),
             ("SCRAPPED",       "Scrapped",      42)
         }
+        Dim qtdColsDescritivas As Integer = 6
 
         Dim doc As New Document(PageSize.A4.Rotate(), 20, 20, 30, 20)
         Using fs As New FileStream(caminhoFinal, FileMode.Create, FileAccess.Write)
@@ -920,7 +930,7 @@ Public Class ReportService
 
             For i As Integer = 0 To colunas.Length - 1
                 Dim cell As New PdfPCell(New Phrase(colunas(i).Header, fontHdr))
-                cell.BackgroundColor     = If(i >= 4, hdrBg2, hdrBg)
+                cell.BackgroundColor     = If(i >= qtdColsDescritivas, hdrBg2, hdrBg)
                 cell.HorizontalAlignment = Element.ALIGN_CENTER
                 cell.Padding             = 5
                 tabela.AddCell(cell)
@@ -935,11 +945,11 @@ Public Class ReportService
                     If dtRow.Columns.Contains(colunas(i).Key) AndAlso Not IsDBNull(row(colunas(i).Key)) Then
                         val = row(colunas(i).Key).ToString()
                     End If
-                    Dim fnt As iTextSharp.text.Font = If(i >= 4, fontNum, fontData)
+                    Dim fnt As iTextSharp.text.Font = If(i >= qtdColsDescritivas, fontNum, fontData)
                     Dim cell As New PdfPCell(New Phrase(val, fnt))
                     cell.BackgroundColor     = bg
                     cell.Padding             = 4
-                    cell.HorizontalAlignment = If(i >= 4, Element.ALIGN_CENTER, Element.ALIGN_LEFT)
+                    cell.HorizontalAlignment = If(i >= qtdColsDescritivas, Element.ALIGN_CENTER, Element.ALIGN_LEFT)
                     tabela.AddCell(cell)
                 Next
                 rowIdx += 1
@@ -1006,11 +1016,12 @@ Public Class ReportService
         sb.AppendLine("<tr>")
         sb.AppendLine("<th class='desc'>Type</th><th class='desc'>Capacity (GB)</th>")
         sb.AppendLine("<th class='desc'>Generation</th><th class='desc'>Speed (MHz)</th>")
+        sb.AppendLine("<th class='desc'>CPU</th><th class='desc'>Storage (GB)</th>")
         sb.AppendLine("<th class='num'>Total</th><th class='num'>In Stock</th>")
         sb.AppendLine("<th class='num'>Installed</th><th class='num'>Sold</th><th class='num'>Scrapped</th>")
         sb.AppendLine("</tr>")
 
-        Dim descCols As String() = {"COMPONENT_TYPE", "CAPACITY_GB", "GENERATION", "SPEED_MHZ"}
+        Dim descCols As String() = {"COMPONENT_TYPE", "CAPACITY_GB", "GENERATION", "SPEED_MHZ", "CPU", "STORAGE_GB"}
         Dim numCols  As String() = {"TOTAL", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"}
 
         For Each row As DataRow In pItens
@@ -1064,6 +1075,8 @@ Public Class ReportService
             ("CAPACITY_GB",      "Cap. (GB)",    "60px"),
             ("SPEED_MHZ",        "Speed (MHz)",  "65px"),
             ("GENERATION",       "Gen",          "50px"),
+            ("CPU",              "CPU",          "90px"),
+            ("STORAGE_GB",       "Storage (GB)", "60px"),
             ("BRAND",            "Brand",        "80px"),
             ("PART_NUMBER",      "Part Number", "100px"),
             ("CONDITION_STATUS", "Condition",    "65px"),

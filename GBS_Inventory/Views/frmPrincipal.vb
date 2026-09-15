@@ -4,6 +4,8 @@ Imports System.Data
 Imports System.IO
 Imports System.Text
 Imports System.Net
+Imports System.Diagnostics
+Imports System.Threading.Tasks
 Imports OfficeOpenXml
 Imports OfficeOpenXml.Style
 Imports Oracle.ManagedDataAccess.Client
@@ -22,6 +24,7 @@ Public Class frmPrincipal
     Private oRemessaController As RemessaController
     Private oUpgradeController As UpgradeController
     Private oCompController As ComponentController
+    Private oBackupLogController As BackupLogController
     Private sArquivoSelImp As String = ""
     Private dtResumoManufacturer As DataTable
     Private dtResumoModel As DataTable
@@ -49,6 +52,7 @@ Public Class frmPrincipal
         oRemessaController = New RemessaController()
         oUpgradeController = New UpgradeController()
         oCompController    = New ComponentController()
+        oBackupLogController = New BackupLogController()
 
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
@@ -68,6 +72,7 @@ Public Class frmPrincipal
             carregarRemessas()
             carregarUpgrades()
             carregarComponents()
+            carregarBackupLog()
 
         Catch ex As Exception
 
@@ -1173,16 +1178,42 @@ Public Class frmPrincipal
         End Try
     End Sub
 
+    Private Class TypeItem
+        Public Property Value As String
+        Public Property Label As String
+        Public Sub New(pValue As String, pLabel As String)
+            Value = pValue
+            Label = pLabel
+        End Sub
+        Public Overrides Function ToString() As String
+            Return Label
+        End Function
+    End Class
+
     Private Sub InicializarFiltrosComponents()
-        Dim selType As String   = If(cboCompType.SelectedIndex > 0, cboCompType.SelectedItem.ToString(), "")
+        Dim curType As TypeItem = TryCast(cboCompType.SelectedItem, TypeItem)
+        Dim selTypeValue As String = If(curType IsNot Nothing, curType.Value, "")
         Dim selStat As String   = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
 
         cboCompType.Items.Clear()
-        cboCompType.Items.AddRange({"(All)", "RAM", "SSD", "HDD"})
+        cboCompType.Items.AddRange({
+            New TypeItem("", "(All)"),
+            New TypeItem("RAM", "RAM"),
+            New TypeItem("SSD", "SSD"),
+            New TypeItem("HDD", "HDD"),
+            New TypeItem("MINI_DESKTOP", "Mini Desktop")
+        })
         cboCompStatus.Items.Clear()
         cboCompStatus.Items.AddRange({"(All)", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"})
 
-        cboCompType.SelectedIndex   = Math.Max(0, cboCompType.Items.IndexOf(selType))
+        Dim idxType As Integer = 0
+        For i As Integer = 0 To cboCompType.Items.Count - 1
+            If DirectCast(cboCompType.Items(i), TypeItem).Value = selTypeValue Then
+                idxType = i
+                Exit For
+            End If
+        Next
+        cboCompType.SelectedIndex   = idxType
         cboCompStatus.SelectedIndex = Math.Max(0, cboCompStatus.Items.IndexOf(selStat))
     End Sub
 
@@ -1191,9 +1222,10 @@ Public Class frmPrincipal
         Dim dv As DataView = dtComponentsCompleto.DefaultView
         Dim parts As New List(Of String)()
 
-        Dim search As String = txtCompSearch.Text.Trim()
-        Dim tipo   As String = If(cboCompType.SelectedIndex > 0, cboCompType.SelectedItem.ToString(), "")
-        Dim stat   As String = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+        Dim search  As String = txtCompSearch.Text.Trim()
+        Dim selType As TypeItem = TryCast(cboCompType.SelectedItem, TypeItem)
+        Dim tipo    As String = If(selType IsNot Nothing, selType.Value, "")
+        Dim stat    As String = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
 
         If Not String.IsNullOrEmpty(tipo) Then parts.Add("COMPONENT_TYPE = '" & tipo.Replace("'", "''") & "'")
         If Not String.IsNullOrEmpty(stat) Then parts.Add("STATUS = '" & stat.Replace("'", "''") & "'")
@@ -1216,6 +1248,8 @@ Public Class frmPrincipal
             {"CAPACITY_GB",      "Capacity (GB)"},
             {"SPEED_MHZ",        "Speed (MHz)"},
             {"GENERATION",       "Gen"},
+            {"CPU",              "CPU"},
+            {"STORAGE_GB",       "Storage (GB)"},
             {"BRAND",            "Brand"},
             {"PART_NUMBER",      "Part Number"},
             {"CONDITION_STATUS", "Condition"},
@@ -1395,6 +1429,97 @@ Public Class frmPrincipal
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
+
+#End Region
+
+#Region "Aba Backup"
+
+    Private Const BackupScriptPath As String = "C:\Users\herna\Desktop\GBS\GBS_Inventory\Database\backup_gbs_weekly.ps1"
+
+    Private Sub carregarBackupLog()
+        Try
+            Dim ds As DataSet = oBackupLogController.fetchAll()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                dgvBackupLog.DataSource = ds.Tables(0)
+                ConfigurarColunasBackupLog()
+            End If
+        Catch ex As Exception
+            lblBackupStatus.ForeColor = Color.FromArgb(220, 38, 38)
+            lblBackupStatus.Text = "Error loading backup history: " & ex.Message
+        End Try
+    End Sub
+
+    Private Sub ConfigurarColunasBackupLog()
+        Dim headers As New Dictionary(Of String, String) From {
+            {"ID_BACKUP_LOG", "ID"},
+            {"DATA_EXECUCAO", "Date/Time"},
+            {"ARQUIVO_DMP",   "Dump File"},
+            {"STATUS",        "Status"},
+            {"MENSAGEM",      "Message"}
+        }
+        For Each col As DataGridViewColumn In dgvBackupLog.Columns
+            If headers.ContainsKey(col.Name) Then col.HeaderText = headers(col.Name)
+        Next
+        If dgvBackupLog.Columns.Contains("ID_BACKUP_LOG") Then dgvBackupLog.Columns("ID_BACKUP_LOG").Visible = False
+    End Sub
+
+    Private Async Sub btnRunBackupNow_Click(sender As Object, e As EventArgs) Handles btnRunBackupNow.Click
+        btnRunBackupNow.Enabled = False
+        lblBackupStatus.ForeColor = TemaEscuro.TextoMutado
+        lblBackupStatus.Text = "Running backup... this may take a moment."
+
+        Dim resultado = Await Task.Run(Function() ExecutarBackupScript())
+
+        If resultado.Sucesso Then
+            lblBackupStatus.ForeColor = TemaEscuro.Accent
+            lblBackupStatus.Text = "Backup completed successfully: " & resultado.NomeDump
+        Else
+            lblBackupStatus.ForeColor = Color.FromArgb(220, 38, 38)
+            lblBackupStatus.Text = "Backup failed (exit code " & resultado.ExitCode & "). See history below for details."
+        End If
+
+        carregarBackupLog()
+        btnRunBackupNow.Enabled = True
+    End Sub
+
+    Private Sub btnBackupRefresh_Click(sender As Object, e As EventArgs) Handles btnBackupRefresh.Click
+        carregarBackupLog()
+    End Sub
+
+    Private Function ExecutarBackupScript() As (Sucesso As Boolean, NomeDump As String, ExitCode As Integer)
+
+        Dim psi As New ProcessStartInfo() With {
+            .FileName               = "powershell.exe",
+            .Arguments              = "-NoProfile -ExecutionPolicy Bypass -File """ & BackupScriptPath & """",
+            .UseShellExecute        = False,
+            .RedirectStandardOutput = True,
+            .RedirectStandardError  = True,
+            .CreateNoWindow         = True
+        }
+
+        Dim saida As New StringBuilder()
+
+        Using proc As New Process()
+            proc.StartInfo = psi
+            AddHandler proc.OutputDataReceived, Sub(s, ev) If ev.Data IsNot Nothing Then saida.AppendLine(ev.Data)
+            AddHandler proc.ErrorDataReceived, Sub(s, ev) If ev.Data IsNot Nothing Then saida.AppendLine(ev.Data)
+
+            proc.Start()
+            proc.BeginOutputReadLine()
+            proc.BeginErrorReadLine()
+            proc.WaitForExit()
+
+            Dim exitCode As Integer = proc.ExitCode
+            Dim nomeDump As String = ""
+
+            Dim m As System.Text.RegularExpressions.Match = System.Text.RegularExpressions.Regex.Match(
+                saida.ToString(), "OK: dump created - (.+\.dmp)")
+            If m.Success Then nomeDump = IO.Path.GetFileName(m.Groups(1).Value.Trim())
+
+            Return (exitCode = 0, nomeDump, exitCode)
+        End Using
+
+    End Function
 
 #End Region
 

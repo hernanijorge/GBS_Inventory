@@ -7,6 +7,18 @@ Imports GBS_Inventory.OracleHelper
 
 Public Class frmAddComponent
 
+    Private Class TypeItem
+        Public Property Value As String
+        Public Property Label As String
+        Public Sub New(pValue As String, pLabel As String)
+            Value = pValue
+            Label = pLabel
+        End Sub
+        Public Overrides Function ToString() As String
+            Return Label
+        End Function
+    End Class
+
     Public Property SavedUID   As String  = ""
     Public Property SavedCount As Integer = 0
 
@@ -28,7 +40,12 @@ Public Class frmAddComponent
     End Sub
 
     Private Sub frmAddComponent_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        cboType.Items.AddRange({"RAM", "SSD", "HDD"})
+        cboType.Items.AddRange({
+            New TypeItem("RAM", "RAM"),
+            New TypeItem("SSD", "SSD"),
+            New TypeItem("HDD", "HDD"),
+            New TypeItem("MINI_DESKTOP", "Mini Desktop")
+        })
         cboCondition.Items.AddRange({"GOOD", "FAIR", "POOR", "UNTESTED"})
         cboStatus.Items.AddRange({"IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"})
         cboType.SelectedIndex      = 0
@@ -71,10 +88,28 @@ Public Class frmAddComponent
     End Sub
 
     Private Sub cboType_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboType.SelectedIndexChanged
-        Dim t As String = If(cboType.SelectedItem IsNot Nothing, cboType.SelectedItem.ToString(), "")
+        Dim selType As TypeItem = TryCast(cboType.SelectedItem, TypeItem)
+        Dim t As String = If(selType IsNot Nothing, selType.Value, "")
+
+        Dim isMiniDesktop As Boolean = (t = "MINI_DESKTOP")
+
+        lblCap.Text            = If(isMiniDesktop, "RAM (GB) *", "Capacity (GB) *")
+        lblGen.Visible         = Not isMiniDesktop
+        cboGeneration.Visible  = Not isMiniDesktop
+        lblSpeedLabel.Visible  = Not isMiniDesktop
+        cboSpeed.Visible       = Not isMiniDesktop
+        lblCpu.Visible         = isMiniDesktop
+        txtCpu.Visible         = isMiniDesktop
+        lblStorage.Visible     = isMiniDesktop
+        txtStorage.Visible     = isMiniDesktop
+
+        txtCpu.Clear()
+        txtStorage.Clear()
+
         cboCapacity.Items.Clear()
         cboGeneration.Items.Clear()
         cboSpeed.Items.Clear()
+        cboCapacity.Text = ""
         Select Case t
             Case "RAM"
                 cboCapacity.Items.AddRange(CapacityRAM)
@@ -99,15 +134,28 @@ Public Class frmAddComponent
 
     Private Sub btnSave_Click(sender As Object, e As EventArgs) Handles btnSave.Click
 
-        Dim tipo As String = If(cboType.SelectedIndex >= 0, cboType.SelectedItem.ToString(), "")
+        Dim selType As TypeItem = TryCast(cboType.SelectedItem, TypeItem)
+        Dim tipo As String = If(selType IsNot Nothing, selType.Value, "")
+        Dim isMiniDesktop As Boolean = (tipo = "MINI_DESKTOP")
         Dim capTxt As String = cboCapacity.Text.Trim()
+        Dim cpuTxt As String = txtCpu.Text.Trim()
+        Dim storageTxt As String = txtStorage.Text.Trim()
 
         Dim erros As New List(Of String)()
-        If String.IsNullOrEmpty(tipo)   Then erros.Add("  · Type")
-        If String.IsNullOrEmpty(capTxt) Then erros.Add("  · Capacity")
+        If String.IsNullOrEmpty(tipo) Then erros.Add("  · Type")
 
         Dim capGb As Integer = 0
-        If Not Integer.TryParse(capTxt, capGb) OrElse capGb <= 0 Then erros.Add("  · Capacity (invalid number)")
+        Dim storageGb As Integer = 0
+        If isMiniDesktop Then
+            If String.IsNullOrEmpty(capTxt) Then erros.Add("  · RAM (GB)")
+            If Not Integer.TryParse(capTxt, capGb) OrElse capGb <= 0 Then erros.Add("  · RAM (GB) (invalid number)")
+            If String.IsNullOrEmpty(storageTxt) Then erros.Add("  · Storage (GB)")
+            If Not Integer.TryParse(storageTxt, storageGb) OrElse storageGb <= 0 Then erros.Add("  · Storage (GB) (invalid number)")
+            If String.IsNullOrEmpty(cpuTxt) Then erros.Add("  · CPU")
+        Else
+            If String.IsNullOrEmpty(capTxt) Then erros.Add("  · Capacity")
+            If Not Integer.TryParse(capTxt, capGb) OrElse capGb <= 0 Then erros.Add("  · Capacity (invalid number)")
+        End If
 
         If erros.Count > 0 Then
             MessageBox.Show("Required fields missing:" & vbCrLf & String.Join(vbCrLf, erros),
@@ -118,16 +166,18 @@ Public Class frmAddComponent
         Dim comp As New Component() With {
             .ComponentType   = tipo,
             .CapacityGB      = capGb,
-            .Generation      = If(cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
+            .Generation      = If(Not isMiniDesktop AndAlso cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
             .Brand           = cboBrand.Text.Trim(),
             .PartNumber      = txtPartNumber.Text.Trim(),
+            .Cpu             = If(isMiniDesktop, cpuTxt, ""),
+            .StorageGb       = If(isMiniDesktop, CType(storageGb, Integer?), Nothing),
             .ConditionStatus = If(cboCondition.SelectedIndex >= 0, cboCondition.SelectedItem.ToString(), "GOOD"),
             .Status          = If(cboStatus.SelectedIndex >= 0, cboStatus.SelectedItem.ToString(), "IN_STOCK"),
             .SourceBatch     = cboSourceBatch.Text.Trim(),
             .Notes           = txtNotes.Text.Trim()
         }
 
-        If cboSpeed.Enabled AndAlso cboSpeed.SelectedIndex >= 0 Then
+        If Not isMiniDesktop AndAlso cboSpeed.Enabled AndAlso cboSpeed.SelectedIndex >= 0 Then
             Dim spd As Integer
             If Integer.TryParse(cboSpeed.SelectedItem.ToString(), spd) Then comp.SpeedMhz = spd
         End If

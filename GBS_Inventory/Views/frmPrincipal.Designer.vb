@@ -21,6 +21,13 @@ Partial Class frmPrincipal
     Friend WithEvents tabComponents As TabPage
     Friend WithEvents tabImportacao As TabPage
     Friend WithEvents tabInvoice    As TabPage
+    Friend WithEvents tabBackup     As TabPage
+
+    ' Controls — Backup tab
+    Friend WithEvents btnRunBackupNow  As Button
+    Friend WithEvents btnBackupRefresh As Button
+    Friend WithEvents lblBackupStatus  As Label
+    Friend WithEvents dgvBackupLog     As DataGridView
 
     ' Controls — Components tab
     Friend WithEvents dgvComponents     As DataGridView
@@ -209,6 +216,7 @@ Partial Class frmPrincipal
         Me.tabComponents = New TabPage("Components")
         Me.tabImportacao = New TabPage("Import")
         Me.tabInvoice = New TabPage("Invoice")
+        Me.tabBackup = New TabPage("Backup")
 
         ' ─── ABA DASHBOARD ────────────────────────────────────────────
         Me.pnlDashboard = New Panel()
@@ -983,10 +991,52 @@ Partial Class frmPrincipal
         pnlInvoice.Controls.Add(btnInvoice)
         Me.tabInvoice.Controls.Add(pnlInvoice)
 
+        ' ─── ABA BACKUP ───────────────────────────────────────────────
+        Me.tabBackup.Padding = New Padding(0)
+
+        Dim pnlBackupTop As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 90,
+            .BackColor = TemaEscuro.Surface,
+            .Padding   = New Padding(8)
+        }
+
+        Dim lblBackupTit As New Label() With {
+            .Text      = "Backup",
+            .Font      = New Font("Segoe UI", 11, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .Location  = New Point(15, 15),
+            .AutoSize  = True
+        }
+
+        Me.btnRunBackupNow  = New Button() With { .Text = "Run Backup Now", .Location = New Point(15, 50), .Size = New Size(150, 30),
+                                                   .BackColor = TemaEscuro.Accent, .ForeColor = TemaEscuro.Fundo, .FlatStyle = FlatStyle.Flat }
+        Me.btnBackupRefresh = New Button() With { .Text = "Refresh", .Location = New Point(175, 50), .Size = New Size(90, 30) }
+
+        Me.lblBackupStatus = New Label() With {
+            .Text      = "",
+            .Location  = New Point(280, 18),
+            .Size      = New Size(700, 60),
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        pnlBackupTop.Controls.AddRange({lblBackupTit, btnRunBackupNow, btnBackupRefresh, lblBackupStatus})
+
+        Me.dgvBackupLog = New DataGridView() With {
+            .Dock          = DockStyle.Fill,
+            .ReadOnly      = True,
+            .MultiSelect   = False,
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        }
+
+        Me.tabBackup.Controls.Add(dgvBackupLog)
+        Me.tabBackup.Controls.Add(pnlBackupTop)
+
         ' ═════════════════════════════════════════════════════════════
         ' MONTAGEM DO TABCONTROL
         ' ═════════════════════════════════════════════════════════════
-        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabComponents, tabImportacao, tabInvoice})
+        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabComponents, tabImportacao, tabInvoice, tabBackup})
         Me.tabPrincipal.SelectedIndex = 0
         Me.pnlContainer.Controls.Add(tabPrincipal)
 

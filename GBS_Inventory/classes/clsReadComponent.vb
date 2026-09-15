@@ -61,15 +61,15 @@ Public Class clsReadComponent
     Public Function selectSummary() As DataSet
         Try
             Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
-                "SELECT COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ," &
+                "SELECT COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB," &
                 "       COUNT(*)                                                  AS TOTAL,"     &
                 "       SUM(CASE WHEN STATUS='IN_STOCK'   THEN 1 ELSE 0 END)      AS IN_STOCK,"  &
                 "       SUM(CASE WHEN STATUS='INSTALLED'  THEN 1 ELSE 0 END)      AS INSTALLED," &
                 "       SUM(CASE WHEN STATUS='SOLD'       THEN 1 ELSE 0 END)      AS SOLD,"      &
                 "       SUM(CASE WHEN STATUS='SCRAPPED'   THEN 1 ELSE 0 END)      AS SCRAPPED"   &
                 "  FROM TBL_COMPONENT" &
-                " GROUP BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ" &
-                " ORDER BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ")
+                " GROUP BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB" &
+                " ORDER BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB")
         Catch ex As Exception
             Throw New Exception(ex.ToString)
         End Try

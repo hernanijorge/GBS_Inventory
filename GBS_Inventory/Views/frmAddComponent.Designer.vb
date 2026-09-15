@@ -21,6 +21,12 @@ Partial Class frmAddComponent
     Friend WithEvents pnlFooter      As Panel
     Friend WithEvents lblSpeedLabel  As Label
     Friend WithEvents nudQuantity    As NumericUpDown
+    Friend WithEvents lblCap         As Label
+    Friend WithEvents lblGen         As Label
+    Friend WithEvents lblCpu         As Label
+    Friend WithEvents txtCpu         As TextBox
+    Friend WithEvents lblStorage     As Label
+    Friend WithEvents txtStorage     As TextBox
 
     Private Sub InitializeComponent()
 
@@ -43,15 +49,21 @@ Partial Class frmAddComponent
         Dim lblType As New Label() With { .Text = "Type *",         .Location = New Point(20,  65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboType       = New ComboBox() With { .Location = New Point(20,  85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
 
-        Dim lblCap As New Label() With  { .Text = "Capacity (GB) *",.Location = New Point(180, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.lblCap        = New Label() With  { .Text = "Capacity (GB) *",.Location = New Point(180, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboCapacity   = New ComboBox() With { .Location = New Point(180, 85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDown }
 
-        Dim lblGen As New Label() With  { .Text = "Generation",     .Location = New Point(340, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.lblGen        = New Label() With  { .Text = "Generation",     .Location = New Point(340, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboGeneration = New ComboBox() With { .Location = New Point(340, 85), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        Me.lblCpu        = New Label() With  { .Text = "CPU *",         .Location = New Point(340, 65), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado, .Visible = False }
+        Me.txtCpu        = New TextBox() With { .Location = New Point(340, 85), .Size = New Size(140, 24), .Visible = False }
 
         ' ── Row 2: Speed | Brand | Part Number ───────────────────────
         Me.lblSpeedLabel = New Label()   With { .Text = "Speed (MHz)",  .Location = New Point(20,  130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboSpeed      = New ComboBox() With { .Location = New Point(20,  150), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        Me.lblStorage    = New Label() With  { .Text = "Storage (GB) *", .Location = New Point(20, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado, .Visible = False }
+        Me.txtStorage    = New TextBox() With { .Location = New Point(20, 150), .Size = New Size(140, 24), .Visible = False }
 
         Dim lblBrand As New Label() With { .Text = "Brand",         .Location = New Point(180, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboBrand      = New ComboBox() With { .Location = New Point(180, 150), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDown }
@@ -87,6 +99,7 @@ Partial Class frmAddComponent
 
         Me.Controls.AddRange({lblTitle,
                                lblType, cboType, lblCap, cboCapacity, lblGen, cboGeneration,
+                               lblCpu, txtCpu, lblStorage, txtStorage,
                                lblSpeedLabel, cboSpeed, lblBrand, cboBrand, lblPart, txtPartNumber,
                                lblCond, cboCondition, lblStat, cboStatus, lblBatch, cboSourceBatch,
                                lblQty, nudQuantity,

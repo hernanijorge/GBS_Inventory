@@ -114,12 +114,14 @@
     <Compile Include="classes\clsLeituraHistorico.vb" />
     <Compile Include="classes\clsReadComponent.vb" />
     <Compile Include="classes\clsWriteComponent.vb" />
+    <Compile Include="classes\clsReadBackupLog.vb" />
     <!-- Controllers (MVC) -->
     <Compile Include="Controllers\EquipamentoController.vb" />
     <Compile Include="Controllers\UpgradeController.vb" />
     <Compile Include="Controllers\RemessaController.vb" />
     <Compile Include="Controllers\ImportacaoController.vb" />
     <Compile Include="Controllers\ComponentController.vb" />
+    <Compile Include="Controllers\BackupLogController.vb" />
     <Compile Include="Controllers\ClienteController.vb" />
     <Compile Include="Controllers\InvoiceController.vb" />
     <!-- Utils -->
