@@ -190,6 +190,13 @@ Public Class clsGravacaoUpgrade
 
         Try
 
+            ' REVERTED 2026-09-16: sending 0 instead of DBNull for the inapplicable pair
+            ' avoids the ORA-01400 crash, but PACK_UPGRADE's cascade UPDATE uses
+            ' "IS NOT NULL" to decide whether to touch RAM_GB/STORAGE_GB on TBL_EQUIPAMENTO
+            ' — 0 satisfies that check, so it was silently zeroing out RAM_GB/STORAGE_GB on
+            ' every non-RAM/Storage upgrade. Back to DBNull (crashes loudly, doesn't corrupt
+            ' data) until the real fix — relaxing the NOT NULL constraint on the 4 log
+            ' columns so genuine NULL can be sent again — is applied to the schema.
             oPar(0).Value  = pUpgrade.IdEquipamento
             oPar(1).Value  = vTipo
             oPar(2).Value  = If(isRam,     CObj(vRamAnterior),    DBNull.Value)
