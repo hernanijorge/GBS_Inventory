@@ -27,7 +27,7 @@ param(
     [string]$OracleDirectory = 'GBS_BACKUP_DIR',
     [string]$SchemaName      = 'GBS_OWNER',
     [string]$ExpdpExe        = 'C:\oraclexe\app\oracle\product\10.2.0\server\BIN\expdp.exe',
-    [string]$SqlplusExe      = 'C:\oracle\product\11.2.0\client_2\BIN\sqlplus.exe',
+    [string]$SqlplusExe      = 'C:\oraclexe\app\oracle\product\10.2.0\server\BIN\sqlplus.exe',
     [string]$AppConfigPath   = (Join-Path $PSScriptRoot '..\GBS_Inventory\App.config')
 )
 

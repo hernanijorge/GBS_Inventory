@@ -1434,7 +1434,19 @@ Public Class frmPrincipal
 
 #Region "Aba Backup"
 
-    Private Const BackupScriptPath As String = "C:\Users\herna\Desktop\GBS\GBS_Inventory\Database\backup_gbs_weekly.ps1"
+    Private Const BackupScriptRelPath As String = "Database\backup_gbs_weekly.ps1"
+
+    ' Walks up from the executable folder until it finds Database\backup_gbs_weekly.ps1,
+    ' so the tab works from any clone location (bin\Debug, bin\Release, C:\gbs, ...).
+    Private Function ResolverBackupScriptPath() As String
+        Dim dir As New IO.DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory)
+        While dir IsNot Nothing
+            Dim candidato As String = IO.Path.Combine(dir.FullName, BackupScriptRelPath)
+            If IO.File.Exists(candidato) Then Return candidato
+            dir = dir.Parent
+        End While
+        Return IO.Path.Combine("C:\gbs\GBS_Inventory", BackupScriptRelPath)
+    End Function
 
     Private Sub carregarBackupLog()
         Try
@@ -1490,7 +1502,7 @@ Public Class frmPrincipal
 
         Dim psi As New ProcessStartInfo() With {
             .FileName               = "powershell.exe",
-            .Arguments              = "-NoProfile -ExecutionPolicy Bypass -File """ & BackupScriptPath & """",
+            .Arguments              = "-NoProfile -ExecutionPolicy Bypass -File """ & ResolverBackupScriptPath() & """",
             .UseShellExecute        = False,
             .RedirectStandardOutput = True,
             .RedirectStandardError  = True,
