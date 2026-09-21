@@ -20,6 +20,8 @@ Public Class frmAddEquipamento
         TemaEscuro.aplicarHelius(Me)
         ConfigurarEstilos()
         CarregarManufacturers()
+        ConfigurarAutoComplete(txtModel, carregarSugestoesModel())
+        ConfigurarAutoComplete(txtProcessor, carregarSugestoesProcessor())
     End Sub
 
     Private Sub frmAddEquipamento_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -53,6 +55,41 @@ Public Class frmAddEquipamento
         Catch
             ' silent — combo stays empty; user can still type a new brand
         End Try
+    End Sub
+
+    ' Suggestions are loaded once per dialog open (not per keystroke). UPPER(TRIM()) folds
+    ' case-only duplicates ("Latitude 5420" / "LATITUDE 5420") into a single suggestion.
+    Private Function carregarSugestoes(pColuna As String) As AutoCompleteStringCollection
+        Dim col As New AutoCompleteStringCollection()
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("OracleDB").ConnectionString
+            Dim ds As DataSet = OracleHelper.ExecuteDataset(cs, CommandType.Text,
+                "SELECT DISTINCT UPPER(TRIM(" & pColuna & ")) FROM TBL_EQUIPAMENTO" &
+                " WHERE " & pColuna & " IS NOT NULL ORDER BY 1")
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim val As String = row(0).ToString()
+                    If Not String.IsNullOrEmpty(val) Then col.Add(val)
+                Next
+            End If
+        Catch
+            ' silent — no suggestions; the user can still type freely
+        End Try
+        Return col
+    End Function
+
+    Private Function carregarSugestoesModel() As AutoCompleteStringCollection
+        Return carregarSugestoes("MODEL")
+    End Function
+
+    Private Function carregarSugestoesProcessor() As AutoCompleteStringCollection
+        Return carregarSugestoes("PROCESSADOR")
+    End Function
+
+    Private Sub ConfigurarAutoComplete(pTxt As TextBox, pSugestoes As AutoCompleteStringCollection)
+        pTxt.AutoCompleteMode         = AutoCompleteMode.SuggestAppend
+        pTxt.AutoCompleteSource       = AutoCompleteSource.CustomSource
+        pTxt.AutoCompleteCustomSource = pSugestoes
     End Sub
 
 #End Region
