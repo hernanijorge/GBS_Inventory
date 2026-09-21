@@ -153,6 +153,7 @@ Public Class frmPrincipal
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         PopularCheckedListBox(clbManufacturer, colMarca)
         PopularCheckedListBox(clbBatch, "SOURCE_BATCH")
+        PopularCheckedListBox(clbScreen, "SCREEN_SIZE")
         recarregarModelosPorManufacturer()
 
     End Sub
@@ -307,6 +308,11 @@ Public Class frmPrincipal
             batches.Add(item.ToString())
         Next
 
+        Dim screens As New List(Of String)()
+        For Each item As Object In clbScreen.CheckedItems
+            screens.Add(item.ToString())
+        Next
+
         Dim colMarca As String = ObterNomeColuna(dtEstoqueCompleto, {"MANUFACTURER", "MARCA"})
         Dim colModelo As String = ObterNomeColuna(dtEstoqueCompleto, {"MODEL", "MODELO"})
         Dim colProc As String = ObterNomeColuna(dtEstoqueCompleto, {"PROCESSADOR", "CPU_MODEL"})
@@ -377,6 +383,16 @@ Public Class frmPrincipal
                 Dim ok As Boolean = False
                 For Each b As String In batches
                     If String.Equals(b, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
+                Next
+                If Not ok Then Continue For
+            End If
+
+            ' screen size — OR among checked, empty = all
+            If screens.Count > 0 AndAlso dtEstoqueCompleto.Columns.Contains("SCREEN_SIZE") Then
+                Dim v As String = If(IsDBNull(row("SCREEN_SIZE")), "", row("SCREEN_SIZE").ToString())
+                Dim ok As Boolean = False
+                For Each sz As String In screens
+                    If String.Equals(sz, v, StringComparison.OrdinalIgnoreCase) Then ok = True : Exit For
                 Next
                 If Not ok Then Continue For
             End If
@@ -509,6 +525,7 @@ Public Class frmPrincipal
             {"CPU_FAMILY", "CPU Family"},
             {"RAM_GB", "RAM (GB)"},
             {"STORAGE_GB", "Storage (GB)"},
+            {"SCREEN_SIZE", "Screen"},
             {"CONDITION_STATUS", "Battery Condition"},
             {"STATUS", "Status"},
             {"OBSERVACAO", "Notes"},
@@ -524,6 +541,16 @@ Public Class frmPrincipal
             End If
         Next
 
+        ' Screen goes right after Storage, before Battery Condition
+        If dgvEstoque.Columns.Contains("SCREEN_SIZE") AndAlso dgvEstoque.Columns.Contains("STORAGE_GB") Then
+            With dgvEstoque.Columns("SCREEN_SIZE")
+                .HeaderText = "Screen"
+                .MinimumWidth = 60
+                .FillWeight = 40
+                .DisplayIndex = dgvEstoque.Columns("STORAGE_GB").DisplayIndex + 1
+            End With
+        End If
+
         ' Configure CONDITION_STATUS column
         If dgvEstoque.Columns.Contains("CONDITION_STATUS") Then
             With dgvEstoque.Columns("CONDITION_STATUS")
@@ -533,7 +560,9 @@ Public Class frmPrincipal
                 .MinimumWidth = 120
                 .FillWeight = 70
             End With
-            If dgvEstoque.Columns.Contains("STORAGE_GB") Then
+            If dgvEstoque.Columns.Contains("SCREEN_SIZE") Then
+                dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = dgvEstoque.Columns("SCREEN_SIZE").DisplayIndex + 1
+            ElseIf dgvEstoque.Columns.Contains("STORAGE_GB") Then
                 Dim idx As Integer = dgvEstoque.Columns("STORAGE_GB").DisplayIndex
                 dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = idx + 1
             End If
@@ -731,6 +760,10 @@ Public Class frmPrincipal
         Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
     End Sub
 
+    Private Sub clbScreen_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbScreen.ItemCheck
+        Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
+    End Sub
+
     Private Sub clbProcessor_ItemCheck(sender As Object, e As ItemCheckEventArgs) Handles clbProcessor.ItemCheck
         Me.BeginInvoke(New Action(AddressOf AtualizarContadorFiltros))
     End Sub
@@ -741,7 +774,8 @@ Public Class frmPrincipal
                                clbModel.CheckedItems.Count +
                                clbStatus.CheckedItems.Count +
                                clbProcessor.CheckedItems.Count +
-                               clbBatch.CheckedItems.Count
+                               clbBatch.CheckedItems.Count +
+                               clbScreen.CheckedItems.Count
         lblFiltrosAtivos.Text = If(count = 0, "No filters active",
                                    If(count = 1, "1 filter active",
                                       count.ToString() & " filters active"))
@@ -768,6 +802,9 @@ Public Class frmPrincipal
         Next
         For i As Integer = 0 To clbBatch.Items.Count - 1
             clbBatch.SetItemChecked(i, False)
+        Next
+        For i As Integer = 0 To clbScreen.Items.Count - 1
+            clbScreen.SetItemChecked(i, False)
         Next
         aplicarFiltrosEstoque()
     End Sub

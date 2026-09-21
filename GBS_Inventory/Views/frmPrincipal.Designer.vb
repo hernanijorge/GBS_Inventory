@@ -108,6 +108,7 @@ Partial Class frmPrincipal
     Friend WithEvents clbStatus          As CheckedListBox
     Friend WithEvents clbProcessor       As CheckedListBox
     Friend WithEvents clbBatch           As CheckedListBox
+    Friend WithEvents clbScreen          As CheckedListBox
     Friend WithEvents btnApplyFilter     As Button
     Friend WithEvents btnClearFilter     As Button
     Friend WithEvents btnGenerateReport  As Button
@@ -543,6 +544,33 @@ Partial Class frmPrincipal
         Me.clbBatch.BorderStyle  = BorderStyle.None
         pnlGrpBatch.Controls.AddRange({lblBatchTitle, clbBatch})
 
+        ' ── Card: Screen ────────────────────────────────────────────
+        Dim pnlGrpScreen As New Panel() With {
+            .Location  = New Point(1091, 6),
+            .Size      = New Size(110, 150),
+            .BackColor = TemaEscuro.Surface
+        }
+        AddHandler pnlGrpScreen.Paint, Sub(sender, e)
+                                           Using pen As New Pen(TemaEscuro.Borda, 1)
+                                               e.Graphics.DrawRectangle(pen, 0, 0, pnlGrpScreen.Width - 1, pnlGrpScreen.Height - 1)
+                                           End Using
+                                       End Sub
+        Dim lblScreenTitle As New Label() With {
+            .Text      = "Screen",
+            .Location  = New Point(4, 4),
+            .AutoSize  = True,
+            .Font      = New Font("Segoe UI", 8, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .BackColor = Color.Transparent
+        }
+        Me.clbScreen              = New CheckedListBox()
+        Me.clbScreen.Location     = New Point(4, 24)
+        Me.clbScreen.Size         = New Size(102, 120)
+        Me.clbScreen.CheckOnClick = True
+        Me.clbScreen.Font         = New Font("Segoe UI", 9)
+        Me.clbScreen.BorderStyle  = BorderStyle.None
+        pnlGrpScreen.Controls.AddRange({lblScreenTitle, clbScreen})
+
         ' ── Botões e contador de filtros ativos ─────────────────────
         Me.btnApplyFilter           = New Button()
         Me.btnApplyFilter.Text      = "Apply Filter"
@@ -599,7 +627,7 @@ Partial Class frmPrincipal
         Me.lblFiltrosAtivos.ForeColor = TemaEscuro.TextoMutado
         Me.lblFiltrosAtivos.Font      = New Font("Segoe UI", 9, FontStyle.Italic)
 
-        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt, pnlGrpBatch,
+        Me.pnlFiltros.Controls.AddRange({pnlGrpMfr, pnlGrpMdl, pnlGrpProc, pnlGrpSt, pnlGrpBatch, pnlGrpScreen,
                                           btnApplyFilter, btnClearFilter,
                                           btnGenerateReport, btnExportExcel,
                                           btnAddToList, btnClearList,

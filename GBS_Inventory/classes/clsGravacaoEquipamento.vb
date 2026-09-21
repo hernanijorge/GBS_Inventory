@@ -126,7 +126,7 @@ Public Class clsGravacaoEquipamento
 
     Public Function incluirEquipamento(pEquipamento As Equipamento) As Integer
 
-        Dim oPar(10) As OracleParameter
+        Dim oPar(11) As OracleParameter
 
         oPar(0)  = New OracleParameter("P_INTERNAL_UID",       OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1)  = New OracleParameter("P_SERIAL_NUMBER",      OracleDbType.Varchar2, ParameterDirection.Input)
@@ -139,6 +139,7 @@ Public Class clsGravacaoEquipamento
         oPar(8)  = New OracleParameter("P_STATUS_EQUIPAMENTO", OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(9)  = New OracleParameter("P_OBSERVACAO",         OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(10) = New OracleParameter("P_BATTERY_CHECK",      OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(11) = New OracleParameter("P_SCREEN_SIZE",        OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -153,6 +154,7 @@ Public Class clsGravacaoEquipamento
             oPar(8).Value  = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
             oPar(9).Value  = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
             oPar(10).Value = If(String.IsNullOrEmpty(pEquipamento.BatteryCheck), DBNull.Value, CObj(pEquipamento.BatteryCheck))
+            oPar(11).Value = If(String.IsNullOrWhiteSpace(pEquipamento.ScreenSize), DBNull.Value, CObj(pEquipamento.ScreenSize.Trim()))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_INSERT", oPar)
 
@@ -168,7 +170,7 @@ Public Class clsGravacaoEquipamento
 
     Public Function alterarEquipamento(pEquipamento As Equipamento) As Boolean
 
-        Dim oPar(9) As OracleParameter
+        Dim oPar(10) As OracleParameter
 
         oPar(0) = New OracleParameter("P_INTERNAL_UID",  OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1) = New OracleParameter("P_SERIAL_NUMBER", OracleDbType.Varchar2, ParameterDirection.Input)
@@ -180,6 +182,7 @@ Public Class clsGravacaoEquipamento
         oPar(7) = New OracleParameter("P_CONDITION_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(8) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(9) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(10) = New OracleParameter("P_SCREEN_SIZE",  OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -193,6 +196,7 @@ Public Class clsGravacaoEquipamento
             oPar(7).Value = DbConditionStatus(pEquipamento.ConditionStatus)
             oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
             oPar(9).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
+            oPar(10).Value = If(String.IsNullOrWhiteSpace(pEquipamento.ScreenSize), DBNull.Value, CObj(pEquipamento.ScreenSize.Trim()))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_UPSERT_EQUIPAMENTO", oPar)
 
@@ -267,7 +271,7 @@ Public Class clsGravacaoEquipamento
     ''' </summary>
     Public Function upsertEquipamento(pEquipamento As Equipamento) As String
 
-        Dim oPar(9) As OracleParameter
+        Dim oPar(10) As OracleParameter
 
         oPar(0) = New OracleParameter("P_INTERNAL_UID",  OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(1) = New OracleParameter("P_SERIAL_NUMBER", OracleDbType.Varchar2, ParameterDirection.Input)
@@ -279,6 +283,7 @@ Public Class clsGravacaoEquipamento
         oPar(7) = New OracleParameter("P_CONDITION_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(8) = New OracleParameter("P_STATUS",        OracleDbType.Varchar2, ParameterDirection.Input)
         oPar(9) = New OracleParameter("P_OBSERVACAO",    OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(10) = New OracleParameter("P_SCREEN_SIZE",  OracleDbType.Varchar2, ParameterDirection.Input)
 
         Try
 
@@ -292,6 +297,7 @@ Public Class clsGravacaoEquipamento
             oPar(7).Value = DbConditionStatus(pEquipamento.ConditionStatus)
             oPar(8).Value = If(String.IsNullOrEmpty(pEquipamento.Status), "IN_STOCK", pEquipamento.Status)
             oPar(9).Value = If(String.IsNullOrEmpty(pEquipamento.Notes), DBNull.Value, CObj(pEquipamento.Notes))
+            oPar(10).Value = If(String.IsNullOrWhiteSpace(pEquipamento.ScreenSize), DBNull.Value, CObj(pEquipamento.ScreenSize.Trim()))
 
             OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.StoredProcedure, "PACK_EQUIPAMENTO.PROC_UPSERT_EQUIPAMENTO", oPar)
 

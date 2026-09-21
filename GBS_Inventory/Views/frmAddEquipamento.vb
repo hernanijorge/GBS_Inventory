@@ -22,6 +22,7 @@ Public Class frmAddEquipamento
         CarregarManufacturers()
         ConfigurarAutoComplete(txtModel, carregarSugestoesModel())
         ConfigurarAutoComplete(txtProcessor, carregarSugestoesProcessor())
+        ConfigurarAutoComplete(txtScreenSize, carregarSugestoesScreenSize())
     End Sub
 
     Private Sub frmAddEquipamento_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -34,6 +35,7 @@ Public Class frmAddEquipamento
         btnSave.BackColor = TemaEscuro.Accent
         btnSave.ForeColor = TemaEscuro.Fundo
         pnlFooter.BackColor = TemaEscuro.Surface
+        lblScreenHint.ForeColor = TemaEscuro.TextoMutado
     End Sub
 
 #End Region
@@ -86,6 +88,10 @@ Public Class frmAddEquipamento
         Return carregarSugestoes("PROCESSADOR")
     End Function
 
+    Private Function carregarSugestoesScreenSize() As AutoCompleteStringCollection
+        Return carregarSugestoes("SCREEN_SIZE")
+    End Function
+
     Private Sub ConfigurarAutoComplete(pTxt As TextBox, pSugestoes As AutoCompleteStringCollection)
         pTxt.AutoCompleteMode         = AutoCompleteMode.SuggestAppend
         pTxt.AutoCompleteSource       = AutoCompleteSource.CustomSource
@@ -129,6 +135,7 @@ Public Class frmAddEquipamento
 
         Dim serial   As String = txtSerial.Text.Trim()
         Dim proc     As String = txtProcessor.Text.Trim()
+        Dim screen   As String = txtScreenSize.Text.Trim()
         Dim batch    As String = txtBatch.Text.Trim()
         Dim notes    As String = txtNotes.Text.Trim()
 
@@ -159,6 +166,7 @@ Public Class frmAddEquipamento
                             cmd.Parameters.Add("P_OBSERVACAO",         OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(notes), DBNull.Value, CObj(notes))
                             cmd.Parameters.Add("P_BATTERY_CHECK",      OracleDbType.Varchar2).Value = DBNull.Value
                             cmd.Parameters.Add("P_SOURCE_BATCH",       OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(batch), DBNull.Value, CObj(batch))
+                            cmd.Parameters.Add("P_SCREEN_SIZE",        OracleDbType.Varchar2).Value = If(String.IsNullOrEmpty(screen), DBNull.Value, CObj(screen))
                             cmd.ExecuteNonQuery()
                         End Using
 

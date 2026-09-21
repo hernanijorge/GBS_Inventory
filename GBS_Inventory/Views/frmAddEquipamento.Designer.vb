@@ -27,6 +27,9 @@ Partial Class frmAddEquipamento
         Me.txtSerial       = New System.Windows.Forms.TextBox()
         Me.lblProcessor    = New System.Windows.Forms.Label()
         Me.txtProcessor    = New System.Windows.Forms.TextBox()
+        Me.lblScreenSize   = New System.Windows.Forms.Label()
+        Me.txtScreenSize   = New System.Windows.Forms.TextBox()
+        Me.lblScreenHint   = New System.Windows.Forms.Label()
         Me.lblRam          = New System.Windows.Forms.Label()
         Me.txtRam          = New System.Windows.Forms.TextBox()
         Me.lblStorage      = New System.Windows.Forms.Label()
@@ -46,7 +49,7 @@ Partial Class frmAddEquipamento
         ' ── Form ──────────────────────────────────────────────────────
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0F, 15.0F)
         Me.AutoScaleMode       = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize          = New System.Drawing.Size(500, 490)
+        Me.ClientSize          = New System.Drawing.Size(500, 524)
         Me.FormBorderStyle     = System.Windows.Forms.FormBorderStyle.FixedDialog
         Me.MaximizeBox         = False
         Me.MinimizeBox         = False
@@ -122,49 +125,59 @@ Partial Class frmAddEquipamento
         Me.txtProcessor.Location = New System.Drawing.Point(155, 174)
         Me.txtProcessor.Size     = New System.Drawing.Size(310, 24)
 
-        ' RAM (GB) + Storage (GB) on same row  — Y=208
+        ' Screen Size  — Y=208
+        Me.lblScreenSize.AutoSize = True
+        Me.lblScreenSize.Location = New System.Drawing.Point(14, 210)
+        Me.lblScreenSize.Text     = "Screen Size"
+        Me.txtScreenSize.Location = New System.Drawing.Point(155, 208)
+        Me.txtScreenSize.Size     = New System.Drawing.Size(110, 24)
+        Me.lblScreenHint.AutoSize = True
+        Me.lblScreenHint.Location = New System.Drawing.Point(275, 211)
+        Me.lblScreenHint.Text     = "e.g. 14"", 15.6"", 17"""
+
+        ' RAM (GB) + Storage (GB) on same row  — Y=242
         Me.lblRam.AutoSize = True
-        Me.lblRam.Location = New System.Drawing.Point(14, 210)
+        Me.lblRam.Location = New System.Drawing.Point(14, 244)
         Me.lblRam.Text     = "RAM (GB)"
-        Me.txtRam.Location = New System.Drawing.Point(155, 208)
+        Me.txtRam.Location = New System.Drawing.Point(155, 242)
         Me.txtRam.Size     = New System.Drawing.Size(70, 24)
 
         Me.lblStorage.AutoSize = True
-        Me.lblStorage.Location = New System.Drawing.Point(238, 210)
+        Me.lblStorage.Location = New System.Drawing.Point(238, 244)
         Me.lblStorage.Text     = "Storage (GB)"
-        Me.txtStorage.Location = New System.Drawing.Point(330, 208)
+        Me.txtStorage.Location = New System.Drawing.Point(330, 242)
         Me.txtStorage.Size     = New System.Drawing.Size(70, 24)
 
-        ' Condition Status *  — Y=242
+        ' Condition Status *  — Y=276
         Me.lblCondition.AutoSize = True
-        Me.lblCondition.Location = New System.Drawing.Point(14, 244)
+        Me.lblCondition.Location = New System.Drawing.Point(14, 278)
         Me.lblCondition.Text     = "Battery Condition *"
-        Me.cboCondition.Location     = New System.Drawing.Point(155, 242)
+        Me.cboCondition.Location     = New System.Drawing.Point(155, 276)
         Me.cboCondition.Size         = New System.Drawing.Size(200, 24)
         Me.cboCondition.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cboCondition.Items.AddRange({"EXCELLENT", "GOOD", "FAIR", "POOR", "NO_BATTERY"})
 
-        ' Status *  — Y=276
+        ' Status *  — Y=310
         Me.lblStatus.AutoSize = True
-        Me.lblStatus.Location = New System.Drawing.Point(14, 278)
+        Me.lblStatus.Location = New System.Drawing.Point(14, 312)
         Me.lblStatus.Text     = "Status *"
-        Me.cboStatus.Location     = New System.Drawing.Point(155, 276)
+        Me.cboStatus.Location     = New System.Drawing.Point(155, 310)
         Me.cboStatus.Size         = New System.Drawing.Size(200, 24)
         Me.cboStatus.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cboStatus.Items.AddRange({"IN_STOCK", "IN_REPAIR", "SCRAPPED"})
 
-        ' Source Batch  — Y=310
+        ' Source Batch  — Y=344
         Me.lblBatch.AutoSize = True
-        Me.lblBatch.Location = New System.Drawing.Point(14, 312)
+        Me.lblBatch.Location = New System.Drawing.Point(14, 346)
         Me.lblBatch.Text     = "Source Batch"
-        Me.txtBatch.Location = New System.Drawing.Point(155, 310)
+        Me.txtBatch.Location = New System.Drawing.Point(155, 344)
         Me.txtBatch.Size     = New System.Drawing.Size(310, 24)
 
-        ' Notes  — Y=344, multiline H=72
+        ' Notes  — Y=378, multiline H=72
         Me.lblNotes.AutoSize = True
-        Me.lblNotes.Location = New System.Drawing.Point(14, 346)
+        Me.lblNotes.Location = New System.Drawing.Point(14, 380)
         Me.lblNotes.Text     = "Notes"
-        Me.txtNotes.Location   = New System.Drawing.Point(155, 344)
+        Me.txtNotes.Location   = New System.Drawing.Point(155, 378)
         Me.txtNotes.Size       = New System.Drawing.Size(310, 72)
         Me.txtNotes.Multiline  = True
         Me.txtNotes.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
@@ -176,6 +189,7 @@ Partial Class frmAddEquipamento
             Me.lblModel,     Me.txtModel,
             Me.lblSerial,    Me.txtSerial,
             Me.lblProcessor, Me.txtProcessor,
+            Me.lblScreenSize, Me.txtScreenSize, Me.lblScreenHint,
             Me.lblRam,       Me.txtRam,
             Me.lblStorage,   Me.txtStorage,
             Me.lblCondition, Me.cboCondition,
@@ -207,6 +221,9 @@ Partial Class frmAddEquipamento
     Friend WithEvents txtSerial       As System.Windows.Forms.TextBox
     Friend WithEvents lblProcessor    As System.Windows.Forms.Label
     Friend WithEvents txtProcessor    As System.Windows.Forms.TextBox
+    Friend WithEvents lblScreenSize   As System.Windows.Forms.Label
+    Friend WithEvents txtScreenSize   As System.Windows.Forms.TextBox
+    Friend WithEvents lblScreenHint   As System.Windows.Forms.Label
     Friend WithEvents lblRam          As System.Windows.Forms.Label
     Friend WithEvents txtRam          As System.Windows.Forms.TextBox
     Friend WithEvents lblStorage      As System.Windows.Forms.Label

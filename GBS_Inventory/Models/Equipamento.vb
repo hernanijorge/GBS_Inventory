@@ -24,6 +24,7 @@ Namespace Models
         Public Property RamGb               As String
         Public Property StorageGb           As String
         Public Property HardDriveType       As String
+        Public Property ScreenSize          As String
         Public Property Resolution          As String
         Public Property Graphics            As String
 
