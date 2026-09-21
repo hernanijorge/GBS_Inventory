@@ -95,6 +95,7 @@ Partial Class frmPrincipal
 
     ' Botão de adição manual de equipamento
     Friend WithEvents btnAddEquipamento As Button
+    Friend WithEvents btnRegistrarUpgrade As Button
 
     ' Rodapé da aba Inventory
     Friend WithEvents pnlEstoqueFooter As Panel
@@ -373,6 +374,11 @@ Partial Class frmPrincipal
         Me.btnAddEquipamento.ForeColor = TemaEscuro.Fundo
         Me.btnAddEquipamento.FlatStyle = FlatStyle.Flat
 
+        Me.btnRegistrarUpgrade = New Button()
+        Me.btnRegistrarUpgrade.Text      = "+ Register Upgrade"
+        Me.btnRegistrarUpgrade.Location  = New Point(1060, 10)
+        Me.btnRegistrarUpgrade.Size      = New Size(140, 28)
+
         Me.lblInventoryQuickScan = New Label()
         Me.lblInventoryQuickScan.Text = "Quick Scan for Report (UID / Serial):"
         Me.lblInventoryQuickScan.Location = New Point(10, 53)
@@ -391,7 +397,7 @@ Partial Class frmPrincipal
 
         Me.pnlAcoes.Controls.AddRange({lblPesquisa, txtPesquisa, btnBuscarUID,
                                         btnScanner, btnImportarPlanilha, btnAtualizar,
-                                        btnAddEquipamento, lblInventoryQuickScan,
+                                        btnAddEquipamento, btnRegistrarUpgrade, lblInventoryQuickScan,
                                         txtInventoryQuickScan, lblInventoryScanStatus})
 
         ' ── Painel de filtros ─────────────────────────────────────────

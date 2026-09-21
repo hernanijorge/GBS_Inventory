@@ -12,8 +12,15 @@ Public Class frmUpgrade
     Private oCompController As ComponentController
     Private vIdEquipamento  As Integer
     Private sInternalUID    As String
+    Private sComponentePre  As String
+    Private sValorAntesPre  As String
 
-    Public Sub New(pIdEquipamento As Integer, pInternalUID As String)
+    ''' <param name="pComponentePre">"RAM" locks the component to RAM; "SSD"/"HDD"/"STORAGE" restricts it to SSD/HDD.
+    ''' Any pre-selection switches the dialog to Manual Entry.</param>
+    ''' <param name="pValorAntesPre">Pre-fills Value BEFORE (e.g. "8 GB"); cursor then starts on Value AFTER.</param>
+    Public Sub New(pIdEquipamento As Integer, pInternalUID As String,
+                   Optional pComponentePre As String = Nothing,
+                   Optional pValorAntesPre As String = Nothing)
 
         InitializeComponent()
 
@@ -21,6 +28,8 @@ Public Class frmUpgrade
         oCompController = New ComponentController()
         vIdEquipamento  = pIdEquipamento
         sInternalUID    = pInternalUID
+        sComponentePre  = pComponentePre
+        sValorAntesPre  = pValorAntesPre
 
         TemaEscuro.aplicarHelius(Me)
 
@@ -32,6 +41,21 @@ Public Class frmUpgrade
 
         cboComponente.Items.Clear()
         cboComponente.Items.AddRange({"RAM", "SSD", "HDD", "BATTERY", "SCREEN", "KEYBOARD", "COVER", "GPU", "OTHER"})
+        If Not String.IsNullOrWhiteSpace(sComponentePre) Then
+            rbManual.Checked = True
+            Dim tipoPre As String = sComponentePre.Trim().ToUpperInvariant()
+            cboComponente.Items.Clear()
+            If tipoPre = "RAM" Then
+                cboComponente.Items.Add("RAM")
+                cboComponente.Enabled = False
+            ElseIf tipoPre = "HDD" Then
+                cboComponente.Items.AddRange({"HDD", "SSD"})
+            Else
+                cboComponente.Items.AddRange({"SSD", "HDD"})
+            End If
+            If Not String.IsNullOrWhiteSpace(sValorAntesPre) Then txtValorAntes.Text = sValorAntesPre
+        End If
+
         cboComponente.SelectedIndex = 0
 
         cboOrigem.Items.Clear()
@@ -48,6 +72,8 @@ Public Class frmUpgrade
         If cboOrigem.Items.Count > 0 Then cboOrigem.SelectedIndex = 0
 
         AplicarModoAcao()
+
+        If Not String.IsNullOrWhiteSpace(sComponentePre) Then ActiveControl = txtValorDepois
 
     End Sub
 

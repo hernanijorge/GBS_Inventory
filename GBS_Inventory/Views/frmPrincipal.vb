@@ -1784,7 +1784,20 @@ Public Class frmPrincipal
 
     Private Sub dgvEstoque_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvEstoque.CellDoubleClick
         If e.RowIndex < 0 Then Return
-        AbrirHistoricoEquipamento()
+        AbrirUpgradeDoGridEstoque()
+    End Sub
+
+    Private Sub btnRegistrarUpgrade_Click(sender As Object, e As EventArgs) Handles btnRegistrarUpgrade.Click
+        AbrirUpgradeDoGridEstoque()
+    End Sub
+
+    Private Sub AbrirUpgradeDoGridEstoque()
+        If dgvEstoque Is Nothing OrElse dgvEstoque.CurrentRow Is Nothing Then
+            MessageBox.Show("Selecione um equipamento no grid primeiro", "Upgrade",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        AbrirUpgradeDoEstoqueSelecionado()
     End Sub
 
     Private Sub AbrirHistoricoEquipamento()
@@ -2936,6 +2949,19 @@ Public Class frmPrincipal
 
         ctx.Items.Add(New ToolStripSeparator())
 
+        ' ── Register Upgrade → submenu ─────────────────────────────────
+        Dim mnuUpgrade As New ToolStripMenuItem("Register Upgrade")
+        Dim mnuRam As New ToolStripMenuItem("RAM Upgrade...")
+        AddHandler mnuRam.Click, Sub(s, ev) AbrirUpgradeRapido("RAM")
+        Dim mnuStorage As New ToolStripMenuItem("Storage Upgrade...")
+        AddHandler mnuStorage.Click, Sub(s, ev) AbrirUpgradeRapido("SSD")
+        Dim mnuFull As New ToolStripMenuItem("Full Upgrade (RAM + Storage)...")
+        AddHandler mnuFull.Click, Sub(s, ev) AbrirUpgradeRapido(Nothing)
+        mnuUpgrade.DropDownItems.AddRange({mnuRam, mnuStorage, New ToolStripSeparator(), mnuFull})
+        ctx.Items.Add(mnuUpgrade)
+
+        ctx.Items.Add(New ToolStripSeparator())
+
         ' ── View History ───────────────────────────────────────────────
         Dim mnuHistory As New ToolStripMenuItem("View History")
         AddHandler mnuHistory.Click, AddressOf mnuViewHistory_Click
@@ -3094,6 +3120,40 @@ Public Class frmPrincipal
                                 MessageBoxButtons.OK, MessageBoxIcon.Error)
             End Try
         End Sub)
+    End Sub
+
+    ' pComponentePre: "RAM" / "SSD" pre-select the component and Value BEFORE from the grid row;
+    ' Nothing opens the regular full dialog.
+    Private Sub AbrirUpgradeRapido(pComponentePre As String)
+        Dim dados = ObterDadosLinhaSelecionada()
+        If Not dados.Valid OrElse dados.Id <= 0 Then
+            MessageBox.Show("Selecione um equipamento no grid primeiro", "Upgrade",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim valorAntes As String = Nothing
+        If pComponentePre IsNot Nothing Then
+            Dim col As String = If(pComponentePre = "RAM", "RAM_GB", "STORAGE_GB")
+            If dgvEstoque.Columns.Contains(col) Then
+                Dim v As Object = dgvEstoque.CurrentRow.Cells(col).Value
+                Dim gb As Integer
+                If v IsNot Nothing AndAlso Integer.TryParse(v.ToString(), gb) AndAlso gb > 0 Then
+                    valorAntes = gb & " GB"
+                End If
+            End If
+        End If
+
+        ' Deferred so the ContextMenuStrip finishes closing before the modal dialog opens.
+        BeginInvoke(Sub()
+                        Using frm As New frmUpgrade(dados.Id, dados.UID, pComponentePre, valorAntes)
+                            If frm.ShowDialog(Me) = DialogResult.OK Then
+                                carregarEstoque()
+                                carregarUpgrades()
+                                carregarDashboard()
+                            End If
+                        End Using
+                    End Sub)
     End Sub
 
     Private Sub mnuViewHistory_Click(sender As Object, e As EventArgs)
