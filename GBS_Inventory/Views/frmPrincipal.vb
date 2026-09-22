@@ -500,6 +500,7 @@ Public Class frmPrincipal
         chk.Name = "_SEL"
         chk.HeaderText = ""
         chk.Width = 30
+        chk.MinimumWidth = 30
         chk.ReadOnly = False
         chk.FillWeight = 1
         dgvEstoque.Columns.Insert(0, chk)
@@ -512,8 +513,12 @@ Public Class frmPrincipal
             dgvEstoque.Columns("STATUS_DESCRICAO").Visible = False
         End If
 
+        ' ID interno não é útil visualmente
+        If dgvEstoque.Columns.Contains("ID_EQUIPAMENTO") Then
+            dgvEstoque.Columns("ID_EQUIPAMENTO").Visible = False
+        End If
+
         Dim headers As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
-            {"ID_EQUIPAMENTO", "ID"},
             {"INTERNAL_UID", "Internal UID"},
             {"SERIAL_NUMBER", "Serial Number"},
             {"MARCA", "Manufacturer"},
@@ -541,32 +546,73 @@ Public Class frmPrincipal
             End If
         Next
 
+        ' Larguras fixas; grid usa scroll horizontal quando não cabe tudo
+        dgvEstoque.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgvEstoque.ScrollBars = ScrollBars.Both
+
+        ' Headers em uma linha só, altura fixa, fonte bold
+        dgvEstoque.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.EnableResizing
+        dgvEstoque.ColumnHeadersHeight = 32
+        dgvEstoque.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False
+        dgvEstoque.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+        dgvEstoque.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+
+        ' Linhas em altura padrão, sem auto-size
+        dgvEstoque.RowTemplate.Height = 26
+        dgvEstoque.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+
+        ' Estilo geral do grid
+        dgvEstoque.DefaultCellStyle.Font = New Font("Segoe UI", 9)
+        dgvEstoque.DefaultCellStyle.Padding = New Padding(4, 0, 4, 0)
+        dgvEstoque.RowHeadersVisible = False
+        dgvEstoque.AllowUserToResizeRows = False
+        dgvEstoque.AllowUserToResizeColumns = True
+
+        ' Larguras fixas por coluna
+        AplicarLarguraColuna("INTERNAL_UID", 90, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("SERIAL_NUMBER", 110, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("MARCA", 90)
+        AplicarLarguraColuna("MANUFACTURER", 90)
+        AplicarLarguraColuna("MODEL", 160)
+        AplicarLarguraColuna("MODELO", 160)
+        AplicarLarguraColuna("PROCESSADOR", 100)
+        AplicarLarguraColuna("CPU_MODEL", 100)
+        AplicarLarguraColuna("RAM_GB", 65, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("STORAGE_GB", 75, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("SCREEN_SIZE", 65, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("CONDITION_STATUS", 100)
+        AplicarLarguraColuna("STATUS", 100)
+        AplicarLarguraColuna("OBSERVACAO", 220)
+        AplicarLarguraColuna("NOTES", 220)
+        AplicarLarguraColuna("DATA_CADASTRO", 130, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("DATA_ATUALIZACAO", 130, DataGridViewContentAlignment.MiddleCenter)
+        AplicarLarguraColuna("SOURCE_BATCH", 100)
+
         ' Screen goes right after Storage, before Battery Condition
         If dgvEstoque.Columns.Contains("SCREEN_SIZE") AndAlso dgvEstoque.Columns.Contains("STORAGE_GB") Then
-            With dgvEstoque.Columns("SCREEN_SIZE")
-                .HeaderText = "Screen"
-                .MinimumWidth = 60
-                .FillWeight = 40
-                .DisplayIndex = dgvEstoque.Columns("STORAGE_GB").DisplayIndex + 1
-            End With
+            dgvEstoque.Columns("SCREEN_SIZE").DisplayIndex = dgvEstoque.Columns("STORAGE_GB").DisplayIndex + 1
         End If
 
-        ' Configure CONDITION_STATUS column
+        ' Battery Condition goes right after Screen (or Storage, se não houver Screen)
         If dgvEstoque.Columns.Contains("CONDITION_STATUS") Then
-            With dgvEstoque.Columns("CONDITION_STATUS")
-                .HeaderText = "Battery Condition"
-                .DataPropertyName = "CONDITION_STATUS"
-                .Visible = True
-                .MinimumWidth = 120
-                .FillWeight = 70
-            End With
             If dgvEstoque.Columns.Contains("SCREEN_SIZE") Then
                 dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = dgvEstoque.Columns("SCREEN_SIZE").DisplayIndex + 1
             ElseIf dgvEstoque.Columns.Contains("STORAGE_GB") Then
-                Dim idx As Integer = dgvEstoque.Columns("STORAGE_GB").DisplayIndex
-                dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = idx + 1
+                dgvEstoque.Columns("CONDITION_STATUS").DisplayIndex = dgvEstoque.Columns("STORAGE_GB").DisplayIndex + 1
             End If
         End If
+    End Sub
+
+    Private Sub AplicarLarguraColuna(pNomeColuna As String, pWidth As Integer,
+                                     Optional pAlignment As DataGridViewContentAlignment = DataGridViewContentAlignment.NotSet)
+        If Not dgvEstoque.Columns.Contains(pNomeColuna) Then Return
+
+        With dgvEstoque.Columns(pNomeColuna)
+            .Width = pWidth
+            If pAlignment <> DataGridViewContentAlignment.NotSet Then
+                .DefaultCellStyle.Alignment = pAlignment
+            End If
+        End With
     End Sub
 
     Private Function ColetarItensRelatorio() As List(Of DataRow)
@@ -1032,6 +1078,13 @@ Public Class frmPrincipal
            dgvEstoque.Columns(e.ColumnIndex).Name = "_SEL" Then
             AtualizarRodapeEstoque()
         End If
+    End Sub
+
+    Private Sub dgvEstoque_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvEstoque.CellFormatting
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 Then Return
+
+        Dim valor As String = If(e.Value Is Nothing, "", e.Value.ToString())
+        dgvEstoque.Rows(e.RowIndex).Cells(e.ColumnIndex).ToolTipText = If(valor.Length > 30, valor, "")
     End Sub
 
 #End Region
