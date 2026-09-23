@@ -58,21 +58,40 @@ Public Class clsReadComponent
 
     End Function
 
-    Public Function selectSummary() As DataSet
+    ' Types and statuses only ever come from the fixed whitelists in ComponentSummaryOptions,
+    ' never from free text, so they are safe to inline.
+    Public Function selectSummary(pOpts As Models.ComponentSummaryOptions) As DataSet
+
+        Dim colunasGroup As String = String.Join(", ", pOpts.ColunasDescritivas)
+
+        Dim colunasSelect As New List(Of String) From {colunasGroup, "COUNT(*) AS TOTAL"}
+        For Each st As String In Models.ComponentSummaryOptions.StatusDisponiveis.Where(Function(s) pOpts.ColunasStatus.Contains(s))
+            colunasSelect.Add("SUM(CASE WHEN STATUS = '" & st & "' THEN 1 ELSE 0 END) AS " & st)
+        Next
+
+        Dim whereTipo As String = ""
+        If Not pOpts.TodosOsTipos Then
+            Dim conds As New List(Of String)()
+            Dim tipos As String() = Models.ComponentSummaryOptions.TiposConhecidos.Where(Function(t) pOpts.TiposIncluidos.Contains(t)).ToArray()
+            If tipos.Length > 0 Then
+                conds.Add("COMPONENT_TYPE IN (" & String.Join(",", tipos.Select(Function(t) "'" & t & "'")) & ")")
+            End If
+            If pOpts.IncluirOutrosTipos Then
+                conds.Add("COMPONENT_TYPE NOT IN (" & String.Join(",", Models.ComponentSummaryOptions.TiposConhecidos.Select(Function(t) "'" & t & "'")) & ")")
+            End If
+            whereTipo = " WHERE " & If(conds.Count = 0, "1 = 0", String.Join(" OR ", conds))
+        End If
+
         Try
             Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
-                "SELECT COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB," &
-                "       COUNT(*)                                                  AS TOTAL,"     &
-                "       SUM(CASE WHEN STATUS='IN_STOCK'   THEN 1 ELSE 0 END)      AS IN_STOCK,"  &
-                "       SUM(CASE WHEN STATUS='INSTALLED'  THEN 1 ELSE 0 END)      AS INSTALLED," &
-                "       SUM(CASE WHEN STATUS='SOLD'       THEN 1 ELSE 0 END)      AS SOLD,"      &
-                "       SUM(CASE WHEN STATUS='SCRAPPED'   THEN 1 ELSE 0 END)      AS SCRAPPED"   &
-                "  FROM TBL_COMPONENT" &
-                " GROUP BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB" &
-                " ORDER BY COMPONENT_TYPE, CAPACITY_GB, GENERATION, SPEED_MHZ, CPU, STORAGE_GB")
+                "SELECT " & String.Join(", ", colunasSelect) &
+                "  FROM TBL_COMPONENT" & whereTipo &
+                " GROUP BY " & colunasGroup &
+                " ORDER BY " & colunasGroup)
         Catch ex As Exception
             Throw New Exception(ex.ToString)
         End Try
+
     End Function
 
     Public Function selectDistinctBrands() As DataSet
@@ -88,6 +107,15 @@ Public Class clsReadComponent
         Try
             Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
                 "SELECT DISTINCT MODEL FROM TBL_COMPONENT WHERE MODEL IS NOT NULL ORDER BY MODEL")
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+    End Function
+
+    Public Function selectDistinctCpus() As DataSet
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
+                "SELECT DISTINCT CPU FROM TBL_COMPONENT WHERE CPU IS NOT NULL ORDER BY CPU")
         Catch ex As Exception
             Throw New Exception(ex.ToString)
         End Try

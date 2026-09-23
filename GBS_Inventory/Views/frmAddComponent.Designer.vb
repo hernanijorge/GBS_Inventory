@@ -63,7 +63,7 @@ Partial Class frmAddComponent
         Me.lblSpeedLabel = New Label()   With { .Text = "Speed (MHz)",  .Location = New Point(20,  130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboSpeed      = New ComboBox() With { .Location = New Point(20,  150), .Size = New Size(140, 24), .DropDownStyle = ComboBoxStyle.DropDownList }
 
-        Me.lblStorage    = New Label() With  { .Text = "Storage (GB) *", .Location = New Point(20, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado, .Visible = False }
+        Me.lblStorage    = New Label() With  { .Text = "Storage (GB)",.Location = New Point(20, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado, .Visible = False }
         Me.txtStorage    = New TextBox() With { .Location = New Point(20, 150), .Size = New Size(140, 24), .Visible = False }
 
         Dim lblBrand As New Label() With { .Text = "Brand",         .Location = New Point(180, 130), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }

@@ -754,7 +754,31 @@ Public Class ReportService
 
     ' ── Components Consolidated Summary Report ───────────────────────────────
 
+    ' Column catalogue for the summary: header, Excel width, PDF width. Which columns appear
+    ' (Model, status columns) is decided by ComponentSummaryOptions.
+    Private Shared ReadOnly ColunasSummaryCatalogo As New Dictionary(Of String, (Header As String, LarguraXlsx As Double, LarguraPdf As Single)) From {
+        {"COMPONENT_TYPE", ("Type",          10, 50)},
+        {"CAPACITY_GB",    ("Capacity (GB)", 14, 60)},
+        {"GENERATION",     ("Generation",    14, 60)},
+        {"SPEED_MHZ",      ("Speed (MHz)",   12, 55)},
+        {"CPU",            ("CPU",           20, 70)},
+        {"MODEL",          ("Model",         22, 80)},
+        {"STORAGE_GB",     ("Storage (GB)",  14, 55)},
+        {"TOTAL",          ("Total",         10, 36)},
+        {"IN_STOCK",       ("In Stock",      10, 42)},
+        {"INSTALLED",      ("Installed",     10, 44)},
+        {"SOLD",           ("Sold",           8, 32)},
+        {"SCRAPPED",       ("Scrapped",      10, 42)}
+    }
+
+    Private Shared Function ColunasSummary(pOpts As Models.ComponentSummaryOptions) As List(Of String)
+        Dim cols As New List(Of String)(pOpts.ColunasDescritivas)
+        cols.AddRange(pOpts.ColunasNumericas)
+        Return cols
+    End Function
+
     Public Shared Function GerarExcelComponentsSummary(pItens As List(Of DataRow),
+                                                        pOpts As Models.ComponentSummaryOptions,
                                                         pOutputPath As String,
                                                         Optional pLogoPath As String = "",
                                                         Optional baseNome As String = "") As String
@@ -762,24 +786,12 @@ Public Class ReportService
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
 
-        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
-                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome), pOpts.NomeArquivoBase(), baseNome)
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".xlsx")
 
-        Dim colunas As (Key As String, Header As String, Largura As Double)() = {
-            ("COMPONENT_TYPE", "Type",         10),
-            ("CAPACITY_GB",    "Capacity (GB)", 14),
-            ("GENERATION",     "Generation",    14),
-            ("SPEED_MHZ",      "Speed (MHz)",   12),
-            ("CPU",            "CPU",           20),
-            ("STORAGE_GB",     "Storage (GB)",  14),
-            ("TOTAL",          "Total",         10),
-            ("IN_STOCK",       "In Stock",      10),
-            ("INSTALLED",      "Installed",     10),
-            ("SOLD",           "Sold",           8),
-            ("SCRAPPED",       "Scrapped",      10)
-        }
-        Dim qtdColsDescritivas As Integer = 6
+        Dim colunas As (Key As String, Header As String, Largura As Double)() =
+            ColunasSummary(pOpts).Select(Function(k) (k, ColunasSummaryCatalogo(k).Header, ColunasSummaryCatalogo(k).LarguraXlsx)).ToArray()
+        Dim qtdColsDescritivas As Integer = pOpts.ColunasDescritivas.Count
 
         Using pkg As New ExcelPackage()
             Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Summary")
@@ -792,14 +804,13 @@ Public Class ReportService
             ws.Row(4).Height = 20
 
             ws.Cells(1, 4, 1, 7).Merge = True
-            ws.Cells(1, 4).Value = "GBS Components — Consolidated Summary"
+            ws.Cells(1, 4).Value = pOpts.Titulo
             ws.Cells(1, 4).Style.Font.Bold = True
             ws.Cells(1, 4).Style.Font.Size = 16
             ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
 
-            ws.Cells(2, 4, 2, 7).Merge = True
-            ws.Cells(2, 4).Value = "Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
-                                    " | Groups: " & pItens.Count.ToString()
+            ws.Cells(2, 4, 2, Math.Max(7, colunas.Length)).Merge = True
+            ws.Cells(2, 4).Value = pOpts.Subtitulo(pItens.Count)
             ws.Cells(2, 4).Style.Font.Size = 10
             ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
 
@@ -860,6 +871,7 @@ Public Class ReportService
     End Function
 
     Public Shared Function GerarPdfComponentsSummary(pItens As List(Of DataRow),
+                                                      pOpts As Models.ComponentSummaryOptions,
                                                       pOutputPath As String,
                                                       Optional pLogoPath As String = "",
                                                       Optional baseNome As String = "") As String
@@ -867,24 +879,12 @@ Public Class ReportService
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
 
-        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
-                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome), pOpts.NomeArquivoBase(), baseNome)
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".pdf")
 
-        Dim colunas As (Key As String, Header As String, Largura As Single)() = {
-            ("COMPONENT_TYPE", "Type",         50),
-            ("CAPACITY_GB",    "Capacity (GB)", 60),
-            ("GENERATION",     "Generation",    60),
-            ("SPEED_MHZ",      "Speed (MHz)",   55),
-            ("CPU",            "CPU",           70),
-            ("STORAGE_GB",     "Storage (GB)",  55),
-            ("TOTAL",          "Total",         36),
-            ("IN_STOCK",       "In Stock",      42),
-            ("INSTALLED",      "Installed",     44),
-            ("SOLD",           "Sold",          32),
-            ("SCRAPPED",       "Scrapped",      42)
-        }
-        Dim qtdColsDescritivas As Integer = 6
+        Dim colunas As (Key As String, Header As String, Largura As Single)() =
+            ColunasSummary(pOpts).Select(Function(k) (k, ColunasSummaryCatalogo(k).Header, ColunasSummaryCatalogo(k).LarguraPdf)).ToArray()
+        Dim qtdColsDescritivas As Integer = pOpts.ColunasDescritivas.Count
 
         Dim doc As New Document(PageSize.A4.Rotate(), 20, 20, 30, 20)
         Using fs As New FileStream(caminhoFinal, FileMode.Create, FileAccess.Write)
@@ -904,11 +904,10 @@ Public Class ReportService
 
             Dim fontTitulo As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 13, New BaseColor(31, 41, 55))
             Dim fontMeta   As iTextSharp.text.Font = FontFactory.GetFont(FontFactory.HELVETICA, 8,  New BaseColor(107, 114, 128))
-            Dim pTitulo As New Paragraph("GBS Components — Consolidated Summary", fontTitulo)
+            Dim pTitulo As New Paragraph(pOpts.Titulo, fontTitulo)
             pTitulo.SpacingBefore = 4
             doc.Add(pTitulo)
-            Dim pMeta As New Paragraph("Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
-                                        "  |  Groups: " & pItens.Count.ToString(), fontMeta)
+            Dim pMeta As New Paragraph(pOpts.Subtitulo(pItens.Count), fontMeta)
             pMeta.SpacingAfter = 8
             doc.Add(pMeta)
 
@@ -964,6 +963,7 @@ Public Class ReportService
     End Function
 
     Public Shared Function GerarRelatorioComponentsSummary(pItens As List(Of DataRow),
+                                                            pOpts As Models.ComponentSummaryOptions,
                                                             pOutputPath As String,
                                                             pLogoPath As String,
                                                             Optional baseNome As String = "") As String
@@ -971,19 +971,18 @@ Public Class ReportService
         Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
         If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
 
-        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome),
-                                 "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss"), baseNome)
+        Dim nome As String = If(String.IsNullOrWhiteSpace(baseNome), pOpts.NomeArquivoBase(), baseNome)
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".doc")
 
         Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
-        Dim html As String = MontarHtmlComponentsSummary(pItens, logoEfetivo)
+        Dim html As String = MontarHtmlComponentsSummary(pItens, pOpts, logoEfetivo)
         File.WriteAllText(caminhoFinal, html, Encoding.UTF8)
 
         Return caminhoFinal
 
     End Function
 
-    Private Shared Function MontarHtmlComponentsSummary(pItens As List(Of DataRow), pLogoPath As String) As String
+    Private Shared Function MontarHtmlComponentsSummary(pItens As List(Of DataRow), pOpts As Models.ComponentSummaryOptions, pLogoPath As String) As String
 
         Dim sb As New StringBuilder()
         sb.AppendLine("<html><head><meta charset='utf-8' />")
@@ -1008,21 +1007,21 @@ Public Class ReportService
                           "' style='max-height:70px;max-width:220px;' /></div>")
         End If
 
-        sb.AppendLine("<h2>GBS Components — Consolidated Summary</h2>")
-        sb.AppendLine("<div class='sub'>Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
-                      " &nbsp;|&nbsp; Groups: " & pItens.Count.ToString() & "</div>")
+        sb.AppendLine("<h2>" & HtmlEncode(pOpts.Titulo) & "</h2>")
+        sb.AppendLine("<div class='sub'>" & HtmlEncode(pOpts.Subtitulo(pItens.Count)) & "</div>")
+
+        Dim descCols As List(Of String) = pOpts.ColunasDescritivas
+        Dim numCols  As List(Of String) = pOpts.ColunasNumericas
 
         sb.AppendLine("<table>")
-        sb.AppendLine("<tr>")
-        sb.AppendLine("<th class='desc'>Type</th><th class='desc'>Capacity (GB)</th>")
-        sb.AppendLine("<th class='desc'>Generation</th><th class='desc'>Speed (MHz)</th>")
-        sb.AppendLine("<th class='desc'>CPU</th><th class='desc'>Storage (GB)</th>")
-        sb.AppendLine("<th class='num'>Total</th><th class='num'>In Stock</th>")
-        sb.AppendLine("<th class='num'>Installed</th><th class='num'>Sold</th><th class='num'>Scrapped</th>")
+        sb.Append("<tr>")
+        For Each c As String In descCols
+            sb.Append("<th class='desc'>" & HtmlEncode(ColunasSummaryCatalogo(c).Header) & "</th>")
+        Next
+        For Each c As String In numCols
+            sb.Append("<th class='num'>" & HtmlEncode(ColunasSummaryCatalogo(c).Header) & "</th>")
+        Next
         sb.AppendLine("</tr>")
-
-        Dim descCols As String() = {"COMPONENT_TYPE", "CAPACITY_GB", "GENERATION", "SPEED_MHZ", "CPU", "STORAGE_GB"}
-        Dim numCols  As String() = {"TOTAL", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"}
 
         For Each row As DataRow In pItens
             Dim tbl As DataTable = row.Table

@@ -37,8 +37,12 @@ Public Class ComponentController
         Return oReader.selectDistinctModels()
     End Function
 
-    Public Function fetchSummary() As DataSet
-        Return oReader.selectSummary()
+    Public Function fetchCpus() As DataSet
+        Return oReader.selectDistinctCpus()
+    End Function
+
+    Public Function fetchSummary(pOpts As ComponentSummaryOptions) As DataSet
+        Return oReader.selectSummary(pOpts)
     End Function
 
 #End Region
@@ -58,6 +62,15 @@ Public Class ComponentController
             oWriter.updateStatus(pId, pStatus)
         Catch ex As Exception
             Throw New Exception("Error updating status: " & ex.Message)
+        End Try
+    End Sub
+
+    Public Sub mudarStatusEmLote(pIds As List(Of Integer), pNovoStatus As String, pNota As String)
+        If pIds Is Nothing OrElse pIds.Count = 0 Then Return
+        Try
+            oWriter.updateStatusBatch(pIds, pNovoStatus, pNota)
+        Catch ex As Exception
+            Throw New Exception("Error updating status (no item was changed): " & ex.Message)
         End Try
     End Sub
 

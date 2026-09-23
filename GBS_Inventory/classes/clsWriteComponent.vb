@@ -43,7 +43,7 @@ Public Class clsWriteComponent
         oPar(13).Size      = 20
 
         oPar(0).Value = pComp.ComponentType
-        oPar(1).Value = pComp.CapacityGB
+        oPar(1).Value = If(pComp.CapacityGB.HasValue AndAlso pComp.CapacityGB.Value > 0, CObj(pComp.CapacityGB.Value), DBNull.Value)
         oPar(2).Value = If(pComp.SpeedMhz.HasValue, CObj(pComp.SpeedMhz.Value), DBNull.Value)
         oPar(3).Value = If(String.IsNullOrEmpty(pComp.Generation),  DBNull.Value, CObj(pComp.Generation))
         oPar(4).Value = If(String.IsNullOrEmpty(pComp.Brand),       DBNull.Value, CObj(pComp.Brand))
@@ -53,7 +53,7 @@ Public Class clsWriteComponent
         oPar(8).Value = If(String.IsNullOrEmpty(pComp.SourceBatch), DBNull.Value, CObj(pComp.SourceBatch))
         oPar(9).Value = If(String.IsNullOrEmpty(pComp.Notes),       DBNull.Value, CObj(pComp.Notes))
         oPar(10).Value = If(String.IsNullOrEmpty(pComp.Cpu),        DBNull.Value, CObj(pComp.Cpu))
-        oPar(11).Value = If(pComp.StorageGb.HasValue,               CObj(pComp.StorageGb.Value), DBNull.Value)
+        oPar(11).Value = If(pComp.StorageGb.HasValue AndAlso pComp.StorageGb.Value > 0, CObj(pComp.StorageGb.Value), DBNull.Value)
         oPar(12).Value = If(String.IsNullOrEmpty(pComp.Model),      DBNull.Value, CObj(pComp.Model))
 
         Try
@@ -80,6 +80,33 @@ Public Class clsWriteComponent
         Catch ex As Exception
             Throw New Exception(ex.ToString)
         End Try
+
+    End Sub
+
+    ' All-or-nothing: one transaction for the whole batch; any failure rolls back every row.
+    Public Sub updateStatusBatch(pIds As List(Of Integer), pStatus As String, pNote As String)
+
+        Using oCon As New OracleConnection(Me.ConnectionString)
+            oCon.Open()
+            Dim oTrans As OracleTransaction = oCon.BeginTransaction()
+            Try
+                For Each id As Integer In pIds
+                    Dim oPar(2) As OracleParameter
+                    oPar(0) = New OracleParameter("P_ID",     OracleDbType.Int32,    ParameterDirection.Input)
+                    oPar(1) = New OracleParameter("P_STATUS", OracleDbType.Varchar2, ParameterDirection.Input)
+                    oPar(2) = New OracleParameter("P_NOTE",   OracleDbType.Varchar2, ParameterDirection.Input)
+                    oPar(0).Value = id
+                    oPar(1).Value = pStatus
+                    oPar(2).Value = If(String.IsNullOrWhiteSpace(pNote), DBNull.Value, CObj(pNote.Trim()))
+                    OracleHelper.ExecuteNonQuery(oTrans, CommandType.StoredProcedure,
+                                                 "PACK_COMPONENT.PROC_UPDATE_STATUS", oPar)
+                Next
+                oTrans.Commit()
+            Catch ex As Exception
+                oTrans.Rollback()
+                Throw New Exception(ex.ToString)
+            End Try
+        End Using
 
     End Sub
 

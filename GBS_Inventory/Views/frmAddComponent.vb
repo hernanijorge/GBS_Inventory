@@ -44,6 +44,7 @@ Public Class frmAddComponent
             New TypeItem("RAM", "RAM"),
             New TypeItem("SSD", "SSD"),
             New TypeItem("HDD", "HDD"),
+            New TypeItem("DESKTOP", "Desktop"),
             New TypeItem("MINI_DESKTOP", "Mini Desktop")
         })
         cboCondition.Items.AddRange({"GOOD", "FAIR", "POOR", "UNTESTED"})
@@ -111,17 +112,17 @@ Public Class frmAddComponent
         Dim selType As TypeItem = TryCast(cboType.SelectedItem, TypeItem)
         Dim t As String = If(selType IsNot Nothing, selType.Value, "")
 
-        Dim isMiniDesktop As Boolean = (t = "MINI_DESKTOP")
+        Dim isDesktop As Boolean = (t = "MINI_DESKTOP" OrElse t = "DESKTOP")
 
-        lblCap.Text            = If(isMiniDesktop, "RAM (GB) *", "Capacity (GB) *")
-        lblGen.Visible         = Not isMiniDesktop
-        cboGeneration.Visible  = Not isMiniDesktop
-        lblSpeedLabel.Visible  = Not isMiniDesktop
-        cboSpeed.Visible       = Not isMiniDesktop
-        lblCpu.Visible         = isMiniDesktop
-        txtCpu.Visible         = isMiniDesktop
-        lblStorage.Visible     = isMiniDesktop
-        txtStorage.Visible     = isMiniDesktop
+        lblCap.Text            = If(isDesktop, "RAM (GB)", "Capacity (GB) *")
+        lblGen.Visible         = Not isDesktop
+        cboGeneration.Visible  = Not isDesktop
+        lblSpeedLabel.Visible  = Not isDesktop
+        cboSpeed.Visible       = Not isDesktop
+        lblCpu.Visible         = isDesktop
+        txtCpu.Visible         = isDesktop
+        lblStorage.Visible     = isDesktop
+        txtStorage.Visible     = isDesktop
 
         txtCpu.Clear()
         txtStorage.Clear()
@@ -156,7 +157,7 @@ Public Class frmAddComponent
 
         Dim selType As TypeItem = TryCast(cboType.SelectedItem, TypeItem)
         Dim tipo As String = If(selType IsNot Nothing, selType.Value, "")
-        Dim isMiniDesktop As Boolean = (tipo = "MINI_DESKTOP")
+        Dim isDesktop As Boolean = (tipo = "MINI_DESKTOP" OrElse tipo = "DESKTOP")
         Dim capTxt As String = cboCapacity.Text.Trim()
         Dim cpuTxt As String = txtCpu.Text.Trim()
         Dim storageTxt As String = txtStorage.Text.Trim()
@@ -166,11 +167,11 @@ Public Class frmAddComponent
 
         Dim capGb As Integer = 0
         Dim storageGb As Integer = 0
-        If isMiniDesktop Then
-            If String.IsNullOrEmpty(capTxt) Then erros.Add("  · RAM (GB)")
-            If Not Integer.TryParse(capTxt, capGb) OrElse capGb <= 0 Then erros.Add("  · RAM (GB) (invalid number)")
-            If String.IsNullOrEmpty(storageTxt) Then erros.Add("  · Storage (GB)")
-            If Not Integer.TryParse(storageTxt, storageGb) OrElse storageGb <= 0 Then erros.Add("  · Storage (GB) (invalid number)")
+        If isDesktop Then
+            ' RAM / Storage are optional and never block the save: blank, 0 or
+            ' unparseable text is saved as NULL (TryParse leaves 0 on failure)
+            Integer.TryParse(capTxt, capGb)
+            Integer.TryParse(storageTxt, storageGb)
             If String.IsNullOrEmpty(cpuTxt) Then erros.Add("  · CPU")
         Else
             If String.IsNullOrEmpty(capTxt) Then erros.Add("  · Capacity")
@@ -185,20 +186,20 @@ Public Class frmAddComponent
 
         Dim comp As New Component() With {
             .ComponentType   = tipo,
-            .CapacityGB      = capGb,
-            .Generation      = If(Not isMiniDesktop AndAlso cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
+            .CapacityGB      = If(capGb > 0, CType(capGb, Integer?), Nothing),
+            .Generation      = If(Not isDesktop AndAlso cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
             .Brand           = cboBrand.Text.Trim(),
             .Model           = txtModel.Text.Trim(),
             .PartNumber      = txtPartNumber.Text.Trim(),
-            .Cpu             = If(isMiniDesktop, cpuTxt, ""),
-            .StorageGb       = If(isMiniDesktop, CType(storageGb, Integer?), Nothing),
+            .Cpu             = If(isDesktop, cpuTxt, ""),
+            .StorageGb       = If(isDesktop AndAlso storageGb > 0, CType(storageGb, Integer?), Nothing),
             .ConditionStatus = If(cboCondition.SelectedIndex >= 0, cboCondition.SelectedItem.ToString(), "GOOD"),
             .Status          = If(cboStatus.SelectedIndex >= 0, cboStatus.SelectedItem.ToString(), "IN_STOCK"),
             .SourceBatch     = cboSourceBatch.Text.Trim(),
             .Notes           = txtNotes.Text.Trim()
         }
 
-        If Not isMiniDesktop AndAlso cboSpeed.Enabled AndAlso cboSpeed.SelectedIndex >= 0 Then
+        If Not isDesktop AndAlso cboSpeed.Enabled AndAlso cboSpeed.SelectedIndex >= 0 Then
             Dim spd As Integer
             If Integer.TryParse(cboSpeed.SelectedItem.ToString(), spd) Then comp.SpeedMhz = spd
         End If

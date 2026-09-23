@@ -32,6 +32,7 @@ Public Class frmPrincipal
     Private dtEstoqueCompleto As DataTable
     Private dtUpgradesCompleto As DataTable
     Private dtComponentsCompleto As DataTable
+    Private bCarregandoFiltrosComp As Boolean = False
     Private dtImportQuality As DataTable
     Private _todasSelecionadas As Boolean = False
     Private _listaRelatorio           As New ListaRelatorio()
@@ -57,6 +58,7 @@ Public Class frmPrincipal
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
         ConfigurarMenuContextoEstoque()
+        ConfigurarMenuContextoComponents()
 
         _timerInventoryScanFeedback = New Timer() With {.Interval = 2000}
         AddHandler _timerInventoryScanFeedback.Tick, AddressOf TimerInventoryScanFeedback_Tick
@@ -1255,12 +1257,15 @@ Public Class frmPrincipal
 
 #Region "Aba Components"
 
-    Private Sub carregarComponents()
+    ' pResetFiltros = True (Refresh button): clears Search and puts every filter back to (All).
+    ' Otherwise (initial load, after Add) current selections are kept when still available.
+    Private Sub carregarComponents(Optional pResetFiltros As Boolean = False)
         Try
             Dim ds As DataSet = oCompController.fetchAll()
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
                 dtComponentsCompleto = ds.Tables(0)
-                InicializarFiltrosComponents()
+                If pResetFiltros Then txtCompSearch.Clear()
+                InicializarFiltrosComponents(pResetFiltros)
                 aplicarFiltrosComponents()
             End If
         Catch ex As Exception
@@ -1280,35 +1285,72 @@ Public Class frmPrincipal
         End Function
     End Class
 
-    Private Sub InicializarFiltrosComponents()
+    Private Sub InicializarFiltrosComponents(Optional pReset As Boolean = False)
         Dim curType As TypeItem = TryCast(cboCompType.SelectedItem, TypeItem)
-        Dim selTypeValue As String = If(curType IsNot Nothing, curType.Value, "")
-        Dim selStat As String   = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+        Dim selTypeValue As String = If(Not pReset AndAlso curType IsNot Nothing, curType.Value, "")
+        Dim selStat  As String = If(Not pReset AndAlso cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+        Dim selModel As String = If(Not pReset AndAlso cboFiltroModel.SelectedIndex > 0, cboFiltroModel.SelectedItem.ToString(), "")
+        Dim selCpu   As String = If(Not pReset AndAlso cboFiltroCPU.SelectedIndex > 0, cboFiltroCPU.SelectedItem.ToString(), "")
 
-        cboCompType.Items.Clear()
-        cboCompType.Items.AddRange({
-            New TypeItem("", "(All)"),
-            New TypeItem("RAM", "RAM"),
-            New TypeItem("SSD", "SSD"),
-            New TypeItem("HDD", "HDD"),
-            New TypeItem("MINI_DESKTOP", "Mini Desktop")
-        })
-        cboCompStatus.Items.Clear()
-        cboCompStatus.Items.AddRange({"(All)", "IN_STOCK", "INSTALLED", "SOLD", "SCRAPPED"})
+        ' Each SelectedIndex below fires SelectedIndexChanged; apply the filter once at the end instead
+        bCarregandoFiltrosComp = True
+        Try
+            cboCompType.Items.Clear()
+            cboCompType.Items.AddRange({
+                New TypeItem("", "(All)"),
+                New TypeItem("RAM", "RAM"),
+                New TypeItem("SSD", "SSD"),
+                New TypeItem("HDD", "HDD"),
+                New TypeItem("DESKTOP", "Desktop"),
+                New TypeItem("MINI_DESKTOP", "Mini Desktop")
+            })
+            cboCompStatus.Items.Clear()
+            cboCompStatus.Items.AddRange({"(All)", "IN_STOCK", "INSTALLED", "RESERVED", "SHIPPED", "SOLD", "SCRAPPED", "IN_REPAIR"})
 
-        Dim idxType As Integer = 0
-        For i As Integer = 0 To cboCompType.Items.Count - 1
-            If DirectCast(cboCompType.Items(i), TypeItem).Value = selTypeValue Then
-                idxType = i
-                Exit For
+            Dim idxType As Integer = 0
+            For i As Integer = 0 To cboCompType.Items.Count - 1
+                If DirectCast(cboCompType.Items(i), TypeItem).Value = selTypeValue Then
+                    idxType = i
+                    Exit For
+                End If
+            Next
+            cboCompType.SelectedIndex   = idxType
+            cboCompStatus.SelectedIndex = Math.Max(0, cboCompStatus.Items.IndexOf(selStat))
+            carregarFiltroModel(selModel)
+            carregarFiltroCPU(selCpu)
+        Finally
+            bCarregandoFiltrosComp = False
+        End Try
+    End Sub
+
+    Private Sub carregarFiltroModel(Optional pSelecionar As String = "")
+        PreencherComboFiltroComp(cboFiltroModel, AddressOf oCompController.fetchModels, pSelecionar)
+    End Sub
+
+    Private Sub carregarFiltroCPU(Optional pSelecionar As String = "")
+        PreencherComboFiltroComp(cboFiltroCPU, AddressOf oCompController.fetchCpus, pSelecionar)
+    End Sub
+
+    ' "(All)" first, then distinct DB values; re-selects pSelecionar if it still exists
+    Private Sub PreencherComboFiltroComp(pCbo As ComboBox, pFetch As Func(Of DataSet), pSelecionar As String)
+        pCbo.Items.Clear()
+        pCbo.Items.Add("(All)")
+        Try
+            Dim ds As DataSet = pFetch()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim v As String = row(0).ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) AndAlso Not pCbo.Items.Contains(v) Then pCbo.Items.Add(v)
+                Next
             End If
-        Next
-        cboCompType.SelectedIndex   = idxType
-        cboCompStatus.SelectedIndex = Math.Max(0, cboCompStatus.Items.IndexOf(selStat))
+        Catch
+            ' silent — combo keeps only (All); grid still loads
+        End Try
+        pCbo.SelectedIndex = Math.Max(0, pCbo.Items.IndexOf(pSelecionar))
     End Sub
 
     Private Sub aplicarFiltrosComponents()
-        If dtComponentsCompleto Is Nothing Then Return
+        If dtComponentsCompleto Is Nothing OrElse bCarregandoFiltrosComp Then Return
         Dim dv As DataView = dtComponentsCompleto.DefaultView
         Dim parts As New List(Of String)()
 
@@ -1316,12 +1358,16 @@ Public Class frmPrincipal
         Dim selType As TypeItem = TryCast(cboCompType.SelectedItem, TypeItem)
         Dim tipo    As String = If(selType IsNot Nothing, selType.Value, "")
         Dim stat    As String = If(cboCompStatus.SelectedIndex > 0, cboCompStatus.SelectedItem.ToString(), "")
+        Dim model   As String = If(cboFiltroModel.SelectedIndex > 0, cboFiltroModel.SelectedItem.ToString(), "")
+        Dim cpu     As String = If(cboFiltroCPU.SelectedIndex > 0, cboFiltroCPU.SelectedItem.ToString(), "")
 
-        If Not String.IsNullOrEmpty(tipo) Then parts.Add("COMPONENT_TYPE = '" & tipo.Replace("'", "''") & "'")
-        If Not String.IsNullOrEmpty(stat) Then parts.Add("STATUS = '" & stat.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(tipo)  Then parts.Add("COMPONENT_TYPE = '" & tipo.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(stat)  Then parts.Add("STATUS = '" & stat.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(model) Then parts.Add("MODEL = '" & model.Replace("'", "''") & "'")
+        If Not String.IsNullOrEmpty(cpu)   Then parts.Add("CPU = '" & cpu.Replace("'", "''") & "'")
         If Not String.IsNullOrEmpty(search) Then
             Dim s As String = search.Replace("'", "''")
-            parts.Add(String.Format("(CONVERT(INTERNAL_UID,'System.String') LIKE '%{0}%' OR CONVERT(BRAND,'System.String') LIKE '%{0}%' OR CONVERT(PART_NUMBER,'System.String') LIKE '%{0}%')", s))
+            parts.Add(String.Format("(CONVERT(INTERNAL_UID,'System.String') LIKE '%{0}%' OR CONVERT(BRAND,'System.String') LIKE '%{0}%' OR CONVERT(PART_NUMBER,'System.String') LIKE '%{0}%' OR CONVERT(MODEL,'System.String') LIKE '%{0}%')", s))
         End If
 
         dv.RowFilter = String.Join(" AND ", parts)
@@ -1367,7 +1413,7 @@ Public Class frmPrincipal
     End Sub
 
     Private Sub btnCompRefresh_Click(sender As Object, e As EventArgs) Handles btnCompRefresh.Click
-        carregarComponents()
+        carregarComponents(pResetFiltros:=True)
     End Sub
 
     Private Sub btnAddComponent_Click(sender As Object, e As EventArgs) Handles btnAddComponent.Click
@@ -1395,6 +1441,82 @@ Public Class frmPrincipal
 
     Private Sub cboCompStatus_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboCompStatus.SelectedIndexChanged
         aplicarFiltrosComponents()
+    End Sub
+
+    Private Sub cboFiltroModel_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboFiltroModel.SelectedIndexChanged
+        aplicarFiltrosComponents()
+    End Sub
+
+    Private Sub cboFiltroCPU_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboFiltroCPU.SelectedIndexChanged
+        aplicarFiltrosComponents()
+    End Sub
+
+    ' ── Context menu: batch Change Status ─────────────────────────────
+    ' Called after TemaEscuro.aplicarHelius, which forces MultiSelect = False on every grid.
+    Private Sub ConfigurarMenuContextoComponents()
+        dgvComponents.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvComponents.MultiSelect   = True
+
+        Dim ctx As New ContextMenuStrip()
+
+        Dim mnuChangeStatus As New ToolStripMenuItem("Change Status...")
+        AddHandler mnuChangeStatus.Click, AddressOf mnuCompChangeStatus_Click
+        ctx.Items.Add(mnuChangeStatus)
+
+        ctx.Items.Add(New ToolStripSeparator())
+
+        Dim mnuRegisterSale As New ToolStripMenuItem("Register Sale")
+        AddHandler mnuRegisterSale.Click, Sub(s, ev) MessageBox.Show("Coming soon", "Register Sale",
+                                                                      MessageBoxButtons.OK, MessageBoxIcon.Information)
+        ctx.Items.Add(mnuRegisterSale)
+
+        AddHandler ctx.Opening, Sub(s, ev)
+                                    Dim temSelecao As Boolean = dgvComponents.SelectedRows.Count >= 1
+                                    mnuChangeStatus.Enabled = temSelecao
+                                    mnuRegisterSale.Enabled = temSelecao
+                                    If Not temSelecao Then ev.Cancel = True
+                                End Sub
+        dgvComponents.ContextMenuStrip = ctx
+    End Sub
+
+    ' Right-click on an unselected row selects only that row; on an already-selected row
+    ' the current (multi) selection is kept so the menu acts on all of it.
+    Private Sub dgvComponents_MouseDown(sender As Object, e As MouseEventArgs) Handles dgvComponents.MouseDown
+        If e.Button <> MouseButtons.Right Then Return
+        Dim hit As DataGridView.HitTestInfo = dgvComponents.HitTest(e.X, e.Y)
+        If hit.RowIndex < 0 OrElse hit.ColumnIndex < 0 Then Return
+        If dgvComponents.Rows(hit.RowIndex).Selected Then Return
+        dgvComponents.ClearSelection()
+        dgvComponents.CurrentCell = dgvComponents.Rows(hit.RowIndex).Cells(hit.ColumnIndex)
+        dgvComponents.Rows(hit.RowIndex).Selected = True
+    End Sub
+
+    Private Sub mnuCompChangeStatus_Click(sender As Object, e As EventArgs)
+        Dim ids As New List(Of Integer)()
+        For Each row As DataGridViewRow In dgvComponents.SelectedRows
+            Dim id As Integer
+            Dim v As Object = row.Cells("ID_COMPONENT").Value
+            If v IsNot Nothing AndAlso Integer.TryParse(v.ToString(), id) AndAlso id > 0 Then ids.Add(id)
+        Next
+        If ids.Count = 0 Then Return
+
+        ' Deferred so the ContextMenuStrip finishes closing before the modal dialog opens
+        ' and before the grid's DataSource is replaced (same reason as mnuStatus_Click).
+        BeginInvoke(Sub()
+                        Using frm As New frmChangeStatusBatch(ids.Count)
+                            If frm.ShowDialog(Me) <> DialogResult.OK Then Return
+                            Try
+                                oCompController.mudarStatusEmLote(ids, frm.NovoStatus, frm.Nota)
+                            Catch ex As Exception
+                                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                                Return
+                            End Try
+                            carregarComponents()
+                            MessageBox.Show(ids.Count.ToString() & " item" & If(ids.Count = 1, "", "s") &
+                                            " updated to " & frm.NovoStatus & ".",
+                                            "Change Status", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        End Using
+                    End Sub)
     End Sub
 
     Private Sub btnCompRelatorio_Click(sender As Object, e As EventArgs) Handles btnCompRelatorio.Click
@@ -1465,10 +1587,16 @@ Public Class frmPrincipal
     End Sub
 
     Private Sub GerarRelatorioSummaryComponents()
+        Dim opts As Models.ComponentSummaryOptions
+        Using frmOpts As New frmReportOptions()
+            If frmOpts.ShowDialog(Me) <> DialogResult.OK Then Return
+            opts = frmOpts.Opcoes
+        End Using
+
         Try
-            Dim ds As DataSet = oCompController.fetchSummary()
+            Dim ds As DataSet = oCompController.fetchSummary(opts)
             If ds Is Nothing OrElse ds.Tables.Count = 0 OrElse ds.Tables(0).Rows.Count = 0 Then
-                MessageBox.Show("No components found.", "Consolidated Report",
+                MessageBox.Show("No components found for the selected options.", "Consolidated Report",
                                 MessageBoxButtons.OK, MessageBoxIcon.Information)
                 Return
             End If
@@ -1482,11 +1610,11 @@ Public Class frmPrincipal
             Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
             If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
 
-            Dim baseNome As String = "ComponentSummary_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            Dim baseNome As String = opts.NomeArquivoBase()
 
-            Dim caminhoDoc  As String = ReportService.GerarRelatorioComponentsSummary(itens, outputPath, logoPath, baseNome)
-            Dim caminhoPdf  As String = ReportService.GerarPdfComponentsSummary(itens, outputPath, logoPath, baseNome)
-            Dim caminhoXlsx As String = ReportService.GerarExcelComponentsSummary(itens, outputPath, logoPath, baseNome)
+            Dim caminhoDoc  As String = ReportService.GerarRelatorioComponentsSummary(itens, opts, outputPath, logoPath, baseNome)
+            Dim caminhoPdf  As String = ReportService.GerarPdfComponentsSummary(itens, opts, outputPath, logoPath, baseNome)
+            Dim caminhoXlsx As String = ReportService.GerarExcelComponentsSummary(itens, opts, outputPath, logoPath, baseNome)
 
             Dim frmEmail As New frmEnviarRelatorio(caminhoDoc, caminhoPdf, caminhoXlsx, itens)
             frmEmail.ShowDialog(Me)

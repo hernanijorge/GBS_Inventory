@@ -38,6 +38,8 @@ Partial Class frmPrincipal
     Friend WithEvents btnCompSearch     As Button
     Friend WithEvents cboCompType       As ComboBox
     Friend WithEvents cboCompStatus     As ComboBox
+    Friend WithEvents cboFiltroModel    As ComboBox
+    Friend WithEvents cboFiltroCPU      As ComboBox
     Friend WithEvents btnCompRelatorio        As Button
     Friend WithEvents btnCompRelatorioSummary As Button
     Friend WithEvents btnCompAddToList        As Button
@@ -859,6 +861,13 @@ Partial Class frmPrincipal
         Dim lblCStat As New Label() With { .Text = "Status:", .Location = New Point(915, 16), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
         Me.cboCompStatus           = New ComboBox() With { .Location = New Point(963, 12), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
 
+        ' Row 2 (right side, aligned with Status): Model | CPU
+        Dim lblCModel As New Label() With { .Text = "Model:", .Location = New Point(715, 56), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboFiltroModel          = New ComboBox() With { .Location = New Point(765, 52), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+
+        Dim lblCCpu As New Label() With { .Text = "CPU:", .Location = New Point(915, 56), .AutoSize = True, .ForeColor = TemaEscuro.TextoMutado }
+        Me.cboFiltroCPU            = New ComboBox() With { .Location = New Point(963, 52), .Size = New Size(130, 26), .DropDownStyle = ComboBoxStyle.DropDownList }
+
         Me.btnCompRelatorio          = New Button() With { .Text = "Report",      .Location = New Point(15, 52),  .Size = New Size(90, 28) }
         Me.btnCompRelatorioSummary   = New Button() With { .Text = "Consolidated", .Location = New Point(115, 52), .Size = New Size(110, 28) }
         Me.btnCompAddToList          = New Button() With { .Text = "+ Add to List", .Location = New Point(235, 52), .Size = New Size(110, 28),
@@ -875,6 +884,7 @@ Partial Class frmPrincipal
 
         pnlCompTop.Controls.AddRange({lblCompTit, lblCompTotal, btnCompRefresh, btnAddComponent,
                                        lblCSearch, txtCompSearch, btnCompSearch, lblCType, cboCompType, lblCStat, cboCompStatus,
+                                       lblCModel, cboFiltroModel, lblCCpu, cboFiltroCPU,
                                        btnCompRelatorio, btnCompRelatorioSummary, btnCompAddToList, btnCompClearList, lblCompListaInfo})
 
         Me.dgvComponents      = New DataGridView() With { .Dock = DockStyle.Fill }
