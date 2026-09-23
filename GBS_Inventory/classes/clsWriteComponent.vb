@@ -24,7 +24,7 @@ Public Class clsWriteComponent
 
     Public Function insertComponent(pComp As Component) As String
 
-        Dim oPar(12) As OracleParameter
+        Dim oPar(13) As OracleParameter
         oPar(0)  = New OracleParameter("P_COMPONENT_TYPE", OracleDbType.Varchar2,  ParameterDirection.Input)
         oPar(1)  = New OracleParameter("P_CAPACITY_GB",    OracleDbType.Int32,     ParameterDirection.Input)
         oPar(2)  = New OracleParameter("P_SPEED_MHZ",      OracleDbType.Int32,     ParameterDirection.Input)
@@ -37,9 +37,10 @@ Public Class clsWriteComponent
         oPar(9)  = New OracleParameter("P_NOTES",          OracleDbType.Varchar2,  ParameterDirection.Input)
         oPar(10) = New OracleParameter("P_CPU",            OracleDbType.Varchar2,  ParameterDirection.Input)
         oPar(11) = New OracleParameter("P_STORAGE_GB",     OracleDbType.Int32,     ParameterDirection.Input)
-        oPar(12)           = New OracleParameter("P_UID_OUT", OracleDbType.Varchar2)
-        oPar(12).Direction = ParameterDirection.Output
-        oPar(12).Size      = 20
+        oPar(12) = New OracleParameter("P_MODEL",          OracleDbType.Varchar2,  ParameterDirection.Input)
+        oPar(13)           = New OracleParameter("P_UID_OUT", OracleDbType.Varchar2)
+        oPar(13).Direction = ParameterDirection.Output
+        oPar(13).Size      = 20
 
         oPar(0).Value = pComp.ComponentType
         oPar(1).Value = pComp.CapacityGB
@@ -53,11 +54,12 @@ Public Class clsWriteComponent
         oPar(9).Value = If(String.IsNullOrEmpty(pComp.Notes),       DBNull.Value, CObj(pComp.Notes))
         oPar(10).Value = If(String.IsNullOrEmpty(pComp.Cpu),        DBNull.Value, CObj(pComp.Cpu))
         oPar(11).Value = If(pComp.StorageGb.HasValue,               CObj(pComp.StorageGb.Value), DBNull.Value)
+        oPar(12).Value = If(String.IsNullOrEmpty(pComp.Model),      DBNull.Value, CObj(pComp.Model))
 
         Try
             OracleHelper.ExecuteNonQuery(Me.ConnectionString, CommandType.StoredProcedure,
                                          "PACK_COMPONENT.PROC_INSERT", oPar)
-            Return oPar(12).Value.ToString()
+            Return oPar(13).Value.ToString()
         Catch ex As Exception
             Throw New Exception(ex.ToString)
         End Try

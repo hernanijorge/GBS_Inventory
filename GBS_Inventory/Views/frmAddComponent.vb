@@ -53,6 +53,9 @@ Public Class frmAddComponent
         cboStatus.SelectedIndex    = 0
         CarregarBrands()
         CarregarSourceBatches()
+        txtModel.AutoCompleteMode         = AutoCompleteMode.SuggestAppend
+        txtModel.AutoCompleteSource       = AutoCompleteSource.CustomSource
+        txtModel.AutoCompleteCustomSource = carregarSugestoesModelComponente()
     End Sub
 
     Private Sub ConfigurarEstilos()
@@ -71,6 +74,23 @@ Public Class frmAddComponent
         Catch
         End Try
     End Sub
+
+    ' Suggestions are loaded once per dialog open (not per keystroke).
+    Private Function carregarSugestoesModelComponente() As AutoCompleteStringCollection
+        Dim col As New AutoCompleteStringCollection()
+        Try
+            Dim ds As DataSet = oController.fetchModels()
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                For Each row As DataRow In ds.Tables(0).Rows
+                    Dim v As String = row(0).ToString().Trim()
+                    If Not String.IsNullOrEmpty(v) Then col.Add(v)
+                Next
+            End If
+        Catch
+            ' silent — no suggestions; the user can still type freely
+        End Try
+        Return col
+    End Function
 
     Private Sub CarregarSourceBatches()
         Try
@@ -168,6 +188,7 @@ Public Class frmAddComponent
             .CapacityGB      = capGb,
             .Generation      = If(Not isMiniDesktop AndAlso cboGeneration.SelectedIndex >= 0, cboGeneration.SelectedItem.ToString(), ""),
             .Brand           = cboBrand.Text.Trim(),
+            .Model           = txtModel.Text.Trim(),
             .PartNumber      = txtPartNumber.Text.Trim(),
             .Cpu             = If(isMiniDesktop, cpuTxt, ""),
             .StorageGb       = If(isMiniDesktop, CType(storageGb, Integer?), Nothing),

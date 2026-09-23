@@ -1341,6 +1341,7 @@ Public Class frmPrincipal
             {"CPU",              "CPU"},
             {"STORAGE_GB",       "Storage (GB)"},
             {"BRAND",            "Brand"},
+            {"MODEL",            "Model"},
             {"PART_NUMBER",      "Part Number"},
             {"CONDITION_STATUS", "Condition"},
             {"STATUS",           "Status"},
@@ -1356,6 +1357,13 @@ Public Class frmPrincipal
         If dgvComponents.Columns.Contains("INTERNAL_UID") Then dgvComponents.Columns("INTERNAL_UID").Visible = False
         If dgvComponents.Columns.Contains("NOTES")        Then dgvComponents.Columns("NOTES").Visible        = False
         If dgvComponents.Columns.Contains("DATE_UPDATED") Then dgvComponents.Columns("DATE_UPDATED").Visible = False
+        If dgvComponents.Columns.Contains("MODEL") Then
+            With dgvComponents.Columns("MODEL")
+                .AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                .Width        = 120
+                If dgvComponents.Columns.Contains("BRAND") Then .DisplayIndex = dgvComponents.Columns("BRAND").DisplayIndex + 1
+            End With
+        End If
     End Sub
 
     Private Sub btnCompRefresh_Click(sender As Object, e As EventArgs) Handles btnCompRefresh.Click

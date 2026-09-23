@@ -9,6 +9,7 @@ Namespace Models
         Public Property SpeedMhz        As Integer?  ' RAM only
         Public Property Generation      As String    ' DDR4, DDR5, NVMe, SATA
         Public Property Brand           As String
+        Public Property Model           As String    ' OptiPlex 3080, EliteDesk 800 G6, etc.
         Public Property PartNumber      As String
         Public Property Cpu             As String    ' MINI_DESKTOP only
         Public Property StorageGb       As Integer?  ' MINI_DESKTOP only

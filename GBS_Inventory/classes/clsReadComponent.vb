@@ -84,6 +84,15 @@ Public Class clsReadComponent
         End Try
     End Function
 
+    Public Function selectDistinctModels() As DataSet
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
+                "SELECT DISTINCT MODEL FROM TBL_COMPONENT WHERE MODEL IS NOT NULL ORDER BY MODEL")
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+    End Function
+
 #End Region
 
 End Class
