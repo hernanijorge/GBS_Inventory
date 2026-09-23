@@ -100,6 +100,7 @@
     <Compile Include="Models\ListaRelatorio.vb" />
     <Compile Include="Models\Component.vb" />
     <Compile Include="Models\ComponentSummaryOptions.vb" />
+    <Compile Include="Models\ShipmentReportOptions.vb" />
     <!-- Classes (Gravação + Leitura + Importação) -->
     <Compile Include="classes\clsGravacaoEquipamento.vb" />
     <Compile Include="classes\clsGravacaoUpgrade.vb" />
@@ -178,6 +179,18 @@
     </Compile>
     <Compile Include="Views\frmReportOptions.Designer.vb">
       <DependentUpon>frmReportOptions.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmShipmentReportOptions.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmShipmentReportOptions.Designer.vb">
+      <DependentUpon>frmShipmentReportOptions.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmClientAliasMapping.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmClientAliasMapping.Designer.vb">
+      <DependentUpon>frmClientAliasMapping.vb</DependentUpon>
     </Compile>
     <Compile Include="Views\frmRemessa.vb">
       <SubType>Form</SubType>

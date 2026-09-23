@@ -870,6 +870,220 @@ Public Class ReportService
 
     End Function
 
+    ' ── Shipments — Report by Recipient ──────────────────────────────────────
+    ' pResumo: one row per client group (CLIENT, VARIATIONS + counts, from
+    ' RemessaController.buscarRelatorioPorDestinatario); pDetalhe: one row per shipment
+    ' (Detailed breakdown and the TOTAL row's distinct carrier count).
+
+    Public Shared Function GerarExcelShipmentsPorRecipient(pResumo As DataTable,
+                                                            pDetalhe As DataTable,
+                                                            pOpts As Models.ShipmentReportOptions,
+                                                            pOutputPath As String,
+                                                            Optional pLogoPath As String = "") As String
+
+        Dim pasta As String = If(Not String.IsNullOrWhiteSpace(pOutputPath), pOutputPath, PastaDefault)
+        If Not Directory.Exists(pasta) Then Directory.CreateDirectory(pasta)
+        Dim caminhoFinal As String = Path.Combine(pasta, pOpts.NomeArquivoBase() & ".xlsx")
+
+        ' Key, Header, width (Summary), width (Detailed — the breakdown reuses columns B..H)
+        Dim colunas As (Key As String, Header As String, Largura As Double, LarguraDet As Double)() = {
+            ("CLIENT",          "Client",              30, 30),
+            ("VARIATIONS",      "Variations included", 45, 30),
+            ("TOTAL_SHIPMENTS", "Total Shipments",     15, 15),
+            ("DELIVERED_CNT",   "Delivered",           11, 24),
+            ("IN_TRANSIT_CNT",  "In Transit",          11, 18),
+            ("PENDING_CNT",     "Pending",             10, 13),
+            ("ISSUES_CNT",      "Issues",              10, 13),
+            ("TOTAL_ITEMS",     "Total Items",         12, 12),
+            ("CARRIERS_USED",   "Carriers Used",       13, 13),
+            ("FIRST_SHIPMENT",  "First Shipment",      15, 15),
+            ("LAST_SHIPMENT",   "Last Shipment",       15, 15)
+        }
+        Dim colsTexto   As String() = {"CLIENT", "VARIATIONS"}
+        Dim colsSomadas As String() = {"TOTAL_SHIPMENTS", "DELIVERED_CNT", "IN_TRANSIT_CNT", "PENDING_CNT", "ISSUES_CNT", "TOTAL_ITEMS"}
+        Dim colsData    As String() = {"FIRST_SHIPMENT", "LAST_SHIPMENT"}
+        Dim nCols As Integer = colunas.Length
+        Const COL_VARIACOES As Integer = 2
+
+        Dim totalShipments As Integer = pResumo.AsEnumerable().Sum(Function(r) Convert.ToInt32(r("TOTAL_SHIPMENTS")))
+
+        Dim corHeader As System.Drawing.Color = System.Drawing.Color.FromArgb(55, 65, 81)
+        Dim corTotal  As System.Drawing.Color = System.Drawing.Color.FromArgb(16, 185, 129)
+        Dim corZebra  As System.Drawing.Color = System.Drawing.Color.FromArgb(249, 250, 251)
+        Dim corGrupo  As System.Drawing.Color = System.Drawing.Color.FromArgb(236, 253, 245)
+        Dim corMeta   As System.Drawing.Color = System.Drawing.Color.FromArgb(107, 114, 128)
+
+        Using pkg As New ExcelPackage()
+            Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("By Recipient")
+            Dim linhaCabecalho As Integer = 5
+            Dim logoEfetivo As String = ObterLogoPath(pLogoPath)
+
+            ws.Row(1).Height = 40
+            ws.Row(2).Height = 20
+            ws.Row(3).Height = 20
+            ws.Row(4).Height = 20
+
+            ws.Cells(1, 4, 1, nCols).Merge = True
+            ws.Cells(1, 4).Value = "GBS Shipments — Report by Recipient"
+            ws.Cells(1, 4).Style.Font.Bold = True
+            ws.Cells(1, 4).Style.Font.Size = 16
+            ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
+
+            ws.Cells(2, 4, 2, nCols).Merge = True
+            ws.Cells(2, 4).Value = "Period: " & pOpts.DataInicio.ToString("yyyy-MM-dd") & " to " & pOpts.DataFim.ToString("yyyy-MM-dd") &
+                                   " | " & If(pOpts.Agrupado, "Clients", "Recipients") & ": " & pResumo.Rows.Count.ToString() &
+                                   " | Total Shipments: " & totalShipments.ToString()
+            ws.Cells(2, 4).Style.Font.Size = 10
+            ws.Cells(2, 4).Style.Font.Color.SetColor(corMeta)
+
+            ws.Cells(3, 4, 3, nCols).Merge = True
+            ws.Cells(3, 4).Value = "Status: " & pOpts.RotulosIncluidos &
+                                   " | Recipient: " & If(String.IsNullOrWhiteSpace(pOpts.RecipientFiltro), "(All)", pOpts.RecipientFiltro) &
+                                   " | Grouping: " & pOpts.DescricaoAgrupamento &
+                                   If(pOpts.IdsSelecionados IsNot Nothing, " | Shipments: hand-picked", "") &
+                                   " | Mode: " & If(pOpts.Detalhado, "Detailed", "Summary") &
+                                   " | Generated: " & pOpts.GeradoEm.ToString("yyyy-MM-dd HH:mm:ss")
+            ws.Cells(3, 4).Style.Font.Size = 10
+            ws.Cells(3, 4).Style.Font.Color.SetColor(corMeta)
+
+            If Not String.IsNullOrWhiteSpace(logoEfetivo) AndAlso File.Exists(logoEfetivo) Then
+                Try
+                    Dim logo = ws.Drawings.AddPicture("GBS_Logo", New FileInfo(logoEfetivo))
+                    logo.SetPosition(0, 4, 0, 4)
+                    logo.SetSize(180, 60)
+                Catch
+                End Try
+            End If
+
+            For i As Integer = 0 To nCols - 1
+                Dim cell As ExcelRange = ws.Cells(linhaCabecalho, i + 1)
+                cell.Value = colunas(i).Header
+                cell.Style.Font.Bold = True
+                cell.Style.Fill.PatternType = ExcelFillStyle.Solid
+                cell.Style.Fill.BackgroundColor.SetColor(If(colsTexto.Contains(colunas(i).Key), corHeader, corTotal))
+                cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
+                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+            Next
+
+            Dim linha As Integer = linhaCabecalho + 1
+
+            ' Writes one client summary row; numbers centered, dates as real dates, variations wrapped
+            Dim escreverResumo As Action(Of DataRow) =
+                Sub(dr As DataRow)
+                    For i As Integer = 0 To nCols - 1
+                        Dim key As String = colunas(i).Key
+                        Dim cell As ExcelRange = ws.Cells(linha, i + 1)
+                        Dim v As Object = dr(key)
+                        If IsDBNull(v) Then Continue For
+                        If colsData.Contains(key) Then
+                            cell.Value = CDate(v)
+                            cell.Style.Numberformat.Format = "yyyy-mm-dd"
+                            cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                        ElseIf colsTexto.Contains(key) Then
+                            cell.Value = v.ToString()
+                            If key = "VARIATIONS" Then cell.Style.WrapText = True
+                        Else
+                            cell.Value = Convert.ToInt32(v)
+                            cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                        End If
+                        cell.Style.VerticalAlignment = ExcelVerticalAlignment.Top
+                    Next
+                End Sub
+
+            Dim idx As Integer = 0
+            For Each dr As DataRow In pResumo.Rows
+                escreverResumo(dr)
+
+                If Not pOpts.Detalhado Then
+                    If idx Mod 2 = 1 Then
+                        ws.Cells(linha, 1, linha, nCols).Style.Fill.PatternType = ExcelFillStyle.Solid
+                        ws.Cells(linha, 1, linha, nCols).Style.Fill.BackgroundColor.SetColor(corZebra)
+                    End If
+                    linha += 1
+                Else
+                    ws.Cells(linha, 1, linha, nCols).Style.Font.Bold = True
+                    ws.Cells(linha, 1, linha, nCols).Style.Fill.PatternType = ExcelFillStyle.Solid
+                    ws.Cells(linha, 1, linha, nCols).Style.Fill.BackgroundColor.SetColor(corGrupo)
+                    linha += 1
+
+                    ' Breakdown sub-header, then one indented line per shipment (B = spelling used)
+                    Dim subCab As String() = {"    Shipment Ref", "Recipient (as typed)", "Carrier", "Tracking", "Status", "Ship Date", "Delivery Date", "Items"}
+                    For i As Integer = 0 To subCab.Length - 1
+                        ws.Cells(linha, i + 1).Value = subCab(i)
+                        ws.Cells(linha, i + 1).Style.Font.Italic = True
+                        ws.Cells(linha, i + 1).Style.Font.Color.SetColor(corMeta)
+                        If i > 1 Then ws.Cells(linha, i + 1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                    Next
+                    linha += 1
+
+                    Dim chave As String = dr("CLIENT_KEY").ToString()
+                    For Each ship As DataRow In pDetalhe.Rows
+                        If ship("CLIENT_KEY").ToString() <> chave Then Continue For
+                        ws.Cells(linha, 1).Value = "    > " & ship("REMESSA_REF").ToString()
+                        ws.Cells(linha, 2).Value = ship("RECIPIENT").ToString()
+                        ws.Cells(linha, 3).Value = ship("CARRIER").ToString()
+                        ws.Cells(linha, 4).Value = ship("TRACKING_NUMBER").ToString()
+                        ws.Cells(linha, 5).Value = ship("STATUS_REMESSA").ToString()
+                        For Each par In {(6, "DATA_ENVIO"), (7, "DATA_ENTREGA")}
+                            If Not IsDBNull(ship(par.Item2)) Then
+                                ws.Cells(linha, par.Item1).Value = CDate(ship(par.Item2))
+                                ws.Cells(linha, par.Item1).Style.Numberformat.Format = "yyyy-mm-dd"
+                            End If
+                        Next
+                        ws.Cells(linha, 8).Value = Convert.ToInt32(ship("TOTAL_ITEMS"))
+                        ws.Cells(linha, 3, linha, 8).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                        linha += 1
+                    Next
+                    linha += 1   ' blank line before the next client
+                End If
+                idx += 1
+            Next
+
+            Dim ultimaLinhaDados As Integer = linha - 1
+
+            ' ── TOTAL row ──
+            ws.Cells(linha, 1).Value = "TOTAL"
+            For i As Integer = 1 To nCols - 1
+                Dim key As String = colunas(i).Key
+                Dim cell As ExcelRange = ws.Cells(linha, i + 1)
+                If colsSomadas.Contains(key) Then
+                    cell.Value = pResumo.AsEnumerable().Sum(Function(r) If(IsDBNull(r(key)), 0, Convert.ToInt32(r(key))))
+                ElseIf key = "CARRIERS_USED" Then
+                    cell.Value = pDetalhe.AsEnumerable().Where(Function(r) Not IsDBNull(r("CARRIER"))) _
+                                         .Select(Function(r) r("CARRIER").ToString()).Distinct().Count()
+                ElseIf colsData.Contains(key) Then
+                    Dim datas = pResumo.AsEnumerable().Where(Function(r) Not IsDBNull(r(key))).Select(Function(r) CDate(r(key)))
+                    If datas.Any() Then
+                        cell.Value = If(key = "FIRST_SHIPMENT", datas.Min(), datas.Max())
+                        cell.Style.Numberformat.Format = "yyyy-mm-dd"
+                    End If
+                End If
+                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+            Next
+            With ws.Cells(linha, 1, linha, nCols).Style
+                .Font.Bold = True
+                .Fill.PatternType = ExcelFillStyle.Solid
+                .Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(209, 250, 229))
+                .Border.Top.Style = ExcelBorderStyle.Thin
+            End With
+
+            For i As Integer = 0 To nCols - 1
+                ws.Column(i + 1).Width = If(pOpts.Detalhado, colunas(i).LarguraDet, colunas(i).Largura)
+            Next
+            ' Without grouping every "variation" is just the recipient itself
+            ws.Column(COL_VARIACOES).Hidden = Not pOpts.Agrupado
+
+            If Not pOpts.Detalhado AndAlso ultimaLinhaDados > linhaCabecalho Then
+                ws.Cells(linhaCabecalho, 1, ultimaLinhaDados, nCols).AutoFilter = True
+            End If
+            ws.View.FreezePanes(linhaCabecalho + 1, 1)
+            pkg.SaveAs(New FileInfo(caminhoFinal))
+        End Using
+
+        Return caminhoFinal
+
+    End Function
+
     Public Shared Function GerarPdfComponentsSummary(pItens As List(Of DataRow),
                                                       pOpts As Models.ComponentSummaryOptions,
                                                       pOutputPath As String,

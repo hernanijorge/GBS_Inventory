@@ -257,6 +257,37 @@ Public Class clsGravacaoRemessa
 
     End Function
 
+    ' Replaces the whole client alias mapping (TBL_CLIENT_ALIAS). Runs inside the open
+    ' transaction; names arrive already normalized (UPPER/TRIM) from the mapping dialog.
+    Public Function substituirAliases(pMapa As Dictionary(Of String, List(Of String)), pUsuario As String) As Boolean
+
+        Try
+
+            OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text, "DELETE FROM TBL_CLIENT_ALIAS")
+
+            For Each par As KeyValuePair(Of String, List(Of String)) In pMapa
+                For Each sAlias As String In par.Value
+                    Dim oPar(2) As OracleParameter
+                    oPar(0) = New OracleParameter("P_CANONICAL", OracleDbType.Varchar2, ParameterDirection.Input) With {.Value = par.Key}
+                    oPar(1) = New OracleParameter("P_ALIAS",     OracleDbType.Varchar2, ParameterDirection.Input) With {.Value = sAlias}
+                    oPar(2) = New OracleParameter("P_USER",      OracleDbType.Varchar2, ParameterDirection.Input) With {
+                                  .Value = If(String.IsNullOrWhiteSpace(pUsuario), DBNull.Value, CObj(pUsuario))}
+                    OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+                        "INSERT INTO TBL_CLIENT_ALIAS (ID_ALIAS, CANONICAL_NAME, ALIAS_NAME, CREATED_AT, CREATED_BY)" &
+                        " VALUES (SEQ_CLIENT_ALIAS.NEXTVAL, :P_CANONICAL, :P_ALIAS, SYSDATE, :P_USER)", oPar)
+                Next
+            Next
+
+        Catch ex As Exception
+
+            Throw New Exception(ex.ToString)
+
+        End Try
+
+        Return True
+
+    End Function
+
     Public Function cancelarRemessa(pIdRemessa As Integer) As Boolean
 
         Dim oPar(0) As OracleParameter

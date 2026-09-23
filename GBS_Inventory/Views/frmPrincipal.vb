@@ -1161,6 +1161,45 @@ Public Class frmPrincipal
         carregarRemessas()
     End Sub
 
+    Private Sub btnRelatorioRecipient_Click(sender As Object, e As EventArgs) Handles btnRelatorioRecipient.Click
+        Dim opts As Models.ShipmentReportOptions
+        Using frmOpts As New frmShipmentReportOptions(oRemessaController)
+            If frmOpts.ShowDialog(Me) <> DialogResult.OK Then Return
+            opts = frmOpts.Opcoes
+        End Using
+        gerarRelatorioShipmentsPorRecipient(opts)
+    End Sub
+
+    Private Sub gerarRelatorioShipmentsPorRecipient(pOpts As Models.ShipmentReportOptions)
+        Try
+            Cursor = Cursors.WaitCursor
+
+            Dim dados = oRemessaController.buscarRelatorioPorDestinatario(pOpts)
+            If dados.Resumo Is Nothing Then
+                Cursor = Cursors.Default
+                MessageBox.Show("No shipments found for the selected criteria.", "Report by Recipient",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim outputPath As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+            If String.IsNullOrWhiteSpace(outputPath) Then outputPath = "C:\GBS\Reports"
+            Dim logoPath As String = System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath")
+            If String.IsNullOrWhiteSpace(logoPath) Then logoPath = ""
+
+            Dim caminhoXlsx As String = ReportService.GerarExcelShipmentsPorRecipient(
+                dados.Resumo, dados.Detalhe, pOpts, outputPath, logoPath)
+
+            Cursor = Cursors.Default
+            System.Diagnostics.Process.Start(caminhoXlsx)
+
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            MessageBox.Show("Error generating report by recipient: " & ex.Message, "Report by Recipient",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
     Private Sub btnCancelarRemessa_Click(sender As Object, e As EventArgs) Handles btnCancelarRemessa.Click
 
         If dgvRemessas.CurrentRow Is Nothing OrElse dgvRemessas.CurrentRow.Index < 0 Then

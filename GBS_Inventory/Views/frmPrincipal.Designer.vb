@@ -81,6 +81,7 @@ Partial Class frmPrincipal
     Friend WithEvents btnNovaRemessa       As Button
     Friend WithEvents btnAtualizarRemessas As Button
     Friend WithEvents btnCancelarRemessa   As Button
+    Friend WithEvents btnRelatorioRecipient As Button
 
     ' Controles da aba Upgrades
     Friend WithEvents lblUpgradesTit        As Label
@@ -703,7 +704,12 @@ Partial Class frmPrincipal
         Me.btnCancelarRemessa.Location   = New Point(460, 10)
         Me.btnCancelarRemessa.Size       = New Size(130, 30)
 
-        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas, btnCancelarRemessa})
+        Me.btnRelatorioRecipient            = New Button()
+        Me.btnRelatorioRecipient.Text       = "Report by Recipient"
+        Me.btnRelatorioRecipient.Location   = New Point(600, 10)
+        Me.btnRelatorioRecipient.Size       = New Size(180, 30)
+
+        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas, btnCancelarRemessa, btnRelatorioRecipient})
 
         Me.dgvRemessas      = New DataGridView()
         Me.dgvRemessas.Dock = DockStyle.Fill
