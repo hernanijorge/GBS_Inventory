@@ -29,6 +29,23 @@ Partial Class frmPrincipal
     Friend WithEvents lblBackupStatus  As Label
     Friend WithEvents dgvBackupLog     As DataGridView
 
+    ' Controls — Diagnostics tab
+    Friend WithEvents tabDiagnostics       As TabPage
+    Friend WithEvents dgvDiagnosticos      As DataGridView
+    Friend WithEvents lblDiagTotal         As Label
+    Friend WithEvents lblDiagStatus        As Label
+    Friend WithEvents btnDiagRefresh       As Button
+    Friend WithEvents btnDiagOpenPdf       As Button
+    Friend WithEvents btnDiagExportExcel   As Button
+    Friend WithEvents btnDiagSendClient    As Button
+    Friend WithEvents txtDiagUid           As TextBox
+    Friend WithEvents txtDiagTag           As TextBox
+    Friend WithEvents cboDiagVerdict       As ComboBox
+    Friend WithEvents dtpDiagIni           As DateTimePicker
+    Friend WithEvents dtpDiagFim           As DateTimePicker
+    Friend WithEvents btnDiagSearch        As Button
+    Friend WithEvents btnDiagClear         As Button
+
     ' Controls — Components tab
     Friend WithEvents dgvComponents     As DataGridView
     Friend WithEvents lblCompTotal      As Label
@@ -222,6 +239,7 @@ Partial Class frmPrincipal
         Me.tabImportacao = New TabPage("Import")
         Me.tabInvoice = New TabPage("Invoice")
         Me.tabBackup = New TabPage("Backup")
+        Me.tabDiagnostics = New TabPage("Diagnostics")
 
         ' ─── ABA DASHBOARD ────────────────────────────────────────────
         Me.pnlDashboard = New Panel()
@@ -1083,10 +1101,97 @@ Partial Class frmPrincipal
         Me.tabBackup.Controls.Add(dgvBackupLog)
         Me.tabBackup.Controls.Add(pnlBackupTop)
 
+        ' ─── ABA DIAGNOSTICS ──────────────────────────────────────────
+        Me.tabDiagnostics.Padding = New Padding(0)
+
+        Dim pnlDiagTop As New Panel() With {
+            .Dock      = DockStyle.Top,
+            .Height    = 90,
+            .BackColor = TemaEscuro.Surface,
+            .Padding   = New Padding(8)
+        }
+
+        Dim lblDiagTit As New Label() With {
+            .Text      = "Diagnostics",
+            .Font      = New Font("Segoe UI", 11, FontStyle.Bold),
+            .ForeColor = TemaEscuro.Accent,
+            .Location  = New Point(15, 15),
+            .AutoSize  = True
+        }
+
+        Me.lblDiagTotal = New Label() With {
+            .Text      = "Total: 0",
+            .Location  = New Point(125, 18),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        Me.btnDiagRefresh     = New Button() With { .Text = "Refresh",          .Location = New Point(230, 10), .Size = New Size(90, 28) }
+        Me.btnDiagOpenPdf     = New Button() With { .Text = "Open PDF",         .Location = New Point(330, 10), .Size = New Size(100, 28) }
+        Me.btnDiagExportExcel = New Button() With { .Text = "Export Excel",     .Location = New Point(440, 10), .Size = New Size(115, 28) }
+        Me.btnDiagSendClient  = New Button() With { .Text = "Send to Customer", .Location = New Point(565, 10), .Size = New Size(145, 28) }
+
+        Me.lblDiagStatus = New Label() With {
+            .Text      = "",
+            .Location  = New Point(725, 16),
+            .Size      = New Size(520, 20),
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        ' Segunda linha — filtros
+        Dim lblDiagUid As New Label() With { .Text = "UID:", .Location = New Point(15, 55), .AutoSize = True,
+                                             .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
+        Me.txtDiagUid = New TextBox() With { .Location = New Point(50, 52), .Size = New Size(120, 26) }
+
+        Dim lblDiagTag As New Label() With { .Text = "Service Tag:", .Location = New Point(182, 55), .AutoSize = True,
+                                             .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
+        Me.txtDiagTag = New TextBox() With { .Location = New Point(262, 52), .Size = New Size(120, 26) }
+
+        Dim lblDiagVerdict As New Label() With { .Text = "Verdict:", .Location = New Point(394, 55), .AutoSize = True,
+                                                 .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
+        Me.cboDiagVerdict = New ComboBox() With { .Location = New Point(450, 52), .Size = New Size(170, 24),
+                                                  .DropDownStyle = ComboBoxStyle.DropDownList }
+        Me.cboDiagVerdict.Items.AddRange({"(All)", "PASS", "PASS_WITH_WARNINGS", "FAIL", "INCOMPLETE"})
+        Me.cboDiagVerdict.SelectedIndex = 0
+
+        ' Datas com checkbox: desmarcado = sem limite
+        Dim lblDiagIni As New Label() With { .Text = "From:", .Location = New Point(632, 55), .AutoSize = True,
+                                             .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
+        Me.dtpDiagIni = New DateTimePicker() With { .Location = New Point(674, 52), .Size = New Size(125, 24),
+                                                    .Format = DateTimePickerFormat.Short, .ShowCheckBox = True, .Checked = False }
+
+        Dim lblDiagFim As New Label() With { .Text = "To:", .Location = New Point(809, 55), .AutoSize = True,
+                                             .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
+        Me.dtpDiagFim = New DateTimePicker() With { .Location = New Point(835, 52), .Size = New Size(125, 24),
+                                                    .Format = DateTimePickerFormat.Short, .ShowCheckBox = True, .Checked = False }
+
+        Me.btnDiagSearch = New Button() With { .Text = "Search", .Location = New Point(972, 51), .Size = New Size(85, 28) }
+        Me.btnDiagClear  = New Button() With { .Text = "Clear",  .Location = New Point(1065, 51), .Size = New Size(75, 28) }
+
+        pnlDiagTop.Controls.AddRange({lblDiagTit, lblDiagTotal, btnDiagRefresh, btnDiagOpenPdf, btnDiagExportExcel,
+                                      btnDiagSendClient, lblDiagStatus, lblDiagUid, txtDiagUid, lblDiagTag, txtDiagTag,
+                                      lblDiagVerdict, cboDiagVerdict, lblDiagIni, dtpDiagIni, lblDiagFim, dtpDiagFim,
+                                      btnDiagSearch, btnDiagClear})
+
+        Me.dgvDiagnosticos = New DataGridView() With {
+            .Dock          = DockStyle.Fill,
+            .ReadOnly      = True,
+            .MultiSelect   = True,
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            .AllowUserToAddRows    = False,
+            .AllowUserToDeleteRows = False
+        }
+
+        Me.tabDiagnostics.Controls.Add(dgvDiagnosticos)
+        Me.tabDiagnostics.Controls.Add(pnlDiagTop)
+
         ' ═════════════════════════════════════════════════════════════
         ' MONTAGEM DO TABCONTROL
+        ' (manter APOS o ultimo Controls.AddRange das abas — todas as abas, inclusive Diagnostics)
         ' ═════════════════════════════════════════════════════════════
-        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabComponents, tabImportacao, tabInvoice, tabBackup})
+        Me.tabPrincipal.TabPages.AddRange({tabDashboard, tabCadastro, tabEstoque, tabRemessas, tabUpgrades, tabComponents, tabImportacao, tabInvoice, tabBackup, tabDiagnostics})
         Me.tabPrincipal.SelectedIndex = 0
         Me.pnlContainer.Controls.Add(tabPrincipal)
 

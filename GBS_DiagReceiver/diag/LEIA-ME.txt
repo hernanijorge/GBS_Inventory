@@ -1,0 +1,3 @@
+Pasta servida pelo GBS_DiagReceiver em  http://<servidor>:8090/diag/<arquivo>
+Coloque aqui os arquivos usados no boot pela rede (scripts, kernel, initrd, squashfs...).
+Subpastas sao permitidas:  diag\ubuntu\vmlinuz  ->  /diag/ubuntu/vmlinuz

@@ -1,0 +1,30 @@
+{
+  "tool_version": "1.0.0",
+  "origin": "UBUNTU-USB",
+  "stamp": "20261015T143000Z",
+  "verdict": "PASS_WITH_WARNINGS",
+  "device": {
+    "internal_uid": "00239589",
+    "service_tag": "5CG13275QP",
+    "manufacturer": "HP",
+    "model": "ZBOOK FIREFLY 14 G7 MOBILE",
+    "bios": "S76 Ver. 01.10.00",
+    "cpu": "Intel(R) Core(TM) i7-10610U CPU @ 1.80GHz",
+    "ram_gib": 16,
+    "storage": "Samsung PM981a 512GB NVMe",
+    "battery_health": 78.5,
+    "battery_cycles": 412,
+    "ssd_life": 96,
+    "technician": "Teste"
+  },
+  "checks": [
+    { "test": "CPU stress",   "result": "PASS",       "details": "10 min, max 89C" },
+    { "test": "Memory",       "result": "PASS",       "details": "memtester 2 passes" },
+    { "test": "Battery",      "result": "WARN",       "details": "78.5% design capacity" },
+    { "test": "Keyboard",     "result": "WARN",       "details": "Key F7 intermittent" },
+    { "test": "Webcam",       "result": "NOT_TESTED", "details": "" },
+    { "test": "SSD SMART",    "result": "PASS",       "details": "96% life remaining" }
+  ],
+  "pdf_filename": "diag_00239589_20261015.pdf",
+  "pdf_base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCAzMDAgMTQ0XSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQgL0YxIDE4IFRmIDIwIDgwIFRkIChHQlMgRGlhZyBUZXN0KSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iagp0cmFpbGVyCjw8IC9Sb290IDEgMCBSID4+CiUlRU9GCg=="
+}

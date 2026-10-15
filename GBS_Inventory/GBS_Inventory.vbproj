@@ -117,6 +117,7 @@
     <Compile Include="classes\clsReadComponent.vb" />
     <Compile Include="classes\clsWriteComponent.vb" />
     <Compile Include="classes\clsReadBackupLog.vb" />
+    <Compile Include="classes\clsReadDiagnostico.vb" />
     <!-- Controllers (MVC) -->
     <Compile Include="Controllers\EquipamentoController.vb" />
     <Compile Include="Controllers\UpgradeController.vb" />
@@ -124,6 +125,7 @@
     <Compile Include="Controllers\ImportacaoController.vb" />
     <Compile Include="Controllers\ComponentController.vb" />
     <Compile Include="Controllers\BackupLogController.vb" />
+    <Compile Include="Controllers\DiagnosticoController.vb" />
     <Compile Include="Controllers\ClienteController.vb" />
     <Compile Include="Controllers\InvoiceController.vb" />
     <!-- Utils -->
@@ -131,6 +133,7 @@
     <Compile Include="Utils\InvoiceDocumentoService.vb" />
     <Compile Include="Utils\InvoiceEmailService.vb" />
     <Compile Include="Utils\ReportService.vb" />
+    <Compile Include="Utils\DiagnosticoReportService.vb" />
     <!-- Views (Forms) -->
     <Compile Include="Views\frmPrincipal.vb">
       <SubType>Form</SubType>

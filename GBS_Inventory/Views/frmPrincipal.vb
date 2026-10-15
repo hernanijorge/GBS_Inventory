@@ -25,6 +25,7 @@ Public Class frmPrincipal
     Private oUpgradeController As UpgradeController
     Private oCompController As ComponentController
     Private oBackupLogController As BackupLogController
+    Private oDiagController As DiagnosticoController
     Private sArquivoSelImp As String = ""
     Private dtResumoManufacturer As DataTable
     Private dtResumoModel As DataTable
@@ -54,6 +55,7 @@ Public Class frmPrincipal
         oUpgradeController = New UpgradeController()
         oCompController    = New ComponentController()
         oBackupLogController = New BackupLogController()
+        oDiagController = New DiagnosticoController()
 
         TemaEscuro.aplicarHelius(Me)
         ConfigurarCardsDashboard()
@@ -75,6 +77,7 @@ Public Class frmPrincipal
             carregarUpgrades()
             carregarComponents()
             carregarBackupLog()
+            carregarDiagnosticos()
 
         Catch ex As Exception
 
@@ -1796,6 +1799,251 @@ Public Class frmPrincipal
             Return (exitCode = 0, nomeDump, exitCode)
         End Using
 
+    End Function
+
+#End Region
+
+#Region "Aba Diagnostics"
+
+    ' Colunas visiveis, na ordem de exibicao (as demais do PROC_LIST ficam ocultas mas vao para o Excel)
+    Private Shared ReadOnly DiagColunasVisiveis As (Key As String, Header As String)() = {
+        ("DATA_TESTE",     "Date"),
+        ("INTERNAL_UID",   "Internal UID"),
+        ("SERVICE_TAG",    "Service Tag"),
+        ("MODEL",          "Model"),
+        ("VERDICT",        "Verdict"),
+        ("BATTERY_HEALTH", "Battery %"),
+        ("SSD_LIFE",       "SSD %"),
+        ("TECHNICIAN",     "Technician"),
+        ("ORIGIN",         "Origin")
+    }
+
+    Private Sub carregarDiagnosticos()
+        Try
+            Dim verdict As String = If(cboDiagVerdict.SelectedIndex > 0, cboDiagVerdict.SelectedItem.ToString(), Nothing)
+            Dim dataIni As Date? = If(dtpDiagIni.Checked, CType(dtpDiagIni.Value.Date, Date?), Nothing)
+            Dim dataFim As Date? = If(dtpDiagFim.Checked, CType(dtpDiagFim.Value.Date, Date?), Nothing)
+
+            Dim ds As DataSet = oDiagController.fetchByFilter(txtDiagUid.Text, txtDiagTag.Text, verdict, dataIni, dataFim)
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                dgvDiagnosticos.DataSource = ds.Tables(0)
+                ConfigurarColunasDiagnosticos()
+                lblDiagTotal.Text = "Total: " & ds.Tables(0).Rows.Count
+            End If
+            lblDiagStatus.Text = ""
+        Catch ex As Exception
+            lblDiagStatus.ForeColor = Color.FromArgb(220, 38, 38)
+            lblDiagStatus.Text = "Error loading diagnostics: " & ex.Message.Split({vbCr, vbLf}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+        End Try
+    End Sub
+
+    Private Sub ConfigurarColunasDiagnosticos()
+        For Each col As DataGridViewColumn In dgvDiagnosticos.Columns
+            col.Visible = False
+        Next
+        For i As Integer = 0 To DiagColunasVisiveis.Length - 1
+            Dim key As String = DiagColunasVisiveis(i).Key
+            If Not dgvDiagnosticos.Columns.Contains(key) Then Continue For
+            Dim col As DataGridViewColumn = dgvDiagnosticos.Columns(key)
+            col.Visible = True
+            col.HeaderText = DiagColunasVisiveis(i).Header
+            col.DisplayIndex = i
+        Next
+        If dgvDiagnosticos.Columns.Contains("DATA_TESTE") Then dgvDiagnosticos.Columns("DATA_TESTE").DefaultCellStyle.Format = "yyyy-MM-dd HH:mm"
+        For Each key As String In {"BATTERY_HEALTH", "SSD_LIFE"}
+            If dgvDiagnosticos.Columns.Contains(key) Then
+                dgvDiagnosticos.Columns(key).DefaultCellStyle.Format = "0.#"
+                dgvDiagnosticos.Columns(key).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            End If
+        Next
+        If dgvDiagnosticos.Columns.Contains("VERDICT") Then
+            dgvDiagnosticos.Columns("VERDICT").DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+        End If
+    End Sub
+
+    ' Veredito colorido + tooltip com os itens com falha / aviso / nao testados
+    Private Sub dgvDiagnosticos_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvDiagnosticos.CellFormatting
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 Then Return
+        If dgvDiagnosticos.Columns(e.ColumnIndex).Name <> "VERDICT" OrElse e.Value Is Nothing OrElse IsDBNull(e.Value) Then Return
+
+        Dim verdict As String = e.Value.ToString()
+        e.CellStyle.BackColor = DiagnosticoReportService.CorVerdict(verdict)
+        e.CellStyle.ForeColor = Color.FromArgb(17, 24, 39)
+        e.Value = verdict.Replace("_", " ")
+        e.FormattingApplied = True
+
+        Dim row As DataRow = LinhaDiag(e.RowIndex)
+        If row IsNot Nothing Then
+            Dim partes As New List(Of String)
+            For Each item In {("FAIL_ITEMS", "Failed"), ("WARN_ITEMS", "Warnings"), ("NOT_TESTED_ITEMS", "Not tested")}
+                If Not IsDBNull(row(item.Item1)) Then partes.Add(item.Item2 & ": " & row(item.Item1).ToString())
+            Next
+            dgvDiagnosticos.Rows(e.RowIndex).Cells(e.ColumnIndex).ToolTipText = String.Join(vbCrLf, partes)
+        End If
+    End Sub
+
+    Private Function LinhaDiag(pRowIndex As Integer) As DataRow
+        If pRowIndex < 0 OrElse pRowIndex >= dgvDiagnosticos.Rows.Count Then Return Nothing
+        Dim drv As DataRowView = TryCast(dgvDiagnosticos.Rows(pRowIndex).DataBoundItem, DataRowView)
+        Return If(drv Is Nothing, Nothing, drv.Row)
+    End Function
+
+    Private Function LinhaDiagAtual() As DataRow
+        If dgvDiagnosticos.CurrentRow Is Nothing Then Return Nothing
+        Return LinhaDiag(dgvDiagnosticos.CurrentRow.Index)
+    End Function
+
+    Private Function PastaRelatorios() As String
+        Dim p As String = System.Configuration.ConfigurationManager.AppSettings("ReportsOutputPath")
+        Return If(String.IsNullOrWhiteSpace(p), "C:\GBS\Reports", p)
+    End Function
+
+    Private Function LogoRelatorios() As String
+        Return If(System.Configuration.ConfigurationManager.AppSettings("InvoiceLogoPath"), "")
+    End Function
+
+    Private Sub btnDiagRefresh_Click(sender As Object, e As EventArgs) Handles btnDiagRefresh.Click, btnDiagSearch.Click
+        carregarDiagnosticos()
+    End Sub
+
+    Private Sub btnDiagClear_Click(sender As Object, e As EventArgs) Handles btnDiagClear.Click
+        txtDiagUid.Text = ""
+        txtDiagTag.Text = ""
+        cboDiagVerdict.SelectedIndex = 0
+        dtpDiagIni.Checked = False
+        dtpDiagFim.Checked = False
+        carregarDiagnosticos()
+    End Sub
+
+    Private Sub txtDiagFiltro_KeyDown(sender As Object, e As KeyEventArgs) Handles txtDiagUid.KeyDown, txtDiagTag.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            e.SuppressKeyPress = True
+            carregarDiagnosticos()
+        End If
+    End Sub
+
+    Private Sub cboDiagVerdict_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboDiagVerdict.SelectedIndexChanged
+        If oDiagController IsNot Nothing Then carregarDiagnosticos()
+    End Sub
+
+    Private Sub btnDiagOpenPdf_Click(sender As Object, e As EventArgs) Handles btnDiagOpenPdf.Click
+        AbrirPdfDiagnostico()
+    End Sub
+
+    Private Sub dgvDiagnosticos_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvDiagnosticos.CellDoubleClick
+        If e.RowIndex >= 0 Then AbrirPdfDiagnostico()
+    End Sub
+
+    ' BLOB -> arquivo temporario -> abre no leitor padrao
+    Private Sub AbrirPdfDiagnostico()
+        Dim row As DataRow = LinhaDiagAtual()
+        If row Is Nothing Then
+            MessageBox.Show("Select a diagnostic in the grid first.", "Open PDF", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim caminho As String = oDiagController.savePdf(CLng(row("ID_DIAGNOSTICO")),
+                                                            IO.Path.Combine(IO.Path.GetTempPath(), "GBS_Diagnostics"))
+            Cursor = Cursors.Default
+            If caminho = "" Then
+                MessageBox.Show("This diagnostic has no PDF attached.", "Open PDF", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+            Process.Start(caminho)
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            MessageBox.Show("Error opening PDF: " & ex.Message, "Open PDF", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' Mais de uma linha selecionada: exporta as selecionadas; senao exporta tudo que o filtro trouxe
+    Private Sub btnDiagExportExcel_Click(sender As Object, e As EventArgs) Handles btnDiagExportExcel.Click
+        Dim soSelecionadas As Boolean = dgvDiagnosticos.SelectedRows.Count > 1
+        Dim linhas As New List(Of DataRow)
+        For Each r As DataGridViewRow In dgvDiagnosticos.Rows
+            If soSelecionadas AndAlso Not r.Selected Then Continue For
+            Dim dr As DataRow = LinhaDiag(r.Index)
+            If dr IsNot Nothing Then linhas.Add(dr)
+        Next
+
+        If linhas.Count = 0 Then
+            MessageBox.Show("No diagnostics to export.", "Export Excel", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim caminho As String = DiagnosticoReportService.GerarExcel(linhas, PastaRelatorios(), LogoRelatorios())
+            Cursor = Cursors.Default
+            Process.Start(caminho)
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            MessageBox.Show("Error exporting Excel: " & ex.Message, "Export Excel", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' PDF do diagnostico + Excel da linha, enviados pelo SMTP existente (frmEnviarRelatorio)
+    Private Sub btnDiagSendClient_Click(sender As Object, e As EventArgs) Handles btnDiagSendClient.Click
+        Dim row As DataRow = LinhaDiagAtual()
+        If row Is Nothing Then
+            MessageBox.Show("Select a diagnostic in the grid first.", "Send to Customer", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim caminhoPdf As String
+        Dim caminhoXlsx As String
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim pasta As String = IO.Path.Combine(PastaRelatorios(), "Diagnostics")
+            caminhoPdf = oDiagController.savePdf(CLng(row("ID_DIAGNOSTICO")), pasta)
+
+            Dim ident As String = TextoDiag(row, "INTERNAL_UID")
+            If ident = "" Then ident = TextoDiag(row, "SERVICE_TAG")
+            caminhoXlsx = DiagnosticoReportService.GerarExcel(New List(Of DataRow) From {row}, pasta, LogoRelatorios(),
+                              "Diagnostic_" & ident & "_" & CDate(row("DATA_TESTE")).ToString("yyyyMMdd_HHmm"))
+            Cursor = Cursors.Default
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            MessageBox.Show("Error preparing attachments: " & ex.Message, "Send to Customer", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End Try
+
+        If caminhoPdf = "" Then
+            MessageBox.Show("This diagnostic has no PDF attached — only the Excel summary will be available.",
+                            "Send to Customer", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+
+        Dim modelo As String = (TextoDiag(row, "MANUFACTURER") & " " & TextoDiag(row, "MODEL")).Trim()
+        Dim verdict As String = TextoDiag(row, "VERDICT").Replace("_", " ")
+        Dim tag As String = TextoDiag(row, "SERVICE_TAG")
+        If tag = "" Then tag = TextoDiag(row, "INTERNAL_UID")
+        Dim assunto As String = $"GBS Diagnostic Report - {modelo} - {tag} - {verdict}"
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("Please find attached the hardware diagnostic report for the following device:")
+        sb.AppendLine()
+        sb.AppendLine($"  - Model: {modelo}")
+        sb.AppendLine($"  - Internal UID: {TextoDiag(row, "INTERNAL_UID")}")
+        sb.AppendLine($"  - Service Tag: {TextoDiag(row, "SERVICE_TAG")}")
+        sb.AppendLine($"  - Test date: {CDate(row("DATA_TESTE")):yyyy-MM-dd}")
+        sb.AppendLine($"  - Result: {verdict}")
+        If Not IsDBNull(row("BATTERY_HEALTH")) Then
+            sb.AppendLine($"  - Battery health: {CDec(row("BATTERY_HEALTH")):0.#}%" &
+                          If(IsDBNull(row("BATTERY_CYCLES")), "", $" ({row("BATTERY_CYCLES")} cycles)"))
+        End If
+        If Not IsDBNull(row("SSD_LIFE")) Then sb.AppendLine($"  - SSD life remaining: {CDec(row("SSD_LIFE")):0.#}%")
+        If TextoDiag(row, "FAIL_ITEMS") <> "" Then sb.AppendLine($"  - Failed: {TextoDiag(row, "FAIL_ITEMS")}")
+        If TextoDiag(row, "WARN_ITEMS") <> "" Then sb.AppendLine($"  - Warnings: {TextoDiag(row, "WARN_ITEMS")}")
+
+        Using frm As New frmEnviarRelatorio("", caminhoPdf, caminhoXlsx, New List(Of DataRow) From {row}, assunto, sb.ToString())
+            frm.ShowDialog(Me)
+        End Using
+    End Sub
+
+    Private Shared Function TextoDiag(pRow As DataRow, pCol As String) As String
+        If Not pRow.Table.Columns.Contains(pCol) OrElse IsDBNull(pRow(pCol)) Then Return ""
+        Return pRow(pCol).ToString().Trim()
     End Function
 
 #End Region

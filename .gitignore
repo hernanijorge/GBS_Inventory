@@ -365,3 +365,6 @@ FodyWeavers.xsd
 # Local Codex / Claude workspace artifacts
 .claude/
 Untitled.png
+
+# GBS_DiagReceiver: token real (nao versionar)
+GBS_DiagReceiver/secrets.config

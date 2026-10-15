@@ -11,10 +11,14 @@ Public Class frmEnviarRelatorio
     Private _caminhoXlsx As String
     Private _itens       As List(Of DataRow)
 
+    ''' <param name="assunto">Opcional: substitui o assunto padrao (inventory report).</param>
+    ''' <param name="corpo">Opcional: substitui o corpo padrao.</param>
     Public Sub New(caminhoDoc  As String,
                    caminhoPdf  As String,
                    caminhoXlsx As String,
-                   itens       As List(Of DataRow))
+                   itens       As List(Of DataRow),
+                   Optional assunto As String = Nothing,
+                   Optional corpo   As String = Nothing)
 
         InitializeComponent()
         TemaEscuro.aplicarHelius(Me)
@@ -26,6 +30,9 @@ Public Class frmEnviarRelatorio
 
         PreencherCaminhos()
         PreencherCampos()
+
+        If assunto IsNot Nothing Then txtSubject.Text = assunto
+        If corpo   IsNot Nothing Then txtBody.Text    = corpo
 
     End Sub
 

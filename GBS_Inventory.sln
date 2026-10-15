@@ -1,9 +1,11 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "GBS_Inventory", "GBS_Inventory\GBS_Inventory.vbproj", "{B4F8E2D1-3C6A-4E7B-9F5D-2A1B8C9D0E3F}"
+EndProject
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "GBS_DiagReceiver", "GBS_DiagReceiver\GBS_DiagReceiver.vbproj", "{23FE55EC-BCA3-43D0-A8EF-AB2EE43B84D0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{B4F8E2D1-3C6A-4E7B-9F5D-2A1B8C9D0E3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4F8E2D1-3C6A-4E7B-9F5D-2A1B8C9D0E3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4F8E2D1-3C6A-4E7B-9F5D-2A1B8C9D0E3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23FE55EC-BCA3-43D0-A8EF-AB2EE43B84D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23FE55EC-BCA3-43D0-A8EF-AB2EE43B84D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23FE55EC-BCA3-43D0-A8EF-AB2EE43B84D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23FE55EC-BCA3-43D0-A8EF-AB2EE43B84D0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
