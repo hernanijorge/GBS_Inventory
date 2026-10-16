@@ -56,9 +56,34 @@ netsh advfirewall firewall delete rule name="GBS DiagReceiver 8090"
 ## Executar
 
 ```bat
-GBS_DiagReceiver.exe              :: inicia o servidor (Ctrl+C encerra)
+GBS_DiagReceiver.exe              :: console (Ctrl+C encerra)
 GBS_DiagReceiver.exe --selftest   :: grava e lê de volta BLOB + CLOB no Oracle e sai (exit 0 = ok)
 ```
+
+## Serviço do Windows ("GBS DiagReceiver")
+
+O próprio .exe é o serviço (ServiceBase): aberto à mão roda como console; iniciado pelo
+Windows roda como serviço (conta LocalSystem, mesmo `http://+:8090/`). Instalação, num
+PowerShell **como Administrador** (feche antes qualquer janela console do receptor):
+
+```powershell
+taskkill /IM GBS_DiagReceiver.exe /F
+sc.exe create GBSDiagReceiver binPath= "C:\GBS\GBS_Inventory\GBS_DiagReceiver\bin\Release\GBS_DiagReceiver.exe" start= auto DisplayName= "GBS DiagReceiver"
+sc.exe description GBSDiagReceiver "Recebe os diagnosticos de laptops (porta 8090) e grava no Oracle XE"
+sc.exe failure GBSDiagReceiver reset= 86400 actions= restart/5000/restart/10000/restart/60000
+sc.exe failureflag GBSDiagReceiver 1
+sc.exe start GBSDiagReceiver
+sc.exe query GBSDiagReceiver
+```
+
+Recompilar o receptor: `sc.exe stop GBSDiagReceiver` antes (o serviço trava o .exe), depois `sc.exe start GBSDiagReceiver`.
+Remover: `sc.exe stop GBSDiagReceiver` e `sc.exe delete GBSDiagReceiver`.
+
+## Log
+
+`C:\GBS\Logs\DiagReceiver_yyyyMMdd.log` (`LogFolder`), um arquivo por dia, apagados após
+90 dias (`LogRetentionDays`). Cada request: IP, UID, tag, verdict, origin, ID gravado ou erro
+completo (stack trace). O 200 só é enviado depois do COMMIT confirmado; falha no banco = 500.
 
 ## Endpoints
 

@@ -52,6 +52,50 @@ Public Class clsReadDiagnostico
 
     End Function
 
+    ''' <summary>Uma linha por equipamento da remessa com o diagnostico mais recente (sem LOB).</summary>
+    Public Function selectByShipment(pIdRemessa As Long) As DataSet
+
+        Dim oPar(1) As OracleParameter
+        oPar(0) = New OracleParameter("P_ID_REMESSA", OracleDbType.Decimal,   ParameterDirection.Input)
+        oPar(1) = New OracleParameter("P_CURSOR",     OracleDbType.RefCursor, ParameterDirection.Output)
+        oPar(0).Value = pIdRemessa
+
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.StoredProcedure,
+                                               "PACK_DIAGNOSTICO.PROC_LIST_BY_SHIPMENT", oPar)
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Cabecalho da remessa para a capa / e-mail. Cliente = TBL_REMESSA.ID_CLIENTE (script 34).
+    ''' CLIENTE_NOME = nome do cliente ou, sem cliente, o DESTINATARIO; CLIENTE_EMAIL = e-mail do
+    ''' cliente (nulo se nao ha cliente ou ele nao tem e-mail); ID_CLIENTE nulo = sem cliente vinculado.
+    ''' </summary>
+    Public Function selectShipmentHeader(pIdRemessa As Long) As DataSet
+
+        Dim oPar(0) As OracleParameter
+        oPar(0) = New OracleParameter("P_ID_REMESSA", OracleDbType.Decimal, ParameterDirection.Input)
+        oPar(0).Value = pIdRemessa
+
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
+                "SELECT R.ID_REMESSA, R.CODIGO_REMESSA, R.DESTINATARIO, R.DATA_ENVIO, R.DATA_CADASTRO," &
+                "       R.ID_CLIENTE," &
+                "       NVL(NVL(C.NOME_FANTASIA, C.NOME_RAZAO), R.DESTINATARIO) AS CLIENTE_NOME," &
+                "       TRIM(C.EMAIL) AS CLIENTE_EMAIL" &
+                "  FROM TBL_REMESSA R" &
+                "  LEFT JOIN TBL_CLIENTE C ON C.ID_CLIENTE = R.ID_CLIENTE" &
+                " WHERE R.ID_REMESSA = :P_ID_REMESSA",
+                oPar)
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+
+    End Function
+
     ''' <summary>Retorna (nome do arquivo, bytes do PDF). Bytes = Nothing quando nao ha PDF.</summary>
     Public Function selectPdf(pId As Long) As (FileName As String, Bytes As Byte())
 

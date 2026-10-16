@@ -343,4 +343,39 @@ Public Class clsGravacaoCliente
 
 #End Region
 
+#Region "Aliases"
+
+    ''' <summary>
+    ''' Grava TBL_CLIENTE.ALIASES na transacao aberta (mesma do incluir/alterar).
+    ''' Normaliza: separa por ";", UPPER/TRIM, sem vazios nem repetidos ("MACIR;MACIR LLC").
+    ''' </summary>
+    Public Sub gravarAliases(pIdCliente As Integer, pAliases As String)
+
+        Dim oPar(1) As OracleParameter
+        oPar(0) = New OracleParameter("P_ALIASES", OracleDbType.Varchar2, ParameterDirection.Input)
+        oPar(1) = New OracleParameter("P_ID", OracleDbType.Int32, ParameterDirection.Input)
+
+        Dim normalizado As String = NormalizarAliases(pAliases)
+        If normalizado.Length > 500 Then
+            Throw New Exception("Aliases too long (max 500 characters).")
+        End If
+        oPar(0).Value = If(normalizado = "", DBNull.Value, CObj(normalizado))
+        oPar(1).Value = pIdCliente
+
+        OracleHelper.ExecuteNonQuery(Me.oTransacao, CommandType.Text,
+            "UPDATE TBL_CLIENTE SET ALIASES = :P_ALIASES WHERE ID_CLIENTE = :P_ID", oPar)
+
+    End Sub
+
+    Public Shared Function NormalizarAliases(pAliases As String) As String
+        If String.IsNullOrWhiteSpace(pAliases) Then Return ""
+        Dim itens = pAliases.Split(";"c).
+            Select(Function(a) a.Trim().ToUpperInvariant()).
+            Where(Function(a) a <> "").
+            Distinct()
+        Return String.Join(";", itens)
+    End Function
+
+#End Region
+
 End Class

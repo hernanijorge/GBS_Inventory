@@ -40,11 +40,15 @@ Public Class DiagnosticoRepository
     End Sub
 
     ''' <summary>Grava o diagnostico. Retorna (ID_DIAGNOSTICO, ID_EQUIPAMENTO ou Nothing).</summary>
+    ''' Transacao explicita: so retorna depois do COMMIT confirmado (falha no commit = excecao,
+    ''' e o receptor responde 500 — nunca 200 sem o registro gravado).
     Public Function Inserir(pReg As Registro) As (Id As Long, IdEquipamento As Long?)
 
         Using con As New OracleConnection(ConnectionString)
             con.Open()
-            Using cmd As New OracleCommand("PACK_DIAGNOSTICO.PROC_INSERT", con)
+            Using tx As OracleTransaction = con.BeginTransaction(),
+                  cmd As New OracleCommand("PACK_DIAGNOSTICO.PROC_INSERT", con)
+                cmd.Transaction = tx
                 cmd.CommandType = CommandType.StoredProcedure
                 cmd.BindByName = True
 
@@ -87,6 +91,7 @@ Public Class DiagnosticoRepository
                 Dim vEq As OracleTypes.OracleDecimal = CType(pIdEq.Value, OracleTypes.OracleDecimal)
                 If Not vEq.IsNull Then idEq = CLng(vEq.Value)
 
+                tx.Commit()   ' sem commit confirmado nao ha retorno (Using faz rollback em excecao)
                 Return (id, idEq)
             End Using
         End Using

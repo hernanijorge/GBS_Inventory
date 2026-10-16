@@ -203,4 +203,21 @@ Public Class RemessaController
 
 #End Region
 
+#Region "Cliente da remessa"
+
+    Public Function buscarClientesDasRemessas() As DataSet
+        Return oLeitura.selecionarClientesDasRemessas()
+    End Function
+
+    Public Sub definirCliente(pIdRemessa As Integer, pIdCliente As Integer?)
+        oGravacao.atualizarCliente(pIdRemessa, pIdCliente)
+    End Sub
+
+    ''' <summary>Auto-link de todas as remessas sem cliente (nunca sobrescreve ID_CLIENTE ja definido).</summary>
+    Public Function autoVincularClientes() As (Vinculadas As Integer, SemMatch As Integer, Ambiguas As Integer)
+        Return oGravacao.autoVincularClientes(Nothing)
+    End Function
+
+#End Region
+
 End Class

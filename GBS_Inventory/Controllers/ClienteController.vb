@@ -29,6 +29,7 @@ Public Class ClienteController
         Try
             oGravacao.beginTransacao()
             Dim vId As Integer = oGravacao.incluirCliente(pCliente)
+            oGravacao.gravarAliases(vId, pCliente.Aliases)
             oGravacao.commitTransacao()
             Return vId
         Catch ex As Exception
@@ -43,6 +44,7 @@ Public Class ClienteController
         Try
             oGravacao.beginTransacao()
             oGravacao.alterarCliente(pCliente)
+            oGravacao.gravarAliases(pCliente.IdCliente, pCliente.Aliases)
             oGravacao.commitTransacao()
             Return True
         Catch ex As Exception

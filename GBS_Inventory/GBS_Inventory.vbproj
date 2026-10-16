@@ -64,7 +64,13 @@
       <HintPath>..\packages\EPPlus.4.5.3.3\lib\net40\EPPlus.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PdfSharp, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.1.50.5147\lib\net20\PdfSharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -134,6 +140,7 @@
     <Compile Include="Utils\InvoiceEmailService.vb" />
     <Compile Include="Utils\ReportService.vb" />
     <Compile Include="Utils\DiagnosticoReportService.vb" />
+    <Compile Include="Utils\CertificadoService.vb" />
     <!-- Views (Forms) -->
     <Compile Include="Views\frmPrincipal.vb">
       <SubType>Form</SubType>
@@ -218,6 +225,12 @@
     </Compile>
     <Compile Include="Views\frmClientes.Designer.vb">
       <DependentUpon>frmClientes.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Views\frmTestCertificates.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\frmTestCertificates.Designer.vb">
+      <DependentUpon>frmTestCertificates.vb</DependentUpon>
     </Compile>
     <Compile Include="Views\frmInvoice.vb">
       <SubType>Form</SubType>

@@ -99,6 +99,11 @@ Partial Class frmPrincipal
     Friend WithEvents btnAtualizarRemessas As Button
     Friend WithEvents btnCancelarRemessa   As Button
     Friend WithEvents btnRelatorioRecipient As Button
+    Friend WithEvents btnTestCertificates  As Button
+    Friend WithEvents cboRemCliente        As ComboBox
+    Friend WithEvents btnRemSetCliente     As Button
+    Friend WithEvents btnRemAutoLink       As Button
+    Friend WithEvents lblRemClienteInfo    As Label
 
     ' Controles da aba Upgrades
     Friend WithEvents lblUpgradesTit        As Label
@@ -695,7 +700,7 @@ Partial Class frmPrincipal
 
         Dim pnlRemessasTop As New Panel() With {
             .Dock      = DockStyle.Top,
-            .Height    = 50,
+            .Height    = 88,
             .BackColor = TemaEscuro.Surface,
             .Padding   = New Padding(8)
         }
@@ -727,7 +732,45 @@ Partial Class frmPrincipal
         Me.btnRelatorioRecipient.Location   = New Point(600, 10)
         Me.btnRelatorioRecipient.Size       = New Size(180, 30)
 
-        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas, btnCancelarRemessa, btnRelatorioRecipient})
+        Me.btnTestCertificates            = New Button()
+        Me.btnTestCertificates.Text       = "Test Certificates"
+        Me.btnTestCertificates.Location   = New Point(790, 10)
+        Me.btnTestCertificates.Size       = New Size(150, 30)
+
+        ' Segunda linha — cliente da remessa selecionada (TBL_REMESSA.ID_CLIENTE)
+        Dim lblRemCliente As New Label() With {
+            .Text      = "Customer:",
+            .Location  = New Point(15, 56),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9)
+        }
+
+        Me.cboRemCliente               = New ComboBox()
+        Me.cboRemCliente.Location      = New Point(90, 52)
+        Me.cboRemCliente.Size          = New Size(300, 24)
+        Me.cboRemCliente.DropDownStyle = ComboBoxStyle.DropDownList
+
+        Me.btnRemSetCliente            = New Button()
+        Me.btnRemSetCliente.Text       = "Set Customer"
+        Me.btnRemSetCliente.Location   = New Point(400, 50)
+        Me.btnRemSetCliente.Size       = New Size(120, 28)
+
+        Me.btnRemAutoLink              = New Button()
+        Me.btnRemAutoLink.Text         = "Auto-link customers"
+        Me.btnRemAutoLink.Location     = New Point(530, 50)
+        Me.btnRemAutoLink.Size         = New Size(160, 28)
+
+        Me.lblRemClienteInfo           = New Label()
+        Me.lblRemClienteInfo.Text      = ""
+        Me.lblRemClienteInfo.Location  = New Point(702, 56)
+        Me.lblRemClienteInfo.Size      = New Size(600, 20)
+        Me.lblRemClienteInfo.ForeColor = TemaEscuro.TextoMutado
+        Me.lblRemClienteInfo.Font      = New Font("Segoe UI", 9)
+
+        pnlRemessasTop.Controls.AddRange({lblRemessasTit, btnNovaRemessa, btnAtualizarRemessas, btnCancelarRemessa, btnRelatorioRecipient,
+                                          btnTestCertificates, lblRemCliente, cboRemCliente, btnRemSetCliente, btnRemAutoLink,
+                                          lblRemClienteInfo})
 
         Me.dgvRemessas      = New DataGridView()
         Me.dgvRemessas.Dock = DockStyle.Fill
@@ -1153,7 +1196,7 @@ Partial Class frmPrincipal
                                                  .ForeColor = TemaEscuro.TextoMutado, .Font = New Font("Segoe UI", 9) }
         Me.cboDiagVerdict = New ComboBox() With { .Location = New Point(450, 52), .Size = New Size(170, 24),
                                                   .DropDownStyle = ComboBoxStyle.DropDownList }
-        Me.cboDiagVerdict.Items.AddRange({"(All)", "PASS", "PASS_WITH_WARNINGS", "FAIL", "INCOMPLETE"})
+        Me.cboDiagVerdict.Items.AddRange({"(All)", "PASSED", "PASSED WITH NOTES", "FAILED", "INCOMPLETE"})
         Me.cboDiagVerdict.SelectedIndex = 0
 
         ' Datas com checkbox: desmarcado = sem limite

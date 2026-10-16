@@ -19,8 +19,7 @@ VERSION = "2.1"
 
 # ---------------------------------------------------------------- thresholds
 CFG = {
-    "battery_pass": 80,       # health >= 80%  -> PASS
-    "battery_fail": 70,       # health <  70%  -> FAIL  (70-79% -> WARN)
+    "battery_pass": 25,       # health >  25%  -> PASS, otherwise FAIL
     "ssd_warn_used": 80,      # NVMe "percentage used" >= 80 (life <= 20%) -> WARN
     "ssd_temp_warn": 70,      # deg C
     "mem_fraction": 0.40,     # share of available RAM used by the memory screen
@@ -215,10 +214,8 @@ def test_battery():
             parts.append(mfr)
         if health is None:
             st = "NOT_TESTED"
-        elif health >= CFG["battery_pass"]:
+        elif health > CFG["battery_pass"]:
             st = "PASS"
-        elif health >= CFG["battery_fail"]:
-            st = "WARN"
         else:
             st = "FAIL"
         INFO.setdefault("battery_health", health)
@@ -1140,7 +1137,7 @@ th{{background:#f1f3f4}}.meta td{{border:none;padding:2px 12px 2px 0}}</style></
 <tr><td><b>Technician</b></td><td>{e('technician')}</td><td><b>Tool</b></td><td>v{VERSION}</td></tr></table>
 <h2 style="font-size:16px">Results</h2><table><tr><th>Test</th><th>Result</th><th>Details</th></tr>{trs}</table>
 <p style="color:#5f6368;font-size:12px">PASS = OK &middot; WARN = works with caveat &middot; FAIL = defect &middot; NOT_TESTED = not verified.
-Battery: PASS &ge;{CFG['battery_pass']}%, WARN {CFG['battery_fail']}-{CFG['battery_pass'] - 1}%, FAIL &lt;{CFG['battery_fail']}%.
+Battery: PASS &gt;{CFG['battery_pass']}% health, FAIL &le;{CFG['battery_pass']}%.
 Memory test is a quick pattern screen, not a full Memtest86+ certification. Internal drives were not modified. Time source: {e('clock_source')}.</p></body></html>"""
     (OUT / (stem + ".html")).write_text(page, encoding="utf-8")
     write_pdf(OUT / (stem + ".pdf"), stamp, v)
@@ -1237,8 +1234,8 @@ def write_pdf(path, stamp, v):
     st["y"] -= 10
     if st["y"] < M + 60:
         new_page()
-    note = (f"PASS = OK; WARN = works with caveat; FAIL = defect; NOT_TESTED = not verified. Battery: PASS >= "
-            f"{CFG['battery_pass']}%, FAIL < {CFG['battery_fail']}%. Memory test is a quick pattern screen. "
+    note = (f"PASS = OK; WARN = works with caveat; FAIL = defect; NOT_TESTED = not verified. Battery: PASS "
+            f"> {CFG['battery_pass']}%, FAIL <= {CFG['battery_pass']}%. Memory test is a quick pattern screen. "
             f"Internal drives were not modified. Time source: {INFO.get('clock_source', '?')}. Tool v{VERSION}.")
     for i, ln in enumerate(_wrap(note, 110)):
         text(M, st["y"] - i * 10, ln, 7, False, (0.37, 0.39, 0.41))

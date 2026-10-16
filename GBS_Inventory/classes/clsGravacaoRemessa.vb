@@ -147,6 +147,9 @@ Public Class clsGravacaoRemessa
                 vIdGerado = CInt(ds.Tables(0).Rows(0)("ID_REMESSA"))
             End If
 
+            ' Cliente automatico pelo Recipient (nome / nome fantasia / aliases), na mesma transacao
+            If vIdGerado > 0 Then autoVincularClientes(vIdGerado)
+
         Catch ex As Exception
 
             Throw New Exception(ex.ToString)
@@ -317,6 +320,105 @@ Public Class clsGravacaoRemessa
         Return True
 
     End Function
+
+#End Region
+
+#Region "Auto-link de cliente"
+
+    ' Cliente ativo cujo nome, nome fantasia ou um dos ALIASES (";"-separados, gravados em
+    ' maiusculas) e igual ao DESTINATARIO da remessa (UPPER/TRIM).
+    Private Const SqlMatchCliente As String =
+        "SELECT {0} FROM TBL_CLIENTE C" &
+        " WHERE C.ATIVO = 'Y'" &
+        "   AND (UPPER(TRIM(C.NOME_RAZAO)) = UPPER(TRIM(R.DESTINATARIO))" &
+        "        OR UPPER(TRIM(C.NOME_FANTASIA)) = UPPER(TRIM(R.DESTINATARIO))" &
+        "        OR INSTR(';' || UPPER(C.ALIASES) || ';', ';' || UPPER(TRIM(R.DESTINATARIO)) || ';') > 0)"
+
+    ''' <summary>
+    ''' Preenche TBL_REMESSA.ID_CLIENTE onde ainda e NULL e o DESTINATARIO bate com EXATAMENTE um
+    ''' cliente ativo. Nunca sobrescreve um ID_CLIENTE ja definido. pIdRemessa = Nothing: todas.
+    ''' Usa a transacao aberta (criacao da remessa) ou abre uma propria (botao Auto-link).
+    ''' </summary>
+    Public Function autoVincularClientes(pIdRemessa As Integer?) As (Vinculadas As Integer, SemMatch As Integer, Ambiguas As Integer)
+
+        Dim filtro As String = If(pIdRemessa.HasValue, " AND R.ID_REMESSA = :P_ID_REMESSA", "")
+        Dim sqlUpdate As String =
+            "UPDATE TBL_REMESSA R SET R.ID_CLIENTE = (" & String.Format(SqlMatchCliente, "MIN(C.ID_CLIENTE)") & ")" &
+            " WHERE R.ID_CLIENTE IS NULL" & filtro &
+            "   AND (" & String.Format(SqlMatchCliente, "COUNT(*)") & ") = 1"
+        Dim sqlRestantes As String =
+            "SELECT NVL(SUM(CASE WHEN N = 0 THEN 1 ELSE 0 END), 0) AS SEM_MATCH," &
+            "       NVL(SUM(CASE WHEN N > 1 THEN 1 ELSE 0 END), 0) AS AMBIGUAS" &
+            "  FROM (SELECT (" & String.Format(SqlMatchCliente, "COUNT(*)") & ") AS N" &
+            "          FROM TBL_REMESSA R WHERE R.ID_CLIENTE IS NULL" & filtro & ")"
+
+        Dim propria As OracleConnection = Nothing
+        Dim tx As OracleTransaction = Me.oTransacao
+        Dim emTransacaoExterna As Boolean = tx IsNot Nothing AndAlso tx.Connection IsNot Nothing
+        Try
+            If Not emTransacaoExterna Then
+                propria = New OracleConnection(Me.ConnectionString)
+                propria.Open()
+                tx = propria.BeginTransaction()
+            End If
+
+            Dim vinculadas As Integer
+            Using cmd As New OracleCommand(sqlUpdate, tx.Connection)
+                cmd.Transaction = tx
+                cmd.BindByName = True
+                If pIdRemessa.HasValue Then cmd.Parameters.Add("P_ID_REMESSA", OracleDbType.Int32).Value = pIdRemessa.Value
+                vinculadas = cmd.ExecuteNonQuery()
+            End Using
+
+            Dim semMatch As Integer = 0, ambiguas As Integer = 0
+            Using cmd As New OracleCommand(sqlRestantes, tx.Connection)
+                cmd.Transaction = tx
+                cmd.BindByName = True
+                If pIdRemessa.HasValue Then cmd.Parameters.Add("P_ID_REMESSA", OracleDbType.Int32).Value = pIdRemessa.Value
+                Using rd As OracleDataReader = cmd.ExecuteReader()
+                    If rd.Read() Then
+                        semMatch = Convert.ToInt32(rd("SEM_MATCH"))
+                        ambiguas = Convert.ToInt32(rd("AMBIGUAS"))
+                    End If
+                End Using
+            End Using
+
+            If Not emTransacaoExterna Then tx.Commit()
+            Return (vinculadas, semMatch, ambiguas)
+
+        Catch ex As Exception
+            If Not emTransacaoExterna AndAlso tx IsNot Nothing Then
+                Try : tx.Rollback() : Catch : End Try
+            End If
+            Throw New Exception(ex.ToString)
+        Finally
+            If propria IsNot Nothing Then propria.Dispose()
+        End Try
+
+    End Function
+
+#End Region
+
+#Region "Cliente da remessa"
+
+    ' Define (ou limpa, com Nothing) o cliente da remessa — TBL_REMESSA.ID_CLIENTE.
+    ' Fora de transacao: so esta coluna e alterada; status e itens nao sao tocados.
+    Public Sub atualizarCliente(pIdRemessa As Integer, pIdCliente As Integer?)
+
+        Dim oPar(1) As OracleParameter
+        oPar(0) = New OracleParameter("P_ID_CLIENTE", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(1) = New OracleParameter("P_ID_REMESSA", OracleDbType.Int32, ParameterDirection.Input)
+        oPar(0).Value = If(pIdCliente.HasValue, CObj(pIdCliente.Value), DBNull.Value)
+        oPar(1).Value = pIdRemessa
+
+        Try
+            OracleHelper.ExecuteNonQuery(Me.ConnectionString, CommandType.Text,
+                "UPDATE TBL_REMESSA SET ID_CLIENTE = :P_ID_CLIENTE WHERE ID_REMESSA = :P_ID_REMESSA", oPar)
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+
+    End Sub
 
 #End Region
 

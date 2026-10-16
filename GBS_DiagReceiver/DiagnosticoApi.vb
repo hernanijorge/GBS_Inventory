@@ -45,26 +45,34 @@ Public Class DiagnosticoApi
 
         Try
             If Not TokenValido(req.Headers("X-GBS-Token")) Then
-                ReceiverLog.Aviso($"401 token invalido de {origem}")
+                ReceiverLog.Aviso($"401 POST de {origem}: token invalido ou ausente")
                 Program.ResponderJson(ctx, 401, "{""error"":""token invalido ou ausente (X-GBS-Token)""}")
                 Return
             End If
 
             Dim corpo As String = LerCorpo(req)
             Dim reg As DiagnosticoRepository.Registro = MontarRegistro(corpo)
+            Dim ident As String = $"UID={reg.InternalUid} TAG={reg.ServiceTag} VERDICT={reg.Verdict} ORIGIN={reg.Origin}"
 
-            Dim res = _repo.Inserir(reg)
+            Dim res As (Id As Long, IdEquipamento As Long?)
+            Try
+                res = _repo.Inserir(reg)   ' retorna so depois do COMMIT
+            Catch ex As Exception
+                ReceiverLog.Erro($"500 POST de {origem}: {ident} -> ERRO ao gravar (nada foi gravado):{vbCrLf}{ex}")
+                Program.ResponderJson(ctx, 500, "{""error"":" & New JavaScriptSerializer().Serialize("database error: " & ex.Message) & "}")
+                Return
+            End Try
+
             Dim encontrado As Boolean = res.IdEquipamento.HasValue
-
-            ReceiverLog.Ok($"POST de {origem}: ID={res.Id} UID={reg.InternalUid} TAG={reg.ServiceTag} " &
-                           $"VERDICT={reg.Verdict} PDF={If(reg.PdfBytes Is Nothing, 0, reg.PdfBytes.Length)} bytes " &
+            ReceiverLog.Ok($"200 POST de {origem}: ID={res.Id} {ident} " &
+                           $"PDF={If(reg.PdfBytes Is Nothing, 0, reg.PdfBytes.Length)} bytes COMMIT ok " &
                            If(encontrado, $"-> equipamento {res.IdEquipamento.Value}", "-> equipamento NAO encontrado"))
 
             Program.ResponderJson(ctx, 200,
                 $"{{""id"":{res.Id},""equipamento_encontrado"":{If(encontrado, "true", "false")}}}")
 
         Catch ex As ErroRequisicao
-            ReceiverLog.Aviso($"{ex.Status} de {origem}: {ex.Message}")
+            ReceiverLog.Aviso($"{ex.Status} POST de {origem}: {ex.Message}")
             Program.ResponderJson(ctx, ex.Status, "{""error"":" & New JavaScriptSerializer().Serialize(ex.Message) & "}")
         End Try
 

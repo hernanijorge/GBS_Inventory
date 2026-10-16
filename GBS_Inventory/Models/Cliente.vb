@@ -21,6 +21,8 @@ Namespace Models
         Public Property Observacoes As String
         Public Property DataCadastro As Date?
         Public Property DataAlteracao As Date?
+        ''' <summary>Nomes alternativos separados por ";" (match com o Recipient das remessas).</summary>
+        Public Property Aliases As String
 
         Public ReadOnly Property NomeExibicao As String
             Get

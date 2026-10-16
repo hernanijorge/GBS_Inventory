@@ -1,15 +1,86 @@
 Imports System.Data
+Imports System.Globalization
 Imports System.IO
 Imports OfficeOpenXml
 Imports OfficeOpenXml.Style
 
 ''' <summary>
-''' Excel da aba Diagnostics, gerado a partir das linhas do grid (PROC_LIST).
-''' Mesmo layout dos relatorios do ReportService (logo, titulo, cabecalho escuro, zebra).
+''' Colunas e Excel da aba Diagnostics. A mesma especificacao (Colunas) e usada pelo grid
+''' e pelo Excel, para os dois ficarem com a mesma ordem, cabecalhos e formato.
 ''' </summary>
 Public Class DiagnosticoReportService
 
     Private Const PastaDefault As String = "C:\GBS\Reports\"
+
+    Public Enum TipoColuna
+        Texto
+        Data
+        Percentual
+        Verdict
+    End Enum
+
+    ''' <summary>
+    ''' Coluna do grid / Excel. Key = campo do PACK_DIAGNOSTICO.PROC_LIST.
+    ''' LarguraGrid = pixels (0 = Fill); LarguraExcel = caracteres.
+    ''' </summary>
+    Public Class Coluna
+        Public ReadOnly Key As String
+        Public ReadOnly Header As String
+        Public ReadOnly LarguraGrid As Integer
+        Public ReadOnly LarguraExcel As Double
+        Public ReadOnly Centralizada As Boolean
+        Public ReadOnly Tipo As TipoColuna
+
+        Public Sub New(pKey As String, pHeader As String, pLarguraGrid As Integer, pLarguraExcel As Double,
+                       pCentralizada As Boolean, pTipo As TipoColuna)
+            Key = pKey : Header = pHeader : LarguraGrid = pLarguraGrid : LarguraExcel = pLarguraExcel
+            Centralizada = pCentralizada : Tipo = pTipo
+        End Sub
+    End Class
+
+    ' Colunas do grid, na ordem de exibicao. O Excel usa as mesmas, na mesma ordem.
+    Public Shared ReadOnly Colunas As Coluna() = {
+        New Coluna("DATA_TESTE",     "Date",         140, 19, False, TipoColuna.Data),
+        New Coluna("INTERNAL_UID",   "Internal UID", 100, 14, False, TipoColuna.Texto),
+        New Coluna("SERVICE_TAG",    "Service Tag",  110, 16, False, TipoColuna.Texto),
+        New Coluna("MODEL",          "Model",          0, 30, False, TipoColuna.Texto),
+        New Coluna("VERDICT",        "Verdict",      150, 20, True,  TipoColuna.Verdict),
+        New Coluna("BATTERY_HEALTH", "Battery %",     85, 11, True,  TipoColuna.Percentual),
+        New Coluna("SSD_LIFE",       "SSD %",         75, 10, True,  TipoColuna.Percentual),
+        New Coluna("TECHNICIAN",     "Technician",   110, 15, False, TipoColuna.Texto),
+        New Coluna("ORIGIN",         "Origin",       105, 13, True,  TipoColuna.Texto)
+    }
+
+    ' Detalhes que so vao para o Excel, depois das colunas do grid
+    Private Shared ReadOnly ColunasExtrasExcel As Coluna() = {
+        New Coluna("MANUFACTURER",     "Manufacturer",   0, 14, False, TipoColuna.Texto),
+        New Coluna("CPU",              "Processor",      0, 30, False, TipoColuna.Texto),
+        New Coluna("RAM_GIB",          "RAM GiB",        0,  9, True,  TipoColuna.Texto),
+        New Coluna("STORAGE",          "Storage",        0, 28, False, TipoColuna.Texto),
+        New Coluna("BATTERY_CYCLES",   "Battery Cycles", 0, 13, True,  TipoColuna.Texto),
+        New Coluna("FAIL_ITEMS",       "Failed",         0, 30, False, TipoColuna.Texto),
+        New Coluna("WARN_ITEMS",       "Notes",          0, 30, False, TipoColuna.Texto),
+        New Coluna("NOT_TESTED_ITEMS", "Not Tested",     0, 30, False, TipoColuna.Texto),
+        New Coluna("TOOL_VERSION",     "Tool Version",   0, 12, False, TipoColuna.Texto)
+    }
+
+    Public Const FormatoData As String = "MM/dd/yyyy h:mm tt"
+    Public Const FormatoPercentual As String = "0.0'%'"
+    Public Const TextoNulo As String = "-"
+
+    ' Codigo gravado no banco -> texto exibido
+    Public Shared ReadOnly VerdictTextos As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+        {"PASS", "PASSED"},
+        {"PASS_WITH_WARNINGS", "PASSED WITH NOTES"},
+        {"FAIL", "FAILED"},
+        {"INCOMPLETE", "INCOMPLETE"}
+    }
+
+    Public Shared Function VerdictTexto(pCodigo As String) As String
+        Dim t As String = Nothing
+        If pCodigo IsNot Nothing AndAlso VerdictTextos.TryGetValue(pCodigo, t) Then Return t
+        Return If(pCodigo, "")
+    End Function
 
     Public Shared Function GerarExcel(pItens As List(Of DataRow),
                                       pOutputPath As String,
@@ -26,42 +97,21 @@ Public Class DiagnosticoReportService
         Next
         Dim caminhoFinal As String = Path.Combine(pasta, nome & ".xlsx")
 
-        ' Colunas: chave (PROC_LIST), header, largura em caracteres
-        Dim colunas As (Key As String, Header As String, Largura As Double)() = {
-            ("DATA_TESTE",       "Test Date",        17),
-            ("INTERNAL_UID",     "Internal UID",     14),
-            ("SERVICE_TAG",      "Service Tag",      16),
-            ("MANUFACTURER",     "Manufacturer",     14),
-            ("MODEL",            "Model",            26),
-            ("CPU",              "Processor",        30),
-            ("RAM_GIB",          "RAM GiB",           9),
-            ("STORAGE",          "Storage",          28),
-            ("VERDICT",          "Verdict",          20),
-            ("BATTERY_HEALTH",   "Battery %",        10),
-            ("BATTERY_CYCLES",   "Battery Cycles",   13),
-            ("SSD_LIFE",         "SSD Life %",       10),
-            ("FAIL_ITEMS",       "Failed",           30),
-            ("WARN_ITEMS",       "Warnings",         30),
-            ("NOT_TESTED_ITEMS", "Not Tested",       30),
-            ("TECHNICIAN",       "Technician",       14),
-            ("ORIGIN",           "Origin",           13),
-            ("TOOL_VERSION",     "Tool Version",     12)
-        }
-        Dim colVerdict As Integer = Array.FindIndex(colunas, Function(c) c.Key = "VERDICT") + 1
+        Dim colunasExcel As Coluna() = Colunas.Concat(ColunasExtrasExcel).ToArray()
 
         Using pkg As New ExcelPackage()
             Dim ws As ExcelWorksheet = pkg.Workbook.Worksheets.Add("Diagnostics")
             Dim linhaCabecalho As Integer = 5
 
             ws.Row(1).Height = 40
-            ws.Cells(1, 4, 1, 10).Merge = True
+            ws.Cells(1, 4, 1, 9).Merge = True
             ws.Cells(1, 4).Value = "GBS Hardware Diagnostics Report"
             ws.Cells(1, 4).Style.Font.Bold = True
             ws.Cells(1, 4).Style.Font.Size = 16
             ws.Cells(1, 4).Style.VerticalAlignment = ExcelVerticalAlignment.Center
 
-            ws.Cells(2, 4, 2, 10).Merge = True
-            ws.Cells(2, 4).Value = "Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
+            ws.Cells(2, 4, 2, 9).Merge = True
+            ws.Cells(2, 4).Value = "Generated: " & DateTime.Now.ToString(FormatoData, CultureInfo.InvariantCulture) &
                                    " | Total devices: " & pItens.Count.ToString()
             ws.Cells(2, 4).Style.Font.Size = 10
             ws.Cells(2, 4).Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(107, 114, 128))
@@ -77,15 +127,15 @@ Public Class DiagnosticoReportService
                 End Try
             End If
 
-            ' ── Cabeçalho ─────────────────────────────────────────────
-            For i As Integer = 0 To colunas.Length - 1
+            ' ── Cabeçalho (mesmo alinhamento das células) ──────────────
+            For i As Integer = 0 To colunasExcel.Length - 1
                 Dim cell As ExcelRange = ws.Cells(linhaCabecalho, i + 1)
-                cell.Value = colunas(i).Header
+                cell.Value = colunasExcel(i).Header
                 cell.Style.Font.Bold = True
                 cell.Style.Fill.PatternType = ExcelFillStyle.Solid
                 cell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(55, 65, 81))
                 cell.Style.Font.Color.SetColor(System.Drawing.Color.White)
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center
+                cell.Style.HorizontalAlignment = Alinhamento(colunasExcel(i))
             Next
 
             ' ── Dados ─────────────────────────────────────────────────
@@ -96,45 +146,49 @@ Public Class DiagnosticoReportService
                 Dim linha As Integer = linhaCabecalho + rowIdx + 1
 
                 If rowIdx Mod 2 = 1 Then
-                    ws.Cells(linha, 1, linha, colunas.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
-                    ws.Cells(linha, 1, linha, colunas.Length).Style.Fill.BackgroundColor.SetColor(corAlternado)
+                    ws.Cells(linha, 1, linha, colunasExcel.Length).Style.Fill.PatternType = ExcelFillStyle.Solid
+                    ws.Cells(linha, 1, linha, colunasExcel.Length).Style.Fill.BackgroundColor.SetColor(corAlternado)
                 End If
 
-                For colIdx As Integer = 0 To colunas.Length - 1
-                    Dim key As String = colunas(colIdx).Key
-                    If Not dr.Table.Columns.Contains(key) OrElse IsDBNull(dr(key)) Then Continue For
+                For colIdx As Integer = 0 To colunasExcel.Length - 1
+                    Dim col As Coluna = colunasExcel(colIdx)
                     Dim cell As ExcelRange = ws.Cells(linha, colIdx + 1)
+                    cell.Style.HorizontalAlignment = Alinhamento(col)
 
-                    Select Case key
-                        Case "DATA_TESTE"
-                            cell.Value = CDate(dr(key))
-                            cell.Style.Numberformat.Format = "yyyy-mm-dd hh:mm"
-                        Case "RAM_GIB", "BATTERY_HEALTH", "BATTERY_CYCLES", "SSD_LIFE"
-                            cell.Value = Convert.ToDecimal(dr(key))
-                            cell.Style.Numberformat.Format = "0.#"
-                            cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right
-                        Case "VERDICT"
-                            Dim v As String = dr(key).ToString()
-                            cell.Value = v.Replace("_", " ")
+                    If Not dr.Table.Columns.Contains(col.Key) OrElse IsDBNull(dr(col.Key)) Then
+                        cell.Value = TextoNulo
+                        Continue For
+                    End If
+
+                    Select Case col.Tipo
+                        Case TipoColuna.Data
+                            cell.Value = CDate(dr(col.Key))
+                            cell.Style.Numberformat.Format = "mm/dd/yyyy h:mm AM/PM"
+                        Case TipoColuna.Percentual
+                            cell.Value = Convert.ToDecimal(dr(col.Key))
+                            cell.Style.Numberformat.Format = "0.0\%"   ' % literal (valor ja e percentual)
+                        Case TipoColuna.Verdict
+                            Dim v As String = dr(col.Key).ToString()
+                            cell.Value = VerdictTexto(v)
                             cell.Style.Font.Bold = True
                             cell.Style.Fill.PatternType = ExcelFillStyle.Solid
                             cell.Style.Fill.BackgroundColor.SetColor(CorVerdict(v))
                         Case Else
-                            cell.Value = dr(key).ToString()
+                            cell.Value = dr(col.Key).ToString()
                     End Select
                 Next
             Next
 
-            For i As Integer = 0 To colunas.Length - 1
-                ws.Column(i + 1).Width = colunas(i).Largura
+            For i As Integer = 0 To colunasExcel.Length - 1
+                ws.Column(i + 1).Width = colunasExcel(i).LarguraExcel
             Next
             For Each key As String In {"FAIL_ITEMS", "WARN_ITEMS", "NOT_TESTED_ITEMS", "STORAGE", "CPU"}
-                Dim idx As Integer = Array.FindIndex(colunas, Function(c) c.Key = key) + 1
+                Dim idx As Integer = Array.FindIndex(colunasExcel, Function(c) c.Key = key) + 1
                 ws.Column(idx).Style.WrapText = True
             Next
 
             If pItens.Count > 0 Then
-                ws.Cells(linhaCabecalho, 1, linhaCabecalho + pItens.Count, colunas.Length).AutoFilter = True
+                ws.Cells(linhaCabecalho, 1, linhaCabecalho + pItens.Count, colunasExcel.Length).AutoFilter = True
             End If
             ws.View.FreezePanes(linhaCabecalho + 1, 1)
 
@@ -143,6 +197,10 @@ Public Class DiagnosticoReportService
 
         Return caminhoFinal
 
+    End Function
+
+    Private Shared Function Alinhamento(pCol As Coluna) As ExcelHorizontalAlignment
+        Return If(pCol.Centralizada, ExcelHorizontalAlignment.Center, ExcelHorizontalAlignment.Left)
     End Function
 
     ''' <summary>Cor de fundo do veredito (tons claros para impressao).</summary>

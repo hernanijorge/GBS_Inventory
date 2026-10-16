@@ -20,6 +20,7 @@ Partial Class frmClientes
     Friend WithEvents txtZipCode As TextBox
     Friend WithEvents txtPais As TextBox
     Friend WithEvents txtObservacoes As TextBox
+    Friend WithEvents txtAliases As TextBox
     Friend WithEvents chkAtivo As CheckBox
     Friend WithEvents btnNovo As Button
     Friend WithEvents btnSalvar As Button
@@ -100,12 +101,7 @@ Partial Class frmClientes
         Me.txtEmail = New TextBox() With {.Location = New Point(210, y + 18), .Size = New Size(220, h)}
         pnlCadastro.Controls.Add(txtEmail)
 
-        pnlCadastro.Controls.Add(New Label() With {
-            .Text = "Phone",
-            .Location = New Point(440, y),
-            .AutoSize = True,
-            .ForeColor = TemaEscuro.TextoMutado
-        })
+        pnlCadastro.Controls.Add(CriarLabel("Phone", 440, y))
         Me.txtTelefone = New TextBox() With {.Location = New Point(440, y + 18), .Size = New Size(135, h)}
         pnlCadastro.Controls.Add(txtTelefone)
 
@@ -159,28 +155,35 @@ Partial Class frmClientes
         pnlCadastro.Controls.Add(txtPais)
 
         y += 50
+        pnlCadastro.Controls.Add(CriarLabel("Aliases (other names used as Recipient on shipments, separated by ;)", 15, y))
+        Me.txtAliases = New TextBox() With {.Location = New Point(15, y + 18), .Size = New Size(560, h), .MaxLength = 500}
+        pnlCadastro.Controls.Add(txtAliases)
+
+        y += 50
         pnlCadastro.Controls.Add(CriarLabel("Notes", 15, y))
         Me.txtObservacoes = New TextBox() With {
             .Location = New Point(15, y + 18),
-            .Size = New Size(560, 120),
+            .Size = New Size(560, 60),
             .Multiline = True,
             .ScrollBars = ScrollBars.Vertical
         }
         pnlCadastro.Controls.Add(txtObservacoes)
 
+        y += 84
         Me.chkAtivo = New CheckBox() With {
             .Text = "Active customer",
-            .Location = New Point(15, 430),
-            .Size = New Size(120, 24),
+            .Location = New Point(15, y),
+            .Size = New Size(140, 24),
             .Checked = True
         }
         pnlCadastro.Controls.Add(chkAtivo)
 
-        Me.btnNovo = New Button() With {.Text = "New", .Location = New Point(15, 475), .Size = New Size(90, 34)}
-        Me.btnSalvar = New Button() With {.Text = "Save", .Location = New Point(115, 475), .Size = New Size(100, 34)}
-        Me.btnExcluir = New Button() With {.Text = "Delete", .Location = New Point(225, 475), .Size = New Size(100, 34)}
-        Me.btnAtualizar = New Button() With {.Text = "Refresh", .Location = New Point(335, 475), .Size = New Size(100, 34)}
-        Me.btnFechar = New Button() With {.Text = "Close", .Location = New Point(475, 475), .Size = New Size(100, 34)}
+        y += 34
+        Me.btnNovo = New Button() With {.Text = "New", .Location = New Point(15, y), .Size = New Size(90, 34)}
+        Me.btnSalvar = New Button() With {.Text = "Save", .Location = New Point(115, y), .Size = New Size(100, 34)}
+        Me.btnExcluir = New Button() With {.Text = "Delete", .Location = New Point(225, y), .Size = New Size(100, 34)}
+        Me.btnAtualizar = New Button() With {.Text = "Refresh", .Location = New Point(335, y), .Size = New Size(100, 34)}
+        Me.btnFechar = New Button() With {.Text = "Close", .Location = New Point(475, y), .Size = New Size(100, 34)}
 
         pnlCadastro.Controls.AddRange({btnNovo, btnSalvar, btnExcluir, btnAtualizar, btnFechar, lblSelecionado})
 
@@ -190,12 +193,14 @@ Partial Class frmClientes
 
     End Sub
 
+    ' Label acima da caixa (mesmo X). AutoSize: com largura fixa (antes 240px) um label
+    ' cobria o vizinho da direita — "Document" escondia "Email" e "Email" cortava o "P" de "Phone".
     Private Function CriarLabel(pTexto As String, pX As Integer, pY As Integer) As Label
 
         Return New Label() With {
             .Text = pTexto,
             .Location = New Point(pX, pY),
-            .Size = New Size(240, 18),
+            .AutoSize = True,
             .ForeColor = TemaEscuro.TextoMutado
         }
 

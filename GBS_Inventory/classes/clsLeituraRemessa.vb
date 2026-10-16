@@ -308,4 +308,22 @@ Public Class clsLeituraRemessa
 
 #End Region
 
+#Region "Cliente da remessa"
+
+    ' Cliente vinculado a cada remessa (TBL_REMESSA.ID_CLIENTE); completa o grid da aba Shipments
+    ' sem alterar PACK_REMESSA.PROC_SELECT_REMESSAS.
+    Public Function selecionarClientesDasRemessas() As DataSet
+        Try
+            Return OracleHelper.ExecuteDataset(Me.ConnectionString, CommandType.Text,
+                "SELECT R.ID_REMESSA, R.ID_CLIENTE," &
+                "       NVL(C.NOME_FANTASIA, C.NOME_RAZAO) AS CUSTOMER, C.EMAIL AS CUSTOMER_EMAIL" &
+                "  FROM TBL_REMESSA R" &
+                "  LEFT JOIN TBL_CLIENTE C ON C.ID_CLIENTE = R.ID_CLIENTE")
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+    End Function
+
+#End Region
+
 End Class

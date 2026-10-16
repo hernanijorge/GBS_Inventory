@@ -923,6 +923,7 @@ Public Class frmPrincipal
         Try
             Dim frm As New frmClientes()
             frm.ShowDialog(Me)
+            carregarRemessas()   ' clientes / e-mails podem ter mudado (combo Customer da aba Shipments)
         Catch ex As Exception
             MessageBox.Show("Error opening clients: " & ex.Message, "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -1103,8 +1104,11 @@ Public Class frmPrincipal
             Dim ds As DataSet = oRemessaController.buscarRemessasAtivas()
 
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                MesclarClientesRemessas(ds.Tables(0))
                 dgvRemessas.DataSource = ds.Tables(0)
                 ConfigurarColunasRemessas()
+                CarregarComboClientesRemessa()
+                AtualizarClienteRemessaSelecionada()
             End If
 
         Catch ex As Exception
@@ -1138,6 +1142,15 @@ Public Class frmPrincipal
         ' Hide internal key and notes (accessible via detail panel)
         If dgvRemessas.Columns.Contains("ID_REMESSA")  Then dgvRemessas.Columns("ID_REMESSA").Visible  = False
         If dgvRemessas.Columns.Contains("OBSERVACAO")  Then dgvRemessas.Columns("OBSERVACAO").Visible  = False
+        If dgvRemessas.Columns.Contains("ID_CLIENTE")     Then dgvRemessas.Columns("ID_CLIENTE").Visible     = False
+        If dgvRemessas.Columns.Contains("CUSTOMER_EMAIL") Then dgvRemessas.Columns("CUSTOMER_EMAIL").Visible = False
+        If dgvRemessas.Columns.Contains("CUSTOMER") Then
+            dgvRemessas.Columns("CUSTOMER").HeaderText = "Customer"
+            dgvRemessas.Columns("CUSTOMER").DefaultCellStyle.NullValue = "-"
+            If dgvRemessas.Columns.Contains("DESTINATARIO") Then
+                dgvRemessas.Columns("CUSTOMER").DisplayIndex = dgvRemessas.Columns("DESTINATARIO").DisplayIndex + 1
+            End If
+        End If
 
         ' Let Recipient fill remaining space
         If dgvRemessas.Columns.Contains("DESTINATARIO") Then
@@ -1171,6 +1184,162 @@ Public Class frmPrincipal
             opts = frmOpts.Opcoes
         End Using
         gerarRelatorioShipmentsPorRecipient(opts)
+    End Sub
+
+#Region "Cliente da remessa"
+
+    ' TBL_REMESSA.ID_CLIENTE: o PROC_SELECT_REMESSAS nao traz o cliente, entao as colunas
+    ' ID_CLIENTE / CUSTOMER / CUSTOMER_EMAIL sao acrescentadas aqui a partir de outra consulta.
+    Private Sub MesclarClientesRemessas(pRemessas As DataTable)
+        If Not pRemessas.Columns.Contains("ID_CLIENTE") Then pRemessas.Columns.Add("ID_CLIENTE", GetType(Integer))
+        If Not pRemessas.Columns.Contains("CUSTOMER") Then pRemessas.Columns.Add("CUSTOMER", GetType(String))
+        If Not pRemessas.Columns.Contains("CUSTOMER_EMAIL") Then pRemessas.Columns.Add("CUSTOMER_EMAIL", GetType(String))
+
+        Dim porRemessa As New Dictionary(Of Integer, DataRow)
+        Dim dsCli As DataSet = oRemessaController.buscarClientesDasRemessas()
+        For Each r As DataRow In dsCli.Tables(0).Rows
+            porRemessa(CInt(r("ID_REMESSA"))) = r
+        Next
+
+        For Each r As DataRow In pRemessas.Rows
+            Dim c As DataRow = Nothing
+            If Not porRemessa.TryGetValue(CInt(r("ID_REMESSA")), c) OrElse IsDBNull(c("ID_CLIENTE")) Then Continue For
+            r("ID_CLIENTE") = CInt(c("ID_CLIENTE"))
+            r("CUSTOMER") = c("CUSTOMER")
+            r("CUSTOMER_EMAIL") = c("CUSTOMER_EMAIL")
+        Next
+        pRemessas.AcceptChanges()
+    End Sub
+
+    ' Combo com os clientes ativos; "(none)" = remessa sem cliente
+    Private Sub CarregarComboClientesRemessa()
+        Dim itens As New List(Of KeyValuePair(Of Integer, String)) From {New KeyValuePair(Of Integer, String)(0, "(none)")}
+        Try
+            ' Clientes ativos: a tela de clientes grava ATIVO = 'Y' (com "S" o combo vinha sempre vazio)
+            Dim ds As DataSet = New ClienteController().buscarTodos("Y")
+            If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
+                Dim clientes = ds.Tables(0).Rows.Cast(Of DataRow)().
+                    Select(Function(r) New KeyValuePair(Of Integer, String)(CInt(r("ID_CLIENTE")), NomeCliente(r))).
+                    OrderBy(Function(kv) kv.Value, StringComparer.OrdinalIgnoreCase)
+                itens.AddRange(clientes)
+            End If
+        Catch ex As Exception
+            lblRemClienteInfo.ForeColor = Color.FromArgb(220, 38, 38)
+            lblRemClienteInfo.Text = "Error loading customers: " & ex.Message
+        End Try
+
+        cboRemCliente.DataSource = Nothing
+        cboRemCliente.DisplayMember = "Value"
+        cboRemCliente.ValueMember = "Key"
+        cboRemCliente.DataSource = itens
+    End Sub
+
+    Private Shared Function NomeCliente(r As DataRow) As String
+        Dim fantasia As String = If(r.Table.Columns.Contains("NOME_FANTASIA") AndAlso Not IsDBNull(r("NOME_FANTASIA")), r("NOME_FANTASIA").ToString().Trim(), "")
+        Dim razao As String = If(r.Table.Columns.Contains("NOME_RAZAO") AndAlso Not IsDBNull(r("NOME_RAZAO")), r("NOME_RAZAO").ToString().Trim(), "")
+        Dim nome As String = If(fantasia <> "", fantasia, razao)
+        Dim email As String = If(r.Table.Columns.Contains("EMAIL") AndAlso Not IsDBNull(r("EMAIL")), r("EMAIL").ToString().Trim(), "")
+        Return If(email = "", nome & "  (no email)", nome & "  <" & email & ">")
+    End Function
+
+    Private Sub dgvRemessas_SelectionChanged(sender As Object, e As EventArgs) Handles dgvRemessas.SelectionChanged
+        AtualizarClienteRemessaSelecionada()
+    End Sub
+
+    ' Mostra no combo o cliente da remessa selecionada e o aviso quando falta cliente / e-mail
+    Private Sub AtualizarClienteRemessaSelecionada()
+        If cboRemCliente.DataSource Is Nothing Then Return
+        Dim row As DataRow = LinhaRemessaAtual()
+        If row Is Nothing Then
+            lblRemClienteInfo.Text = ""
+            Return
+        End If
+
+        Dim idCliente As Integer = If(IsDBNull(row("ID_CLIENTE")), 0, CInt(row("ID_CLIENTE")))
+        cboRemCliente.SelectedValue = idCliente
+        If cboRemCliente.SelectedIndex < 0 Then cboRemCliente.SelectedIndex = 0   ' cliente inativo / removido da lista
+
+        If idCliente = 0 Then
+            lblRemClienteInfo.ForeColor = TemaEscuro.Destaque
+            lblRemClienteInfo.Text = "No customer linked to this shipment – select one and click Set Customer."
+        ElseIf IsDBNull(row("CUSTOMER_EMAIL")) OrElse row("CUSTOMER_EMAIL").ToString().Trim() = "" Then
+            lblRemClienteInfo.ForeColor = TemaEscuro.Destaque
+            lblRemClienteInfo.Text = "Customer email not found – register the customer's email (Clients)."
+        Else
+            lblRemClienteInfo.ForeColor = TemaEscuro.TextoMutado
+            lblRemClienteInfo.Text = "Email: " & row("CUSTOMER_EMAIL").ToString()
+        End If
+    End Sub
+
+    Private Function LinhaRemessaAtual() As DataRow
+        If dgvRemessas.CurrentRow Is Nothing Then Return Nothing
+        Dim drv As DataRowView = TryCast(dgvRemessas.CurrentRow.DataBoundItem, DataRowView)
+        If drv Is Nothing OrElse Not drv.Row.Table.Columns.Contains("ID_CLIENTE") Then Return Nothing
+        Return drv.Row
+    End Function
+
+    ' Grava so TBL_REMESSA.ID_CLIENTE (status e itens da remessa nao mudam)
+    Private Sub btnRemSetCliente_Click(sender As Object, e As EventArgs) Handles btnRemSetCliente.Click
+        Dim row As DataRow = LinhaRemessaAtual()
+        If row Is Nothing Then
+            MessageBox.Show("Select a shipment first.", "Set Customer", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim idCliente As Integer = If(cboRemCliente.SelectedValue Is Nothing, 0, CInt(cboRemCliente.SelectedValue))
+        Try
+            oRemessaController.definirCliente(CInt(row("ID_REMESSA")), If(idCliente = 0, CType(Nothing, Integer?), idCliente))
+
+            ' Atualiza a linha sem recarregar o grid (mantem a selecao)
+            Dim info As DataRow = oRemessaController.buscarClientesDasRemessas().Tables(0).Select("ID_REMESSA = " & CInt(row("ID_REMESSA"))).FirstOrDefault()
+            row("ID_CLIENTE") = If(idCliente = 0, CObj(DBNull.Value), idCliente)
+            row("CUSTOMER") = If(info Is Nothing, DBNull.Value, info("CUSTOMER"))
+            row("CUSTOMER_EMAIL") = If(info Is Nothing, DBNull.Value, info("CUSTOMER_EMAIL"))
+            row.AcceptChanges()
+            AtualizarClienteRemessaSelecionada()
+        Catch ex As Exception
+            MessageBox.Show("Error setting customer: " & ex.Message, "Set Customer", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' Vincula o cliente em todas as remessas SEM cliente cujo Recipient bate com nome / nome
+    ' fantasia / alias de exatamente um cliente ativo. Nunca altera um cliente ja definido.
+    Private Sub btnRemAutoLink_Click(sender As Object, e As EventArgs) Handles btnRemAutoLink.Click
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim res = oRemessaController.autoVincularClientes()
+            Cursor = Cursors.Default
+
+            Dim msg As String = $"{res.Vinculadas} shipment(s) linked, {res.SemMatch} without match."
+            If res.Ambiguas > 0 Then
+                msg &= vbCrLf & $"{res.Ambiguas} shipment(s) match more than one customer and were left unlinked " &
+                       "(check duplicate names / aliases, or use Set Customer)."
+            End If
+            MessageBox.Show(msg, "Auto-link customers", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            carregarRemessas()
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            MessageBox.Show("Error linking customers: " & ex.Message, "Auto-link customers", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+#End Region
+
+    ' Certificados de teste (diagnosticos) das maquinas da remessa selecionada — so leitura
+    Private Sub btnTestCertificates_Click(sender As Object, e As EventArgs) Handles btnTestCertificates.Click
+        Dim idRemessa As Integer = 0
+        If dgvRemessas.CurrentRow IsNot Nothing AndAlso dgvRemessas.Columns.Contains("ID_REMESSA") AndAlso
+           dgvRemessas.CurrentRow.Cells("ID_REMESSA").Value IsNot Nothing Then
+            Integer.TryParse(dgvRemessas.CurrentRow.Cells("ID_REMESSA").Value.ToString(), idRemessa)
+        End If
+        If idRemessa <= 0 Then
+            MessageBox.Show("Select a shipment first.", "Test Certificates", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Using frm As New frmTestCertificates(idRemessa)
+            frm.ShowDialog(Me)
+        End Using
     End Sub
 
     Private Sub gerarRelatorioShipmentsPorRecipient(pOpts As Models.ShipmentReportOptions)
@@ -1805,22 +1974,17 @@ Public Class frmPrincipal
 
 #Region "Aba Diagnostics"
 
-    ' Colunas visiveis, na ordem de exibicao (as demais do PROC_LIST ficam ocultas mas vao para o Excel)
-    Private Shared ReadOnly DiagColunasVisiveis As (Key As String, Header As String)() = {
-        ("DATA_TESTE",     "Date"),
-        ("INTERNAL_UID",   "Internal UID"),
-        ("SERVICE_TAG",    "Service Tag"),
-        ("MODEL",          "Model"),
-        ("VERDICT",        "Verdict"),
-        ("BATTERY_HEALTH", "Battery %"),
-        ("SSD_LIFE",       "SSD %"),
-        ("TECHNICIAN",     "Technician"),
-        ("ORIGIN",         "Origin")
-    }
+    ' Colunas visiveis: DiagnosticoReportService.Colunas (mesma especificacao do Excel).
+    ' As demais colunas do PROC_LIST ficam ocultas.
 
     Private Sub carregarDiagnosticos()
         Try
-            Dim verdict As String = If(cboDiagVerdict.SelectedIndex > 0, cboDiagVerdict.SelectedItem.ToString(), Nothing)
+            ' Combo mostra o texto amigavel (PASSED...); o filtro usa o codigo do banco (PASS...)
+            Dim verdict As String = Nothing
+            If cboDiagVerdict.SelectedIndex > 0 Then
+                verdict = DiagnosticoReportService.VerdictTextos.
+                    First(Function(kv) kv.Value = cboDiagVerdict.SelectedItem.ToString()).Key
+            End If
             Dim dataIni As Date? = If(dtpDiagIni.Checked, CType(dtpDiagIni.Value.Date, Date?), Nothing)
             Dim dataFim As Date? = If(dtpDiagFim.Checked, CType(dtpDiagFim.Value.Date, Date?), Nothing)
 
@@ -1838,27 +2002,52 @@ Public Class frmPrincipal
     End Sub
 
     Private Sub ConfigurarColunasDiagnosticos()
+        ' O tema (estilizarGridHelius) forca Fill e MultiSelect=False em todos os grids:
+        ' aqui valem larguras fixas (so Model em Fill) e selecao multipla para o Export Excel.
+        dgvDiagnosticos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgvDiagnosticos.RowHeadersVisible = False
+        dgvDiagnosticos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvDiagnosticos.MultiSelect = True
+
         For Each col As DataGridViewColumn In dgvDiagnosticos.Columns
             col.Visible = False
         Next
-        For i As Integer = 0 To DiagColunasVisiveis.Length - 1
-            Dim key As String = DiagColunasVisiveis(i).Key
-            If Not dgvDiagnosticos.Columns.Contains(key) Then Continue For
-            Dim col As DataGridViewColumn = dgvDiagnosticos.Columns(key)
+
+        Dim colunas = DiagnosticoReportService.Colunas
+        For i As Integer = 0 To colunas.Length - 1
+            Dim spec = colunas(i)
+            If Not dgvDiagnosticos.Columns.Contains(spec.Key) Then Continue For
+            Dim col As DataGridViewColumn = dgvDiagnosticos.Columns(spec.Key)
             col.Visible = True
-            col.HeaderText = DiagColunasVisiveis(i).Header
+            col.HeaderText = spec.Header
             col.DisplayIndex = i
-        Next
-        If dgvDiagnosticos.Columns.Contains("DATA_TESTE") Then dgvDiagnosticos.Columns("DATA_TESTE").DefaultCellStyle.Format = "yyyy-MM-dd HH:mm"
-        For Each key As String In {"BATTERY_HEALTH", "SSD_LIFE"}
-            If dgvDiagnosticos.Columns.Contains(key) Then
-                dgvDiagnosticos.Columns(key).DefaultCellStyle.Format = "0.#"
-                dgvDiagnosticos.Columns(key).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+
+            If spec.LarguraGrid = 0 Then
+                col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                col.MinimumWidth = 150
+            Else
+                col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                col.Width = spec.LarguraGrid
             End If
+
+            ' Cabecalho com o mesmo alinhamento da celula
+            Dim alin As DataGridViewContentAlignment = If(spec.Centralizada,
+                DataGridViewContentAlignment.MiddleCenter, DataGridViewContentAlignment.MiddleLeft)
+            col.DefaultCellStyle.Alignment = alin
+            col.HeaderCell.Style.Alignment = alin
+            col.DefaultCellStyle.NullValue = DiagnosticoReportService.TextoNulo
+
+            Select Case spec.Tipo
+                Case DiagnosticoReportService.TipoColuna.Data
+                    col.DefaultCellStyle.Format = DiagnosticoReportService.FormatoData
+                    col.DefaultCellStyle.FormatProvider = Globalization.CultureInfo.InvariantCulture
+                Case DiagnosticoReportService.TipoColuna.Percentual
+                    col.DefaultCellStyle.Format = DiagnosticoReportService.FormatoPercentual
+                    col.DefaultCellStyle.FormatProvider = Globalization.CultureInfo.InvariantCulture
+                Case DiagnosticoReportService.TipoColuna.Verdict
+                    col.DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+            End Select
         Next
-        If dgvDiagnosticos.Columns.Contains("VERDICT") Then
-            dgvDiagnosticos.Columns("VERDICT").DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
-        End If
     End Sub
 
     ' Veredito colorido + tooltip com os itens com falha / aviso / nao testados
@@ -1869,13 +2058,13 @@ Public Class frmPrincipal
         Dim verdict As String = e.Value.ToString()
         e.CellStyle.BackColor = DiagnosticoReportService.CorVerdict(verdict)
         e.CellStyle.ForeColor = Color.FromArgb(17, 24, 39)
-        e.Value = verdict.Replace("_", " ")
+        e.Value = DiagnosticoReportService.VerdictTexto(verdict)
         e.FormattingApplied = True
 
         Dim row As DataRow = LinhaDiag(e.RowIndex)
         If row IsNot Nothing Then
             Dim partes As New List(Of String)
-            For Each item In {("FAIL_ITEMS", "Failed"), ("WARN_ITEMS", "Warnings"), ("NOT_TESTED_ITEMS", "Not tested")}
+            For Each item In {("FAIL_ITEMS", "Failed"), ("WARN_ITEMS", "Notes"), ("NOT_TESTED_ITEMS", "Not tested")}
                 If Not IsDBNull(row(item.Item1)) Then partes.Add(item.Item2 & ": " & row(item.Item1).ToString())
             Next
             dgvDiagnosticos.Rows(e.RowIndex).Cells(e.ColumnIndex).ToolTipText = String.Join(vbCrLf, partes)
@@ -2015,7 +2204,7 @@ Public Class frmPrincipal
         End If
 
         Dim modelo As String = (TextoDiag(row, "MANUFACTURER") & " " & TextoDiag(row, "MODEL")).Trim()
-        Dim verdict As String = TextoDiag(row, "VERDICT").Replace("_", " ")
+        Dim verdict As String = DiagnosticoReportService.VerdictTexto(TextoDiag(row, "VERDICT"))
         Dim tag As String = TextoDiag(row, "SERVICE_TAG")
         If tag = "" Then tag = TextoDiag(row, "INTERNAL_UID")
         Dim assunto As String = $"GBS Diagnostic Report - {modelo} - {tag} - {verdict}"
@@ -2034,7 +2223,7 @@ Public Class frmPrincipal
         End If
         If Not IsDBNull(row("SSD_LIFE")) Then sb.AppendLine($"  - SSD life remaining: {CDec(row("SSD_LIFE")):0.#}%")
         If TextoDiag(row, "FAIL_ITEMS") <> "" Then sb.AppendLine($"  - Failed: {TextoDiag(row, "FAIL_ITEMS")}")
-        If TextoDiag(row, "WARN_ITEMS") <> "" Then sb.AppendLine($"  - Warnings: {TextoDiag(row, "WARN_ITEMS")}")
+        If TextoDiag(row, "WARN_ITEMS") <> "" Then sb.AppendLine($"  - Notes: {TextoDiag(row, "WARN_ITEMS")}")
 
         Using frm As New frmEnviarRelatorio("", caminhoPdf, caminhoXlsx, New List(Of DataRow) From {row}, assunto, sb.ToString())
             frm.ShowDialog(Me)

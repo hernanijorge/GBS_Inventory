@@ -23,6 +23,16 @@ Public Class DiagnosticoController
         Return oReader.selectByFilter(pUid, pTag, pVerdict, pDataIni, pDataFim)
     End Function
 
+    Public Function fetchByShipment(pIdRemessa As Long) As DataTable
+        Return oReader.selectByShipment(pIdRemessa).Tables(0)
+    End Function
+
+    ''' <summary>Cabecalho da remessa (codigo, cliente, e-mail resolvido). Nothing se nao existe.</summary>
+    Public Function fetchShipmentHeader(pIdRemessa As Long) As DataRow
+        Dim t As DataTable = oReader.selectShipmentHeader(pIdRemessa).Tables(0)
+        Return If(t.Rows.Count > 0, t.Rows(0), Nothing)
+    End Function
+
     ''' <summary>
     ''' Grava o PDF do diagnostico em pPasta e retorna o caminho, ou "" se o registro nao tem PDF.
     ''' </summary>

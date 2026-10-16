@@ -1,20 +1,31 @@
 Imports System.Configuration
 Imports System.Net
+Imports System.ServiceProcess
 Imports System.Threading
 
 ''' <summary>
 ''' GBS_DiagReceiver — recebe os resultados do diagnostico de laptops e grava no
 ''' Oracle XE (PACK_DIAGNOSTICO). Tambem serve a pasta .\diag para o boot pela rede.
 '''
-'''   GBS_DiagReceiver.exe              inicia o servidor HTTP
+'''   GBS_DiagReceiver.exe              console (Ctrl+C encerra)
 '''   GBS_DiagReceiver.exe --selftest   grava e le de volta BLOB + CLOB no Oracle e sai
+'''   (iniciado pelo Windows)           roda como servico "GBS DiagReceiver" (ReceiverService)
 ''' </summary>
 Public Module Program
 
     Private _listener As HttpListener
+    Private _loop As Thread
 
     Public Function Main(args As String()) As Integer
 
+        ' Sem sessao interativa = iniciado pelo Service Control Manager
+        If Not Environment.UserInteractive Then
+            ReceiverLog.Configurar(False)
+            ServiceBase.Run(New ReceiverService())
+            Return 0
+        End If
+
+        ReceiverLog.Configurar(True)
         Console.OutputEncoding = Encoding.UTF8
         Console.Title = "GBS DiagReceiver"
 
@@ -22,30 +33,63 @@ Public Module Program
             Return SelfTest()
         End If
 
+        Try
+            Iniciar()
+        Catch ex As Exception
+            ReceiverLog.Erro(ex.Message)
+            Return 1
+        End Try
+
+        ReceiverLog.Info("Ctrl+C para encerrar.")
+        Dim fim As New ManualResetEvent(False)
+        AddHandler Console.CancelKeyPress, Sub(s, e)
+                                               e.Cancel = True
+                                               fim.Set()
+                                           End Sub
+        fim.WaitOne()
+        Parar()
+        Return 0
+
+    End Function
+
+    ''' <summary>
+    ''' Le a configuracao, abre o HttpListener e inicia o loop de atendimento numa thread.
+    ''' Lanca excecao se nao puder iniciar (o servico entao falha ao iniciar e isso fica no log).
+    ''' </summary>
+    Public Sub Iniciar()
+
         Dim porta As Integer = LerInt("Port", 8090)
         Dim token As String = ConfigurationManager.AppSettings("Token")
         Dim maxBody As Long = CLng(LerInt("MaxBodyMB", 50)) * 1024 * 1024
 
+        ReceiverLog.Info($"GBS_DiagReceiver iniciando ({If(Environment.UserInteractive, "console", "servico")}). Log: {ReceiverLog.ArquivoAtual}")
+
         If String.IsNullOrWhiteSpace(token) Then
-            ReceiverLog.Erro("Token nao configurado. Crie secrets.config ao lado do .exe (ver README). Abortando.")
-            Return 1
+            Throw New Exception("Token nao configurado. Crie secrets.config ao lado do .exe (ver README).")
         End If
 
         Dim api As New DiagnosticoApi(token, maxBody)
         Dim estaticos As New StaticFiles(If(ConfigurationManager.AppSettings("DiagFolder"), "diag"))
 
         _listener = IniciarListener(porta)
-        If _listener Is Nothing Then Return 1
+        If _listener Is Nothing Then Throw New Exception("Nao foi possivel escutar na porta " & porta & " (ver log).")
 
         ReceiverLog.Info("Pasta /diag: " & estaticos.Raiz)
-        ReceiverLog.Info("Ctrl+C para encerrar.")
 
-        AddHandler Console.CancelKeyPress, Sub(s, e)
-                                               e.Cancel = True
-                                               ReceiverLog.Info("Encerrando...")
-                                               Try : _listener.Stop() : Catch : End Try
-                                           End Sub
+        _loop = New Thread(Sub() LoopAtendimento(api, estaticos)) With {.IsBackground = True, .Name = "HttpLoop"}
+        _loop.Start()
 
+    End Sub
+
+    Public Sub Parar()
+        ReceiverLog.Info("Encerrando...")
+        Try : _listener?.Stop() : Catch : End Try
+        Try : _loop?.Join(5000) : Catch : End Try
+        Try : _listener?.Close() : Catch : End Try
+        ReceiverLog.Info("Encerrado.")
+    End Sub
+
+    Private Sub LoopAtendimento(api As DiagnosticoApi, estaticos As StaticFiles)
         While _listener.IsListening
             Dim ctx As HttpListenerContext
             Try
@@ -58,10 +102,7 @@ Public Module Program
             End Try
             ThreadPool.QueueUserWorkItem(Sub() Atender(ctx, api, estaticos))
         End While
-
-        Return 0
-
-    End Function
+    End Sub
 
     ''' <summary>
     ''' Tenta http://+:porta/ (aceita a rede; exige urlacl ou admin). Se negar acesso,
@@ -122,7 +163,7 @@ Public Module Program
             End If
 
         Catch ex As Exception
-            ReceiverLog.Erro($"{metodo} {caminho} de {ctx.Request.RemoteEndPoint}: {ex.Message}")
+            ReceiverLog.Erro($"500 {metodo} {caminho} de {ctx.Request.RemoteEndPoint}:{vbCrLf}{ex}")
             Try
                 ResponderJson(ctx, 500, "{""error"":" &
                     New Web.Script.Serialization.JavaScriptSerializer().Serialize(ex.Message) & "}")

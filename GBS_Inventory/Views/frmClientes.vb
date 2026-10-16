@@ -85,6 +85,7 @@ Public Class frmClientes
         txtZipCode.Text = ObterTexto(row, "ZIP_CODE")
         txtPais.Text = ObterTexto(row, "PAIS")
         txtObservacoes.Text = ObterTexto(row, "OBSERVACOES")
+        txtAliases.Text = ObterTexto(row, "ALIASES")
         chkAtivo.Checked = (ObterTexto(row, "ATIVO") = "Y")
 
     End Sub
@@ -177,6 +178,7 @@ Public Class frmClientes
         txtZipCode.Clear()
         txtPais.Text = "USA"
         txtObservacoes.Clear()
+        txtAliases.Clear()
         chkAtivo.Checked = True
 
     End Sub
@@ -196,6 +198,7 @@ Public Class frmClientes
             .ZipCode = txtZipCode.Text.Trim(),
             .Pais = txtPais.Text.Trim(),
             .Observacoes = txtObservacoes.Text.Trim(),
+            .Aliases = txtAliases.Text.Trim(),
             .Ativo = If(chkAtivo.Checked, "Y", "N")
         }
 
@@ -223,6 +226,38 @@ Public Class frmClientes
         For Each par In mapa
             If dgvClientes.Columns.Contains(par.Key) Then
                 dgvClientes.Columns(par.Key).HeaderText = par.Value
+            End If
+        Next
+
+        ' So as colunas essenciais (as demais seguem no formulario a direita), em Fill com pesos
+        Dim visiveis As New Dictionary(Of String, Single) From {
+            {"ID_CLIENTE", 35},
+            {"NOME_RAZAO", 200},
+            {"EMAIL",      150},
+            {"TELEFONE",   80},
+            {"CIDADE",     80},
+            {"ESTADO",     45},
+            {"ATIVO",      45}
+        }
+        dgvClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvClientes.RowHeadersVisible = False
+        Dim ordem As Integer = 0
+        For Each col As DataGridViewColumn In dgvClientes.Columns
+            col.Visible = visiveis.ContainsKey(col.Name)
+        Next
+        For Each par In visiveis
+            If Not dgvClientes.Columns.Contains(par.Key) Then Continue For
+            Dim col As DataGridViewColumn = dgvClientes.Columns(par.Key)
+            col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            col.FillWeight = par.Value
+            col.MinimumWidth = 30
+            col.DisplayIndex = ordem
+            ordem += 1
+        Next
+        For Each key As String In {"ID_CLIENTE", "ESTADO", "ATIVO"}
+            If dgvClientes.Columns.Contains(key) Then
+                dgvClientes.Columns(key).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+                dgvClientes.Columns(key).HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
             End If
         Next
     End Sub

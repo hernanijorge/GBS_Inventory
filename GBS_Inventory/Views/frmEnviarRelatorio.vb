@@ -13,12 +13,14 @@ Public Class frmEnviarRelatorio
 
     ''' <param name="assunto">Opcional: substitui o assunto padrao (inventory report).</param>
     ''' <param name="corpo">Opcional: substitui o corpo padrao.</param>
+    ''' <param name="emailPara">Opcional: preenche o campo To (ex.: e-mail do cliente da remessa).</param>
     Public Sub New(caminhoDoc  As String,
                    caminhoPdf  As String,
                    caminhoXlsx As String,
                    itens       As List(Of DataRow),
-                   Optional assunto As String = Nothing,
-                   Optional corpo   As String = Nothing)
+                   Optional assunto   As String = Nothing,
+                   Optional corpo     As String = Nothing,
+                   Optional emailPara As String = Nothing)
 
         InitializeComponent()
         TemaEscuro.aplicarHelius(Me)
@@ -33,6 +35,14 @@ Public Class frmEnviarRelatorio
 
         If assunto IsNot Nothing Then txtSubject.Text = assunto
         If corpo   IsNot Nothing Then txtBody.Text    = corpo
+        If Not String.IsNullOrWhiteSpace(emailPara) Then txtTo.Text = emailPara.Trim()
+
+        ' O slot "PDF" tambem recebe o ZIP dos certificados (anexo grande)
+        If Not String.IsNullOrEmpty(_caminhoPdf) AndAlso
+           _caminhoPdf.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) Then
+            lblPdfIcon.Text     = "ZIP"
+            chkAttachPdf.Text   = "ZIP"
+        End If
 
     End Sub
 
