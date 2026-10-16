@@ -126,8 +126,11 @@ try {
         throw "expdp.exe not found at '$ExpdpExe'."
     }
 
-    $dumpFile = "gbs_backup_$timestamp.dmp"
-    $logFile  = "gbs_backup_$timestamp.log"
+    # Date + time in the name: expdp refuses to overwrite (ORA-31641), so a date-only
+    # name made any second run on the same day fail. The run log stays one per day.
+    $fileStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $dumpFile = "gbs_backup_$fileStamp.dmp"
+    $logFile  = "gbs_backup_$fileStamp.log"
     $parFile  = Join-Path $env:TEMP "gbs_expdp_$timestamp.par"
 
     $parContent = @(
