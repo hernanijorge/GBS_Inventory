@@ -23,6 +23,11 @@ Public Class DiagnosticoController
         Return oReader.selectByFilter(pUid, pTag, pVerdict, pDataIni, pDataFim)
     End Function
 
+    ''' <summary>Liga testes de maquinas que foram cadastradas depois do diagnostico.</summary>
+    Public Function relink() As (Linked As Integer, Unlinked As Integer)
+        Return oReader.relink()
+    End Function
+
     Public Function fetchByShipment(pIdRemessa As Long) As DataTable
         Return oReader.selectByShipment(pIdRemessa).Tables(0)
     End Function

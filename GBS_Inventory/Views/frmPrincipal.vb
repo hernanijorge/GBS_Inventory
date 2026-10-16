@@ -1988,13 +1988,26 @@ Public Class frmPrincipal
             Dim dataIni As Date? = If(dtpDiagIni.Checked, CType(dtpDiagIni.Value.Date, Date?), Nothing)
             Dim dataFim As Date? = If(dtpDiagFim.Checked, CType(dtpDiagFim.Value.Date, Date?), Nothing)
 
+            ' Re-link antes de listar: testes de maquinas cadastradas depois passam a ter equipamento
+            Dim rl As (Linked As Integer, Unlinked As Integer) = oDiagController.relink()
+
             Dim ds As DataSet = oDiagController.fetchByFilter(txtDiagUid.Text, txtDiagTag.Text, verdict, dataIni, dataFim)
             If ds IsNot Nothing AndAlso ds.Tables.Count > 0 Then
-                dgvDiagnosticos.DataSource = ds.Tables(0)
+                Dim t As DataTable = ds.Tables(0)
+                t.Columns.Add("LINKED", GetType(String))
+                For Each r As DataRow In t.Rows
+                    r("LINKED") = If(IsDBNull(r("ID_EQUIPAMENTO")), "No", "Yes")
+                Next
+                t.AcceptChanges()
+                dgvDiagnosticos.DataSource = t
                 ConfigurarColunasDiagnosticos()
-                lblDiagTotal.Text = "Total: " & ds.Tables(0).Rows.Count
+                AplicarFiltroLinked()
             End If
-            lblDiagStatus.Text = ""
+
+            lblDiagUnlinked.Text = $"{rl.Unlinked} test(s) without equipment"
+            lblDiagUnlinked.ForeColor = If(rl.Unlinked > 0, TemaEscuro.Destaque, TemaEscuro.TextoMutado)
+            lblDiagStatus.ForeColor = TemaEscuro.TextoMutado
+            lblDiagStatus.Text = If(rl.Linked > 0, $"{rl.Linked} test(s) linked to equipment registered after the test.", "")
         Catch ex As Exception
             lblDiagStatus.ForeColor = Color.FromArgb(220, 38, 38)
             lblDiagStatus.Text = "Error loading diagnostics: " & ex.Message.Split({vbCr, vbLf}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
@@ -2048,7 +2061,69 @@ Public Class frmPrincipal
                     col.DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
             End Select
         Next
+
+        ' Linked: so no grid (nao vai para o Excel do cliente)
+        If dgvDiagnosticos.Columns.Contains("LINKED") Then
+            With dgvDiagnosticos.Columns("LINKED")
+                .Visible = True
+                .HeaderText = "Linked"
+                .DisplayIndex = dgvDiagnosticos.Columns.Cast(Of DataGridViewColumn)().Where(Function(c) c.Visible).Count() - 1
+                .AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                .Width = 70
+                .DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+                .HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
+            End With
+        End If
     End Sub
+
+#Region "Testes sem equipamento (Linked / Create Equipment)"
+
+    Private Sub AplicarFiltroLinked()
+        Dim t As DataTable = TryCast(dgvDiagnosticos.DataSource, DataTable)
+        If t Is Nothing Then Return
+        t.DefaultView.RowFilter = If(chkDiagNotLinked.Checked, "ID_EQUIPAMENTO IS NULL", "")
+        lblDiagTotal.Text = "Total: " & t.DefaultView.Count
+        AtualizarBotaoCreateEquip()
+    End Sub
+
+    Private Sub chkDiagNotLinked_CheckedChanged(sender As Object, e As EventArgs) Handles chkDiagNotLinked.CheckedChanged
+        AplicarFiltroLinked()
+    End Sub
+
+    Private Sub dgvDiagnosticos_SelectionChanged(sender As Object, e As EventArgs) Handles dgvDiagnosticos.SelectionChanged
+        AtualizarBotaoCreateEquip()
+    End Sub
+
+    ' "Create Equipment" so para teste sem equipamento (Linked = No)
+    Private Sub AtualizarBotaoCreateEquip()
+        Dim row As DataRow = LinhaDiagAtual()
+        btnDiagCreateEquip.Enabled = row IsNot Nothing AndAlso row.Table.Columns.Contains("ID_EQUIPAMENTO") AndAlso
+                                     IsDBNull(row("ID_EQUIPAMENTO"))
+    End Sub
+
+    ' Abre o cadastro de equipamento ja preenchido com os dados do teste; ao salvar,
+    ' o frmAddEquipamento roda o relink e o grid e recarregado.
+    Private Sub btnDiagCreateEquip_Click(sender As Object, e As EventArgs) Handles btnDiagCreateEquip.Click
+        Dim row As DataRow = LinhaDiagAtual()
+        If row Is Nothing OrElse Not IsDBNull(row("ID_EQUIPAMENTO")) Then Return
+
+        Using frm As New frmAddEquipamento()
+            frm.PreencherDoDiagnostico(row)
+            If frm.ShowDialog(Me) <> DialogResult.OK Then Return
+
+            carregarDiagnosticos()
+            carregarEstoque()
+            carregarDashboard()
+
+            lblDiagStatus.ForeColor = If(frm.RelinkedTests > 0, TemaEscuro.Accent, TemaEscuro.Destaque)
+            lblDiagStatus.Text = If(frm.RelinkedTests > 0,
+                $"Equipment {frm.SavedUID} created; {frm.RelinkedTests} test(s) linked to it.",
+                $"Equipment {frm.SavedUID} created, but the test was not linked: its UID / service tag do not match " &
+                "exactly one equipment (check UID and Serial).")
+        End Using
+    End Sub
+
+#End Region
 
     ' Veredito colorido + tooltip com os itens com falha / aviso / nao testados
     Private Sub dgvDiagnosticos_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvDiagnosticos.CellFormatting

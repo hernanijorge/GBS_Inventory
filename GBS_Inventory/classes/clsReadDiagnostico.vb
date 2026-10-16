@@ -52,6 +52,26 @@ Public Class clsReadDiagnostico
 
     End Function
 
+    ''' <summary>
+    ''' PROC_RELINK: liga diagnosticos sem equipamento (match unico por UID / service tag).
+    ''' Retorna quantos foram ligados agora e quantos continuam sem equipamento.
+    ''' </summary>
+    Public Function relink() As (Linked As Integer, Unlinked As Integer)
+
+        Dim oPar(1) As OracleParameter
+        oPar(0) = New OracleParameter("P_LINKED",   OracleDbType.Decimal, ParameterDirection.Output)
+        oPar(1) = New OracleParameter("P_UNLINKED", OracleDbType.Decimal, ParameterDirection.Output)
+
+        Try
+            OracleHelper.ExecuteNonQuery(Me.ConnectionString, CommandType.StoredProcedure,
+                                         "PACK_DIAGNOSTICO.PROC_RELINK", oPar)
+            Return (CInt(oPar(0).Value.ToString()), CInt(oPar(1).Value.ToString()))
+        Catch ex As Exception
+            Throw New Exception(ex.ToString)
+        End Try
+
+    End Function
+
     ''' <summary>Uma linha por equipamento da remessa com o diagnostico mais recente (sem LOB).</summary>
     Public Function selectByShipment(pIdRemessa As Long) As DataSet
 

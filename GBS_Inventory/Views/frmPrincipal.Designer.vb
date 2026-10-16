@@ -45,6 +45,9 @@ Partial Class frmPrincipal
     Friend WithEvents dtpDiagFim           As DateTimePicker
     Friend WithEvents btnDiagSearch        As Button
     Friend WithEvents btnDiagClear         As Button
+    Friend WithEvents btnDiagCreateEquip   As Button
+    Friend WithEvents chkDiagNotLinked     As CheckBox
+    Friend WithEvents lblDiagUnlinked      As Label
 
     ' Controls — Components tab
     Friend WithEvents dgvComponents     As DataGridView
@@ -1149,7 +1152,7 @@ Partial Class frmPrincipal
 
         Dim pnlDiagTop As New Panel() With {
             .Dock      = DockStyle.Top,
-            .Height    = 90,
+            .Height    = 112,
             .BackColor = TemaEscuro.Surface,
             .Padding   = New Padding(8)
         }
@@ -1175,10 +1178,23 @@ Partial Class frmPrincipal
         Me.btnDiagExportExcel = New Button() With { .Text = "Export Excel",     .Location = New Point(440, 10), .Size = New Size(115, 28) }
         Me.btnDiagSendClient  = New Button() With { .Text = "Send to Customer", .Location = New Point(565, 10), .Size = New Size(145, 28) }
 
+        ' Testes de maquinas ainda nao cadastradas (ID_EQUIPAMENTO nulo)
+        Me.btnDiagCreateEquip = New Button() With { .Text = "Create Equipment", .Location = New Point(720, 10), .Size = New Size(140, 28),
+                                                    .Enabled = False }
+        Me.chkDiagNotLinked   = New CheckBox() With { .Text = "Not linked only", .Location = New Point(872, 14), .AutoSize = True }
+        Me.lblDiagUnlinked    = New Label() With {
+            .Text      = "",
+            .Location  = New Point(1000, 16),
+            .AutoSize  = True,
+            .ForeColor = TemaEscuro.TextoMutado,
+            .Font      = New Font("Segoe UI", 9, FontStyle.Bold)
+        }
+
+        ' Terceira linha — mensagens (erros, relink)
         Me.lblDiagStatus = New Label() With {
             .Text      = "",
-            .Location  = New Point(725, 16),
-            .Size      = New Size(520, 20),
+            .Location  = New Point(15, 88),
+            .Size      = New Size(1100, 20),
             .ForeColor = TemaEscuro.TextoMutado,
             .Font      = New Font("Segoe UI", 9)
         }
@@ -1216,7 +1232,7 @@ Partial Class frmPrincipal
         pnlDiagTop.Controls.AddRange({lblDiagTit, lblDiagTotal, btnDiagRefresh, btnDiagOpenPdf, btnDiagExportExcel,
                                       btnDiagSendClient, lblDiagStatus, lblDiagUid, txtDiagUid, lblDiagTag, txtDiagTag,
                                       lblDiagVerdict, cboDiagVerdict, lblDiagIni, dtpDiagIni, lblDiagFim, dtpDiagFim,
-                                      btnDiagSearch, btnDiagClear})
+                                      btnDiagSearch, btnDiagClear, btnDiagCreateEquip, chkDiagNotLinked, lblDiagUnlinked})
 
         Me.dgvDiagnosticos = New DataGridView() With {
             .Dock          = DockStyle.Fill,
