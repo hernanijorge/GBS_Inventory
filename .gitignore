@@ -368,3 +368,4 @@ Untitled.png
 
 # GBS_DiagReceiver: token real (nao versionar)
 GBS_DiagReceiver/secrets.config
+GBS_DiagReceiver/diag/start.sh

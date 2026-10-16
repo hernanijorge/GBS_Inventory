@@ -80,6 +80,13 @@
     <Content Include="diag\LEIA-ME.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="diag\gbs_diagnostics.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- start.sh contem o token: fora do git (.gitignore), copiado so se existir -->
+    <Content Include="diag\start.sh" Condition="Exists('diag\start.sh')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>
